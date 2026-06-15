@@ -458,14 +458,26 @@
 }
 
 .kfpl-quick-action-num {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--color-text-muted);
-  opacity: 0.4;
+  color: var(--action-color, var(--color-gold));
+  background: rgba(16, 185, 129, 0.08);
+  background: color-mix(in srgb, var(--action-color, var(--color-gold)) 12%, transparent);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
   position: absolute;
-  top: 8px;
-  right: 10px;
-  font-family: 'JetBrains Mono', monospace;
+  top: 10px;
+  right: 12px;
+  font-family: var(--font-family);
+  transition: all 0.25s ease;
+  line-height: 1;
+}
+
+.kfpl-quick-action-btn:hover .kfpl-quick-action-num {
+  background: var(--action-color, var(--color-gold));
+  color: var(--color-white);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .kfpl-quick-action-icon-wrap {
