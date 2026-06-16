@@ -17,6 +17,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 // ── Investor Pages ───────────────────────
 import InvestorList from './pages/investors/InvestorList';
 import AddInvestor from './pages/investors/AddInvestor';
+import EditInvestor from './pages/investors/EditInvestor';
 import InvestorDetail from './pages/investors/InvestorDetail';
 
 // ── Investment Pages ───────────────────────
@@ -31,6 +32,7 @@ import ROIDetail from './pages/roi/ROIDetail';
 // ── Agent Pages ───────────────────────
 import AgentList from './pages/agents/AgentList';
 import AddAgent from './pages/agents/AddAgent';
+import EditAgent from './pages/agents/EditAgent';
 import AgentDetail from './pages/agents/AgentDetail';
 
 // ── Approval Pages ───────────────────────
@@ -81,6 +83,7 @@ export default function App() {
             <Route path="investors" element={<InvestorList />} />
             <Route path="investors/add" element={<AddInvestor />} />
             <Route path="investors/:id" element={<InvestorDetail />} />
+            <Route path="investors/:id/edit" element={<EditInvestor />} />
 
             {/* Manage Investments */}
             <Route path="investments" element={<InvestmentList />} />
@@ -97,6 +100,7 @@ export default function App() {
             <Route path="agents" element={<AgentList />} />
             <Route path="agents/add" element={<AddAgent />} />
             <Route path="agents/:id" element={<AgentDetail />} />
+            <Route path="agents/:id/edit" element={<EditAgent />} />
 
             {/* Approval for Deposit & Withdrawal */}
             <Route path="approvals" element={<ApprovalsQueue />} />
