@@ -26,7 +26,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   // Submit Credentials (Step 1)
-  const handleCredentialsSubmit = (e) => {
+  const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -37,37 +37,51 @@ export default function Login() {
 
     setLoading(true);
     
-    // Simulate API authorization check
-    setTimeout(() => {
-      // Allow current email as set in settings, fallback to admin@kfpl.com
-      const savedAuth = localStorage.getItem('kfpl_auth');
-      const activeAdminEmail = savedAuth ? JSON.parse(savedAuth)?.admin?.email : 'admin@kfpl.com';
-      
-      if ((email === activeAdminEmail || email === 'admin@kfpl.com') && password === 'admin123') {
-        // Correct credentials entered. Check if 2FA (TFA) toggle is ON.
-        const isTfaEnabled = localStorage.getItem('kfpl_tfa') === 'true';
-        
-        if (isTfaEnabled) {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('🔐 Login API Response:', data);
+        if (data.requires2FA) {
+          console.log('📩 2FA OTP (from API):', data.otp || data.code || 'Check email');
           // Switch to OTP step
           setStep('otp');
           setError('');
         } else {
           // No TFA, log in directly
+          const adminObject = data.admin || data.data || data.user || {};
+          const storedAdmin = {
+            ...adminObject,
+            email: email, // ALWAYS use the typed email to log in
+            name: adminObject.name || 'Super Admin'
+          };
+          console.log('🔐 Storing kfpl_auth admin (direct):', storedAdmin);
           localStorage.setItem('kfpl_auth', JSON.stringify({ 
-            token: 'mock-jwt', 
-            admin: { name: 'Super Admin', email } 
+            token: data.token, 
+            admin: storedAdmin
           }));
           navigate('/dashboard');
         }
       } else {
-        setError(`Invalid credentials. Try ${activeAdminEmail} / admin123`);
+        setError(data.message || data.error || 'Invalid credentials.');
       }
+    } catch (err) {
+      setError('Unable to connect to the server.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   // Submit OTP Verification (Step 2)
-  const handleOtpSubmit = (e) => {
+  const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setOtpError('');
 
@@ -78,19 +92,39 @@ export default function Login() {
 
     setLoading(true);
     
-    setTimeout(() => {
-      // Mock code is 123456
-      if (otp === '123456') {
+    try {
+      const response = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await response.json();
+      console.log('🔐 2FA Verification API Response:', data);
+
+      if (response.ok) {
+        const adminObject = data.admin || data.data || data.user || {};
+        const storedAdmin = {
+          ...adminObject,
+          email: email, // ALWAYS use the typed email to log in
+          name: adminObject.name || 'Super Admin'
+        };
+        console.log('🔐 Storing kfpl_auth admin:', storedAdmin);
         localStorage.setItem('kfpl_auth', JSON.stringify({ 
-          token: 'mock-jwt', 
-          admin: { name: 'Super Admin', email: email || 'admin@kfpl.com' } 
+          token: data.token, 
+          admin: storedAdmin
         }));
         navigate('/dashboard');
       } else {
-        setOtpError('Invalid OTP. Please enter 123456 to log in.');
+        setOtpError(data.message || data.error || 'Invalid OTP.');
       }
+    } catch (err) {
+      setOtpError('Unable to connect to the server.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -121,7 +155,7 @@ export default function Login() {
                 <input
                   type="email"
                   className="kfpl-login-input"
-                  placeholder="admin@kfpl.com"
+                  placeholder="Enter Your E-mail"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoFocus

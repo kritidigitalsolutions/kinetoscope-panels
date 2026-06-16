@@ -3,7 +3,7 @@
    Description: Professional top bar with breadcrumb, notifications, admin profile
    ============================================================ */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // ── Route to Title & Breadcrumb Map ───────────────────────
@@ -41,9 +41,45 @@ export default function Header({ isCollapsed, onMenuClick }) {
 
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Read logged-in admin info from localStorage
+  const authData = localStorage.getItem('kfpl_auth');
+  console.log('DEBUG Header: authData from localStorage:', authData);
+  
+  let adminInfo = null;
+  if (authData) {
+    try {
+      const parsed = JSON.parse(authData);
+      // Robust extraction: handle nested admin, data, or user structures
+      const root = parsed?.admin || parsed;
+      adminInfo = root?.admin || root?.data || root?.user || root;
+    } catch (e) {
+      console.error('Failed to parse authData', e);
+    }
+  }
+  
+  console.log('DEBUG Header: Resolved adminInfo:', adminInfo);
+  const adminName = adminInfo?.name || 'Super Admin';
+  const adminEmail = adminInfo?.email || 'admin@kfpl.com';
+
+  const dropdownRef = useRef(null);
+
   useEffect(() => {
     document.documentElement.classList.remove('dark-theme');
     localStorage.removeItem('kfpl_theme');
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -98,11 +134,11 @@ export default function Header({ isCollapsed, onMenuClick }) {
         <div className="kfpl-header-divider"></div>
 
         {/* Admin Profile with Dropdown */}
-        <div className="kfpl-dropdown-container" style={{ position: 'relative' }}>
+        <div className="kfpl-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
           <div className="kfpl-header-profile" onClick={() => setShowDropdown(!showDropdown)}>
-            <div className="kfpl-header-avatar">SA</div>
+            <div className="kfpl-header-avatar">{adminName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}</div>
             <div className="kfpl-header-profile-info">
-              <span className="kfpl-header-profile-name">Super Admin</span>
+              <span className="kfpl-header-profile-name">{adminName}</span>
               <span className="kfpl-header-profile-role">Administrator</span>
             </div>
             <svg
@@ -124,10 +160,10 @@ export default function Header({ isCollapsed, onMenuClick }) {
           </div>
 
           {showDropdown && (
-            <div className="kfpl-header-profile-dropdown" onMouseLeave={() => setShowDropdown(false)}>
+            <div className="kfpl-header-profile-dropdown">
               <div className="kfpl-dropdown-profile-header">
-                <span className="kfpl-dropdown-profile-name">Super Admin</span>
-                <span className="kfpl-dropdown-profile-email">admin@kfpl.com</span>
+                <span className="kfpl-dropdown-profile-name">{adminName}</span>
+                <span className="kfpl-dropdown-profile-email">{adminEmail}</span>
               </div>
               <div className="kfpl-dropdown-divider"></div>
               <div className="kfpl-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/settings'); }}>

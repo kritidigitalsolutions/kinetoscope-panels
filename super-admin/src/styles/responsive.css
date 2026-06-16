@@ -48,6 +48,11 @@
 
   .kfpl-header {
     left: var(--sidebar-collapsed-width);
+    padding: 0 20px;
+  }
+
+  .kfpl-content {
+    padding: 20px;
   }
 
   /* Dashboard */
@@ -68,12 +73,16 @@
   }
 
   .kfpl-dashboard-widgets {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   /* Detail */
   .kfpl-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .kfpl-detail-kpis-summary {
+    grid-template-columns: 1fr 1fr;
   }
 
   /* Form */
@@ -125,10 +134,7 @@
     display: inline-flex;
   }
 
-  /* Overlay */
-  .kfpl-sidebar-overlay {
-    display: block;
-  }
+
 
   /* Main area */
   .kfpl-main-area {
@@ -137,6 +143,7 @@
 
   .kfpl-header {
     left: 0;
+    padding: 0 16px;
   }
 
   .kfpl-header.sidebar-collapsed {
@@ -145,6 +152,19 @@
 
   .kfpl-header-hamburger {
     display: flex;
+  }
+
+  .kfpl-header-breadcrumb {
+    display: none;
+  }
+
+  .kfpl-header-title {
+    font-size: 0.9375rem;
+  }
+
+  .kfpl-header-icon-btn[aria-label="Search"],
+  .kfpl-header-icon-btn[aria-label="Messages"] {
+    display: none;
   }
 
   .kfpl-content {
@@ -173,7 +193,7 @@
   }
 
   .kfpl-welcome-banner {
-    padding: 24px 20px;
+    padding: 20px 16px;
   }
 
   .kfpl-welcome-title {
@@ -182,6 +202,10 @@
 
   .kfpl-welcome-stats {
     flex-wrap: wrap;
+  }
+
+  .kfpl-welcome-deco {
+    display: none;
   }
 
   /* KPI card */
@@ -250,6 +274,10 @@
     grid-template-columns: 1fr;
   }
 
+  .kfpl-detail-kpis-summary {
+    grid-template-columns: 1fr;
+  }
+
   .kfpl-detail-actions {
     width: 100%;
   }
@@ -309,7 +337,7 @@
   }
 
   .kfpl-quick-actions-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .kfpl-kpi-value {

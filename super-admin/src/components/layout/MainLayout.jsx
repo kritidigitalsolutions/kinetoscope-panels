@@ -15,7 +15,7 @@ export default function MainLayout() {
   // Listen for window resize to auto-manage sidebar state
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth >= 768) {
         setIsMobileOpen(false);
       }
     };
