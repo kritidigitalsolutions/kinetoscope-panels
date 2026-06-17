@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import { investors, INVESTMENT_SEGMENTS } from '../../data/mockData';
+import { getApiUrl } from '../../config/apiUrl';
 
 export default function AssignInvestment() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function AssignInvestment() {
     }
 
     try {
-      const response = await fetch('/api/super-admin/investments', {
+      const response = await fetch(getApiUrl('/api/super-admin/investments'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

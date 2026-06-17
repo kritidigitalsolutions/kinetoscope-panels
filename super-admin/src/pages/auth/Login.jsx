@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../../config/apiUrl';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function Login() {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +94,7 @@ export default function Login() {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/auth/verify-2fa', {
+      const response = await fetch(getApiUrl('/api/auth/verify-2fa'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

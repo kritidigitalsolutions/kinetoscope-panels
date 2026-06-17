@@ -4,6 +4,7 @@
    ============================================================ */
 
 import { NavLink, useLocation } from 'react-router-dom';
+import { getApiUrl } from '../../config/apiUrl';
 
 // ── SVG Icons ───────────────────────
 const icons = {
@@ -119,7 +120,7 @@ export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileC
     const token = authData ? JSON.parse(authData)?.token : null;
     if (token) {
       try {
-        await fetch('/api/auth/logout', {
+        await fetch(getApiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

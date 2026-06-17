@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/Toast';
+import { getApiUrl } from '../../config/apiUrl';
 
 // ── 6-Digit Reusable OTP Input Component ───────────────────────
 function OtpInput({ value, onChange, idPrefix = 'otp', length = 6 }) {
@@ -126,7 +127,7 @@ export default function Settings() {
         }
 
         console.log('DEBUG Settings: Fetching profile from /api/auth/profile...');
-        const response = await fetch('/api/auth/profile', {
+        const response = await fetch(getApiUrl('/api/auth/profile'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -261,7 +262,7 @@ export default function Settings() {
     setSendingOtp(true);
 
     try {
-      const response = await fetch('/api/super-admin/settings/change-email/send-otp', {
+      const response = await fetch(getApiUrl('/api/super-admin/settings/change-email/send-otp'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -307,7 +308,7 @@ export default function Settings() {
     setVerifyingOtp(true);
 
     try {
-      const response = await fetch('/api/super-admin/settings/change-email/verify-otp', {
+      const response = await fetch(getApiUrl('/api/super-admin/settings/change-email/verify-otp'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -374,7 +375,7 @@ export default function Settings() {
     setSendingPwdOtp(true);
 
     try {
-      const response = await fetch('/api/super-admin/settings/change-password/send-otp', {
+      const response = await fetch(getApiUrl('/api/super-admin/settings/change-password/send-otp'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -427,7 +428,7 @@ export default function Settings() {
         return;
       }
 
-      const response = await fetch('/api/super-admin/settings/change-password/verify-otp', {
+      const response = await fetch(getApiUrl('/api/super-admin/settings/change-password/verify-otp'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -497,7 +498,7 @@ export default function Settings() {
     }
 
     try {
-      const response = await fetch('/api/super-admin/settings/2fa', {
+      const response = await fetch(getApiUrl('/api/super-admin/settings/2fa'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

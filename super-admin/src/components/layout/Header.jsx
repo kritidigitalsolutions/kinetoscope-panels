@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../../config/apiUrl';
 
 // ── Route to Title & Breadcrumb Map ───────────────────────
 const routeConfig = {
@@ -87,7 +88,7 @@ export default function Header({ isCollapsed, onMenuClick }) {
     const token = authData ? JSON.parse(authData)?.token : null;
     if (token) {
       try {
-        await fetch('/api/auth/logout', {
+        await fetch(getApiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

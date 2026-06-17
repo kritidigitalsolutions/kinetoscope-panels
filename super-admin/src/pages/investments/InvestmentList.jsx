@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
 import { investors, formatCurrency } from '../../data/mockData';
+import { getApiUrl } from '../../config/apiUrl';
 
 export default function InvestmentList() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function InvestmentList() {
       }
 
       try {
-        const response = await fetch('/api/super-admin/investments', {
+        const response = await fetch(getApiUrl('/api/super-admin/investments'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
