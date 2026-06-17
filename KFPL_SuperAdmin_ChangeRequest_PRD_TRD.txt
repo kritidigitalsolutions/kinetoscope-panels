@@ -1,0 +1,362 @@
+﻿KFPL
+Super Admin Portal
+Change Request â€” PRD + TRD (Frontend)
+Scope: 11 client-requested change items applicable to the Super Admin frontend
+Stack: React Â· Tailwind CSS Â· Custom CSS
+Theme: Deep Forest Green (#061D13) Â· Vibrant Emerald (#10B981)
+Prepared for: Milind
+Document Version 1.0
+
+Table of Contents
+
+
+
+1. Introduction & Scope
+This document defines the Product Requirements (PRD) and Technical Requirements (TRD) for changes requested by the client, restricted strictly to the Super Admin portal of the KFPL platform. Items relating purely to the Agent Portal or Client Portal are intentionally excluded â€” they are covered in separate documents.
+Each change item below is mapped to its original point number from the client's request, followed by detailed functional requirements, business rules, acceptance criteria, and the corresponding frontend technical approach.
+2. Quick Reference
+ID
+Client Point
+Change Summary
+CR-01
+Point 1
+Agent Table â€” Commission Paid as Amount (not %)
+CR-02
+Point 2
+Clickable Client Count â†’ Agent's Client List
+CR-03
+Point 3 (backend configuration portion only)
+Commission Slab & Reward Configuration (Admin-Managed)
+CR-04
+Point 4
+Individual Agent Page â€” Client Table Column Order
+CR-05
+Point 7
+Client Table â€” ROI % and Perks Columns
+CR-06
+Point 8 (admin-side portion only)
+Nominee Field in Admin-Side Profile Forms
+CR-07
+Point 9 (receiving end only)
+Service Requests â€” New Section
+CR-08
+Point 10
+â€œNon Agent Clientâ€ Label
+CR-09
+Point 11 (display portion only)
+Risk Profile Column (Display Only)
+CR-10
+Point 12
+Manage Investment â€” Multi-Segment Assignment + Date of Joining
+CR-11
+Point 13
+Return on Investment â€” Client/Agent Dropdown + New Fields
+
+3. Detailed Change Requests
+CR-01 â€” Agent Table â€” Commission Paid as Amount (not %)
+  Client Point Reference: Point 1  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want to see the actual commission paid amount instead of a percentage, so I can track real payouts accurately.
+Functional Requirements:
+The â€œCommission Paidâ€ column in the Agent Management table must display the rupee (â‚¹) value instead of a percentage.
+Business Rules:
+Displayed value = sum of (one-time + monthly + special) commission paid to that agent till date.
+Acceptance Criteria:
+Format: â‚¹1,24,500 using Indian numbering with comma separators.
+Column remains sortable, sorting numerically on the rupee value.
+Hovering the value can optionally show a breakdown: One-time â‚¹X + Monthly â‚¹Y + Special â‚¹Z.
+Edge Cases:
+If commission paid is zero, display â‚¹0, never a blank cell.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+AgentTable.jsx
+Update column definition to render via formatCurrency() instead of formatPercent()
+formatCurrency.js
+Shared utility, reused across Agent and Client tables
+
+State / Data Notes:
+API field expected: commissionPaidTotal (number) â€” confirm unit (rupees vs. paise) with backend.
+UI/UX Notes:
+Right-align numeric column; use tabular-nums / Consolas for clean digit alignment.
+Text color: --color-text-primary (#11221A).
+
+CR-02 â€” Clickable Client Count â†’ Agent's Client List
+  Client Point Reference: Point 2  
+PRD â€” Product Requirement
+User Story: As a Super Admin, clicking an agent's client count should take me directly to that agent's client list.
+Acceptance Criteria:
+The number is rendered as a link/button with a hover underline in --color-gold-dark.
+Clicking navigates to a filtered client list scoped to that agentId.
+Destination page header reads â€œClients of [Agent Name]â€ with a â€œBack to Agentsâ€ breadcrumb.
+Edge Cases:
+If an agent has 0 clients, the number is plain text (not clickable, no link styling).
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+AgentTable.jsx
+Wrap client-count cell in a <button> element with onClick navigation
+AgentClientsView.jsx (new)
+Reuses ClientTable.jsx pre-filtered by agentId
+
+State / Data Notes:
+Route: /admin/agents/:agentId/clients
+Pass agentId and agentName via React Router state for breadcrumb context.
+API Contract (assumed â€” confirm with backend):
+GET /api/admin/clients?agentId={id}Response: paginated array of client objects
+UI/UX Notes:
+Use a real <button> (not a clickable <div>) for keyboard and screen-reader accessibility.
+
+CR-03 â€” Commission Slab & Reward Configuration (Admin-Managed)
+  Client Point Reference: Point 3 (backend configuration portion only)  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I need to configure commission slabs and rewards once, so the system can auto-calculate agent commissions without manual entry every time.
+Functional Requirements:
+Slab Configuration screen â€” defines investment-range-to-percentage mapping for One-Time commission and for Monthly recurring commission.
+Special Commission Override â€” a per-agent manual entry field (not slab-based), with a mandatory reason/note field.
+Reward Management â€” define the reward catalog: target description, target value (e.g. â€œ10 clientsâ€ or â€œâ‚¹50L total businessâ€), reward description, and Active/Inactive status.
+Business Rules:
+Slabs must be non-overlapping ranges (e.g. â‚¹0â€“5L, â‚¹5Lâ€“10L, â‚¹10L+).
+Special commission is additive on top of slab-calculated commission, not a replacement for it.
+A reward becomes unlockable only once its target condition is met; the calculation engine itself is a backend responsibility â€” Super Admin only defines the rule.
+Acceptance Criteria:
+Admin can Add / Edit / Delete slab rows.
+Admin can Add / Edit / Deactivate rewards.
+Changing a slab does not retroactively recalculate already-paid commissions unless explicitly confirmed otherwise by the client.
+Edge Cases:
+Overlapping slab ranges must show an inline validation error before save is allowed.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+CommissionSlabConfig.jsx (new)
+Editable table for one-time and monthly slab rows
+RewardConfig.jsx (new)
+Editable table for reward catalog
+SlabRow.jsx (new)
+Reusable editable table row sub-component
+
+State / Data Notes:
+Routes: /admin/commission-config and /admin/reward-config.
+Dedicated store useCommissionConfigStore (Zustand) so this data can be reused later if the Agent Portal needs read access.
+API Contract (assumed â€” confirm with backend):
+GET / POST /api/admin/commission-slabsBody: { type: 'one-time' | 'monthly', minAmount, maxAmount, percentage } POST /api/admin/agents/:id/special-commissionBody: { amount, reason, addedBy, date } GET / POST /api/admin/rewardsBody: { targetDescription, targetValue, targetType, rewardDescription, isActive }
+Validation Rules:
+Zod schema enforcing minAmount < maxAmount with no overlapping ranges (client-side pre-check, backend does final validation).
+
+CR-04 â€” Individual Agent Page â€” Client Table Column Order
+  Client Point Reference: Point 4  
+PRD â€” Product Requirement
+User Story: As a Super Admin, when I open an agent's detail page, I want a consistent, logical column order in the client list under that agent.
+Acceptance Criteria:
+Each column supports sorting.
+Status is rendered as a colored badge: green = Active, grey = Inactive, red = Closed.
+Required Column Order:
+Client ID
+Date of Joining
+Name
+Email
+Mobile
+Total Investment
+ROI %
+Commission Paid (for that specific client, to that agent)
+Status
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+AgentClientTable.jsx
+Confirm column configuration array matches the exact required order
+StatusBadge.jsx (new, shared)
+Reusable badge used across Client and Agent modules
+
+State / Data Notes:
+Use a single source-of-truth column config array (key + label + type) so the table renders consistently wherever this view is reused.
+
+CR-05 â€” Client Table â€” ROI % and Perks Columns
+  Client Point Reference: Point 7  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want to see each client's ROI allocation and their perk tier at a glance in the client list.
+Functional Requirements:
+Add a â€œROI % Allocated / Receivedâ€ column to the main Client Management table.
+Add a â€œPerksâ€ column â€” an auto-derived badge based on investment tier (e.g. Silver below â‚¹10L, Gold â‚¹10Lâ€“50L, Platinum above â‚¹50L â€” exact thresholds pending confirmation from client, consistent with the original SOW's Perks & Recognition module).
+Acceptance Criteria:
+The Perk badge auto-updates whenever a client's total investment crosses a tier threshold; no manual admin action required.
+ROI % is editable only from the ROI Management module (CR-11); read-only here.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+ClientTable.jsx
+Add two new column definitions
+PerkBadge.jsx (new)
+Accepts investmentAmount prop, internally maps to a tier and renders a styled badge
+getPerkTier.js (new utility)
+Shared tiering logic reused wherever investment-based perks matter
+
+State / Data Notes:
+API field: client object should include roiPercent and totalInvestment; perk tier is computed client-side from totalInvestment unless backend prefers to own this logic.
+
+CR-06 â€” Nominee Field in Admin-Side Profile Forms
+  Client Point Reference: Point 8 (admin-side portion only)  
+PRD â€” Product Requirement
+User Story: As a Super Admin, when adding or editing an Investor or Agent profile, I should be able to capture nominee details.
+Acceptance Criteria:
+New fields: Nominee Name (text, required if any nominee field is filled), Nominee Relation (dropdown: Spouse / Parent / Child / Sibling / Other), Nominee Contact Number (optional).
+Fields appear in both Add Investor and Add Agent forms, and in their respective edit/view forms.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+InvestorProfileForm.jsx
+Add three new fields
+AgentProfileForm.jsx
+Add three new fields
+
+State / Data Notes:
+API payload addition: nominee: { name, relation, contact } as a nested object.
+Validation Rules:
+Nominee Name becomes required only if any other nominee field is filled (prevents partial entries).
+Mobile number pattern validation applied to Nominee Contact.
+
+CR-07 â€” Service Requests â€” New Section
+  Client Point Reference: Point 9 (receiving end only)  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want a centralized place to view and manage all service requests raised by clients and agents.
+Functional Requirements:
+New sidebar menu item: â€œService Requestsâ€.
+List view columns: Request ID, Raised By (name + type tag: Client / Agent), Date Raised, Request Type / Subject, Status.
+Detail view: full description, ability to change status, and add an internal response/note.
+Acceptance Criteria:
+Status options: Open, In Progress, Resolved, Closed.
+Filterable by status, by raiser type (Client / Agent), and by date range.
+An unresolved request shows a notification badge count on the sidebar icon.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+ServiceRequestsPage.jsx (new)
+List view with filters
+ServiceRequestTable.jsx (new)
+Table component
+ServiceRequestDetail.jsx (new)
+Detail / response view
+
+State / Data Notes:
+Routes: /admin/service-requests and /admin/service-requests/:id.
+Unresolved badge count can be implemented via simple polling for v1; a websocket can be considered later.
+API Contract (assumed â€” confirm with backend):
+GET /api/admin/service-requests?status=&type=&from=&to=GET /api/admin/service-requests/:idPATCH /api/admin/service-requests/:id   Body: { status, adminNote }GET /api/admin/service-requests/unresolved-count
+UI/UX Notes:
+Reuse the same StatusBadge.jsx pattern used elsewhere for visual consistency.
+
+CR-08 â€” â€œNon Agent Clientâ€ Label
+  Client Point Reference: Point 10  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want to clearly identify clients who joined directly without any agent, since they have no agent commission attached.
+Acceptance Criteria:
+In the Agent column of the Client table, if no agent is linked, show the label â€œNon Agent Clientâ€ (grey badge) instead of a blank cell or dash.
+This is filterable via a dropdown: All / With Agent / Non Agent Client.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+ClientTable.jsx
+Conditional render: agent link if agentId exists, else a muted â€œNon Agent Clientâ€ badge
+
+API Contract (assumed â€” confirm with backend):
+GET /api/admin/clients?hasAgent=false
+
+CR-09 â€” Risk Profile Column (Display Only)
+  Client Point Reference: Point 11 (display portion only)  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want to see each client's selected risk profile so investment assignment decisions can align with it.
+Acceptance Criteria:
+New â€œRisk Profileâ€ column in the Client table, read-only, populated from the client's registration data.
+Exact category list (e.g. Conservative / Moderate / Aggressive) is pending from the client; placeholder logic will be finalized once received.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+ClientTable.jsx
+Add Risk Profile column
+RiskProfileBadge.jsx (new)
+Color-coded badge per category â€” exact color mapping pending client input
+
+State / Data Notes:
+API field: riskProfile (string / enum, values pending).
+This is intentionally a placeholder build â€” once the client shares the exact taxonomy, only the badge color-map and dropdown options need updating; no structural change required.
+
+CR-10 â€” Manage Investment â€” Multi-Segment Assignment + Date of Joining
+  Client Point Reference: Point 12  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want to assign a client's investment across multiple segments at once, and record their date of joining at the time of assignment.
+Functional Requirements:
+The â€œAdd + Assign Investmentâ€ form's Segment field becomes a multi-select (currently single-select).
+A new Date of Joining field (date picker) is added to this form.
+Business Rules:
+Segment assignment continues to respect the original SOW logic â€” based on client risk appetite/profile (10%â€“100% scale) â€” but now multiple segments can each carry their own allocation percentage.
+Acceptance Criteria:
+Admin can select two or more segments (e.g. Film Making 40% + Music 30% + Trading 30%).
+System validates that total allocation across selected segments does not exceed 100% (confirm this exact rule with client).
+Date of Joining is mandatory and cannot be a future date.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+AssignInvestmentForm.jsx
+Replace single <select> with a multi-select (e.g. react-select multi mode, or custom checkbox-chip UI)
+DatePicker field
+Added with max date = today
+
+State / Data Notes:
+State shape changes from a single object { segment, allocationPercent } to { segments: [{ name, allocationPercent }], dateOfJoining }.
+This is an API contract change â€” flag it to the backend team early since the payload structure moves from a single object to an array.
+Validation Rules:
+Zod refine() check ensuring the sum of allocationPercent across segments does not exceed 100.
+
+CR-11 â€” Return on Investment â€” Client/Agent Dropdown + New Fields
+  Client Point Reference: Point 13  
+PRD â€” Product Requirement
+User Story: As a Super Admin, I want one unified ROI screen that adapts based on whether I am recording a payout for a Client or an Agent.
+Functional Requirements:
+Top dropdown: â€œSelect Typeâ€ â†’ Client / Agent.
+Selecting Client shows client ROI fields (Investment Amount, ROI Allocation %, Monthly Return, Date).
+Selecting Agent shows agent commission payout fields (Commission Type, Amount, related Client if applicable).
+New fields added to both flows: Amount Paid, Payment Mode (dropdown: Bank Transfer / UPI / Cheque / Other), Transaction Reference (text).
+Acceptance Criteria:
+Switching the dropdown clears fields specific to the other type â€” no stale data carryover.
+Transaction Reference is validated as unique; an inline error appears if a duplicate is detected.
+Payment Mode is mandatory before submission.
+TRD â€” Technical Requirement (Frontend)
+Component-Level Changes:
+Component
+Change
+ROIManagementForm.jsx
+Top-level state recipientType: 'client' | 'agent' with conditional field rendering
+PaymentDetailsFields.jsx (new, shared)
+Amount Paid, Payment Mode, Transaction Ref â€” reused in both branches
+
+API Contract (assumed â€” confirm with backend):
+POST /api/admin/roi-entriesBody (client): { recipientType: 'client', clientId, investmentAmount, roiPercent, monthlyReturn, amountPaid, paymentMode, transactionRef, date }Body (agent): { recipientType: 'agent', agentId, commissionType, amountPaid, paymentMode, transactionRef, date } GET /api/admin/roi-entries/check-ref?ref=xxx   (duplicate check)
+Validation Rules:
+Discriminated union schema (Zod discriminatedUnion on recipientType) keeps validation logic clean for the two branches.
+Debounce-validate transactionRef against the check-ref endpoint on field blur.
+
+4. Cross-Cutting Notes
+Theme Consistency:
+All new components use the existing design tokens â€” Deep Forest Green (#061D13) for headers/navigation, Vibrant Emerald (#10B981) for primary actions/links/badges, Soft Mint (#ECFDF5) for badge backgrounds.
+Typography stays consistent with already-built Super Admin and Client Portal documents: Inter / Plus Jakarta Sans for UI text.
+Reusable Components Introduced:
+StatusBadge, PerkBadge, RiskProfileBadge, AgentTag, PaymentDetailsFields â€” build these once and reuse across modules to avoid duplication.
+Comment Standard:
+Every new file/component follows the existing convention â€” a start and end comment block stating the component's purpose, props, and last-modified context.
+5. Pending Inputs Needed From Client
+The following items are blocking full implementation and must be received before final build:
+Exact one-time and monthly commission slab values.
+Reward catalog with targets.
+Risk profiling category list and the preferred color/display convention.
+Whether multi-segment allocation must total exactly 100% or can be partial.
+Whether slab changes apply retroactively or only going forward.

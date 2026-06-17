@@ -34,6 +34,7 @@ import AgentList from './pages/agents/AgentList';
 import AddAgent from './pages/agents/AddAgent';
 import EditAgent from './pages/agents/EditAgent';
 import AgentDetail from './pages/agents/AgentDetail';
+import AgentClientsView from './pages/agents/AgentClientsView';
 
 // ── Approval Pages ───────────────────────
 import ApprovalsQueue from './pages/approvals/ApprovalsQueue';
@@ -47,6 +48,15 @@ import EmailNotifications from './pages/email/EmailNotifications';
 
 // ── Settings ───────────────────────
 import Settings from './pages/settings/Settings';
+import CommissionConfig from './pages/settings/CommissionConfig';
+import RewardConfig from './pages/settings/RewardConfig';
+
+// ── Portals ────────────────────────
+import ClientPortalMock from './pages/portals/ClientPortalMock';
+import AgentPortalMock from './pages/portals/AgentPortalMock';
+
+// ── Service Requests ───────────────────────
+import ServiceRequestsPage from './pages/service-requests/ServiceRequestsPage';
 
 // ── 404 ───────────────────────
 import NotFound from './pages/NotFound';
@@ -101,6 +111,7 @@ export default function App() {
             <Route path="agents/add" element={<AddAgent />} />
             <Route path="agents/:id" element={<AgentDetail />} />
             <Route path="agents/:id/edit" element={<EditAgent />} />
+            <Route path="agents/:id/clients" element={<AgentClientsView />} />
 
             {/* Approval for Deposit & Withdrawal */}
             <Route path="approvals" element={<ApprovalsQueue />} />
@@ -112,8 +123,17 @@ export default function App() {
             {/* Email Notifications */}
             <Route path="email-notifications" element={<EmailNotifications />} />
 
+            {/* Service Requests */}
+            <Route path="service-requests" element={<ServiceRequestsPage />} />
+
             {/* Settings */}
             <Route path="settings" element={<Settings />} />
+            <Route path="settings/commission-slabs" element={<CommissionConfig />} />
+            <Route path="settings/rewards" element={<RewardConfig />} />
+
+            {/* Portals */}
+            <Route path="portals/client" element={<ClientPortalMock />} />
+            <Route path="portals/agent" element={<AgentPortalMock />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

@@ -12,34 +12,64 @@ export default function AgentList() {
   const navigate = useNavigate();
 
   const columns = [
-    {
-      header: 'Agent',
-      accessor: 'name',
-      render: (row) => (
-        <div>
-          <div className="kfpl-table-cell-primary">{row.name}</div>
-          <div className="kfpl-table-cell-secondary">{row.email}</div>
-        </div>
-      ),
-    },
     { header: 'Agent ID', accessor: 'agentId' },
-    { header: 'Clients', accessor: 'totalClients' },
+    { header: 'Join Date', accessor: 'joinDate' },
+    {
+      header: 'Agent Name',
+      accessor: 'name',
+      render: (row) => <span style={{ fontWeight: 600 }}>{row.name}</span>,
+    },
+    { header: 'Email Address', accessor: 'email' },
+    {
+      header: 'Clients',
+      accessor: 'totalClients',
+      render: (row) => {
+        if (row.totalClients > 0) {
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent navigation to agent details page
+                navigate(`/agents/${row.id}/clients`, { state: { agentName: row.name, agentId: row.agentId } });
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                color: 'var(--color-gold-dark)',
+                textDecoration: 'underline',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              {row.totalClients}
+            </button>
+          );
+        }
+        return <span>0</span>;
+      }
+    },
     {
       header: 'Total Investment',
       accessor: 'totalInvestment',
       render: (row) => <span className="font-semibold">{formatCurrency(row.totalInvestment)}</span>,
     },
     {
-      header: 'Commission',
-      accessor: 'commissionMonthly',
-      render: (row) => `${row.commissionMonthly}% monthly`,
+      header: 'Commission Paid',
+      accessor: 'commissionPaidTotal',
+      render: (row) => {
+        const totalPaid = row.commissionHistory
+          ? row.commissionHistory
+              .filter(c => c.status === 'paid')
+              .reduce((sum, c) => sum + c.amount, 0)
+          : (row.commissionPaidTotal || 0);
+        return <span className="font-semibold">{formatCurrency(totalPaid)}</span>;
+      },
     },
     {
       header: 'Status',
       accessor: 'status',
       render: (row) => <Badge status={row.status}>{row.status}</Badge>,
     },
-    { header: 'Join Date', accessor: 'joinDate' },
   ];
 
   return (

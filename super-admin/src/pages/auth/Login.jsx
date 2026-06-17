@@ -53,11 +53,13 @@ export default function Login() {
         console.log('🔐 Login API Response:', data);
         if (data.requires2FA) {
           console.log('📩 2FA OTP (from API):', data.otp || data.code || 'Check email');
+          localStorage.setItem('kfpl_tfa', 'true');
           // Switch to OTP step
           setStep('otp');
           setError('');
         } else {
           // No TFA, log in directly
+          localStorage.setItem('kfpl_tfa', 'false');
           const adminObject = data.admin || data.data || data.user || {};
           const storedAdmin = {
             ...adminObject,
@@ -106,6 +108,7 @@ export default function Login() {
       console.log('🔐 2FA Verification API Response:', data);
 
       if (response.ok) {
+        localStorage.setItem('kfpl_tfa', 'true');
         const adminObject = data.admin || data.data || data.user || {};
         const storedAdmin = {
           ...adminObject,

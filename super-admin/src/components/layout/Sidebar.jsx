@@ -3,6 +3,7 @@
    Description: Fixed left navigation with all Super Admin modules
    ============================================================ */
 
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { getApiUrl } from '../../config/apiUrl';
 
@@ -56,6 +57,11 @@ const icons = {
       <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
   ),
+  support: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
   email: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
@@ -89,6 +95,13 @@ const navSections = [
     ],
   },
   {
+    title: 'Portals',
+    items: [
+      { path: '/portals/client', icon: 'investors', label: 'Client Portal' },
+      { path: '/portals/agent', icon: 'agents', label: 'Agent Portal' },
+    ],
+  },
+  {
     title: 'Investment Management',
     items: [
       { path: '/investments', icon: 'investment', label: 'Manage Investments' },
@@ -102,6 +115,9 @@ const navSections = [
     items: [
       { path: '/approvals', icon: 'approvals', label: 'Deposit & Withdrawal', badge: 7 },
       { path: '/email-notifications', icon: 'email', label: 'Email Notifications' },
+      { path: '/service-requests', icon: 'support', label: 'Service Requests' },
+      { path: '/settings/commission-slabs', icon: 'roi', label: 'Commission Slabs' },
+      { path: '/settings/rewards', icon: 'perks', label: 'Rewards Config' },
       { path: '/settings', icon: 'settings', label: 'Settings' },
     ],
   },
@@ -109,6 +125,25 @@ const navSections = [
 
 export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }) {
   const location = useLocation();
+  const [unresolvedCount, setUnresolvedCount] = useState(2);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const data = localStorage.getItem('kfpl_service_requests');
+      if (data) {
+        const list = JSON.parse(data);
+        const count = list.filter(r => r.status === 'Open' || r.status === 'In Progress').length;
+        setUnresolvedCount(count);
+      } else {
+        setUnresolvedCount(2);
+      }
+    };
+    
+    updateCount();
+    
+    window.addEventListener('serviceRequestsUpdated', updateCount);
+    return () => window.removeEventListener('serviceRequestsUpdated', updateCount);
+  }, []);
 
   const isActive = (path) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
@@ -168,9 +203,13 @@ export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileC
                 >
                   <span className="kfpl-sidebar-item-icon">{icons[item.icon]}</span>
                   <span className="kfpl-sidebar-item-label">{item.label}</span>
-                  {item.badge && (
+                  {item.path === '/service-requests' ? (
+                    unresolvedCount > 0 && (
+                      <span className="kfpl-sidebar-item-badge">{unresolvedCount}</span>
+                    )
+                  ) : item.badge ? (
                     <span className="kfpl-sidebar-item-badge">{item.badge}</span>
-                  )}
+                  ) : null}
                 </NavLink>
               ))}
             </div>

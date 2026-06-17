@@ -8,12 +8,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import Badge from '../../components/ui/Badge';
 import FileDropzone from '../../components/ui/FileDropzone';
-import { investors } from '../../data/mockData';
+import { investors, agents } from '../../data/mockData';
 
 export default function EditInvestor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const addToast = useToast();
+  const [selectedAgentId, setSelectedAgentId] = useState('');
 
   const investor = investors.find(inv => inv.id === Number(id));
 
@@ -21,6 +22,8 @@ export default function EditInvestor() {
     fullName: '', email: '', phone: '', dob: '', address: '',
     pan: '', bankName: '', accountNo: '', ifsc: '',
     category: '', status: '',
+    nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
+    riskProfile: '',
   });
 
   useEffect(() => {
@@ -37,7 +40,15 @@ export default function EditInvestor() {
         ifsc: investor.ifsc || '',
         category: investor.category || '',
         status: investor.status || '',
+        nomineeName: investor.nominee?.name || '',
+        nomineeRelation: investor.nominee?.relation || '',
+        nomineeContact: investor.nominee?.contact || '',
+        nomineeEmail: investor.nominee?.email || '',
+        riskProfile: investor.riskProfile || 'Conservative',
       });
+      // Find current agent
+      const currentAgent = agents.find(a => a.clients.includes(investor.id));
+      setSelectedAgentId(currentAgent ? String(currentAgent.id) : '');
     }
   }, [investor]);
 
@@ -58,6 +69,10 @@ export default function EditInvestor() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
+      alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
+      return;
+    }
     // Update mock data in-memory so changes reflect immediately
     const idx = investors.findIndex(inv => inv.id === Number(id));
     if (idx !== -1) {
@@ -74,8 +89,36 @@ export default function EditInvestor() {
         ifsc: form.ifsc,
         category: form.category,
         status: form.status,
+        riskProfile: form.riskProfile,
+        nominee: {
+          name: form.nomineeName,
+          relation: form.nomineeRelation,
+          contact: form.nomineeContact,
+          email: form.nomineeEmail,
+        }
       };
     }
+
+    // Update Agent relations: remove client from all agents
+    agents.forEach(agent => {
+      const cIdx = agent.clients.indexOf(Number(id));
+      if (cIdx !== -1) {
+        agent.clients.splice(cIdx, 1);
+        agent.totalClients = agent.clients.length;
+      }
+    });
+
+    // Assign to selected agent if any
+    if (selectedAgentId) {
+      const agent = agents.find(a => a.id === Number(selectedAgentId));
+      if (agent) {
+        if (!agent.clients.includes(Number(id))) {
+          agent.clients.push(Number(id));
+          agent.totalClients = agent.clients.length;
+        }
+      }
+    }
+
     addToast(`Client "${form.fullName}" updated successfully!`, 'success', 'Client Updated');
     setTimeout(() => navigate(`/investors/${id}`), 500);
   };
@@ -134,7 +177,7 @@ export default function EditInvestor() {
           {/* Status & Category */}
           <div className="kfpl-form-section">
             <div className="kfpl-form-section-title">Account Settings</div>
-            <div className="kfpl-form-row">
+            <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Category / Tier</label>
                 <select className="kfpl-input" name="category" value={form.category} onChange={handleChange}>
@@ -152,10 +195,38 @@ export default function EditInvestor() {
                   <option value="suspended">Suspended</option>
                 </select>
               </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Risk Profile</label>
+                <select className="kfpl-input" name="riskProfile" value={form.riskProfile} onChange={handleChange}>
+                  <option value="Conservative">Conservative</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Aggressive">Aggressive</option>
+                </select>
+              </div>
+            </div>
+            <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Agent / Source of Client</label>
+                <select 
+                  className="kfpl-select" 
+                  value={selectedAgentId} 
+                  onChange={(e) => setSelectedAgentId(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+                >
+                  <option value="">Direct Client (No Agent)</option>
+                  {agents.map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({a.agentId})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="kfpl-input-group" style={{ flex: 2 }}></div>
             </div>
           </div>
 
-          {/* KYC & Bank */}
+          {/* KYC Document Uploads */}
+          <FileDropzone label="PAN Card Upload" />
+          <FileDropzone label="Aadhaar Card Upload" />
+          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
           <div className="kfpl-form-section">
             <div className="kfpl-form-section-title">KYC & Bank Details</div>
             <div className="kfpl-form-row-3">
@@ -178,6 +249,38 @@ export default function EditInvestor() {
                 <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder="HDFC0001234" />
               </div>
               <div></div>
+            </div>
+          </div>
+
+          {/* Nominee Details */}
+          <div className="kfpl-form-section">
+            <div className="kfpl-form-section-title">Nominee Details</div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Name {(form.nomineeRelation || form.nomineeContact) && <span className="required">*</span>}</label>
+                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
+              </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Relation</label>
+                <select className="kfpl-select" name="nomineeRelation" value={form.nomineeRelation} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                  <option value="">Select Relation</option>
+                  <option value="Spouse">Spouse</option>
+                  <option value="Parent">Parent</option>
+                  <option value="Child">Child</option>
+                  <option value="Sibling">Sibling</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Contact Number</label>
+                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
+              </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Email Address</label>
+                <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
+              </div>
             </div>
           </div>
 

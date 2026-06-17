@@ -17,6 +17,7 @@
   min-height: 100vh;
   margin-left: var(--sidebar-width);
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
 }
 
 .kfpl-main-area.sidebar-collapsed {
@@ -28,6 +29,7 @@
   padding: 28px 32px;
   overflow-y: auto;
   margin-top: var(--header-height);
+  min-width: 0;
 }
 
 /* ── Sidebar ─────────────────────── */
@@ -467,6 +469,8 @@
 
 /* ── Page Wrapper ─────────────────────── */
 .kfpl-page {
+  width: 100%;
+  min-width: 0;
   animation: fadeSlideUp 0.35s ease forwards;
 }
 

@@ -17,6 +17,8 @@ export default function AgentDetail() {
 
   const agent = agents.find(a => a.id === Number(id));
 
+  const [localStatus, setLocalStatus] = useState(agent ? agent.status : 'active');
+
   if (!agent) {
     return (
       <div className="kfpl-page">
@@ -28,25 +30,59 @@ export default function AgentDetail() {
     );
   }
 
+  const handleBlockAgent = () => {
+    const newStatus = localStatus === 'suspended' ? 'active' : 'suspended';
+    agent.status = newStatus;
+    setLocalStatus(newStatus);
+    addToast(`Agent status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+  };
+
+  const handleHoldAgent = () => {
+    const newStatus = localStatus === 'inactive' ? 'active' : 'inactive';
+    agent.status = newStatus;
+    setLocalStatus(newStatus);
+    addToast(`Agent status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+  };
+
+  const handleDeleteAgent = () => {
+    if (window.confirm(`Are you sure you want to completely delete agent profile "${agent.name}"?`)) {
+      const idx = agents.findIndex(a => a.id === agent.id);
+      if (idx !== -1) {
+        agents.splice(idx, 1);
+      }
+      addToast('Agent profile deleted successfully!', 'success', 'Agent Deleted');
+      navigate('/agents');
+    }
+  };
+
   const agentClients = investors.filter(inv => agent.clients.includes(inv.id));
 
   const tabs = ['profile', 'clients', 'commission'];
 
   return (
     <div className="kfpl-page">
-      <div className="kfpl-detail-header">
+      <div className="kfpl-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div className="kfpl-detail-profile">
           <div className="kfpl-detail-avatar">{agent.name.split(' ').map(n => n[0]).join('')}</div>
           <div>
             <h2 className="kfpl-detail-name">{agent.name}</h2>
             <div className="kfpl-detail-id">{agent.agentId}</div>
             <div className="kfpl-detail-meta">
-              <Badge status={agent.status}>{agent.status}</Badge>
+              <Badge status={localStatus}>{localStatus}</Badge>
             </div>
           </div>
         </div>
-        <div className="kfpl-detail-actions">
+        <div className="kfpl-detail-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => navigate('/agents')}>← Back</button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-navy)', borderColor: 'var(--color-border)', background: localStatus === 'suspended' ? '#EF4444' : 'var(--color-surface)', color: localStatus === 'suspended' ? 'var(--color-white)' : 'var(--color-text-primary)' }} onClick={handleBlockAgent}>
+            {localStatus === 'suspended' ? 'Unblock Agent' : 'Block Agent'}
+          </button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-navy)', borderColor: 'var(--color-border)', background: localStatus === 'inactive' ? '#F59E0B' : 'var(--color-surface)', color: localStatus === 'inactive' ? 'var(--color-white)' : 'var(--color-text-primary)' }} onClick={handleHoldAgent}>
+            {localStatus === 'inactive' ? 'Resume Agent' : 'Hold Agent'}
+          </button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={handleDeleteAgent}>
+            Delete Agent
+          </button>
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={() => navigate(`/agents/${id}/edit`)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -93,17 +129,33 @@ export default function AgentDetail() {
           <div className="kfpl-table-scroll">
             <table className="kfpl-table">
               <thead>
-                <tr><th>Client</th><th>Client ID</th><th>Investment</th><th>Category</th><th>Status</th></tr>
+                <tr>
+                  <th>Client ID</th>
+                  <th>Date of Joining</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Mobile</th>
+                  <th style={{ textAlign: 'right' }}>Total Investment</th>
+                  <th style={{ textAlign: 'right' }}>ROI %</th>
+                  <th style={{ textAlign: 'right' }}>Commission Paid</th>
+                  <th>Status</th>
+                </tr>
               </thead>
               <tbody>
                 {agentClients.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No clients found</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No clients found</td></tr>
                 ) : agentClients.map(client => (
-                  <tr key={client.id} onClick={() => navigate(`/investors/${client.id}`)}>
-                    <td className="kfpl-table-cell-primary">{client.name}</td>
+                  <tr key={client.id} onClick={() => navigate(`/investors/${client.id}`)} style={{ cursor: 'pointer' }}>
                     <td>{client.clientId}</td>
-                    <td className="font-semibold">{formatCurrency(client.totalInvestment)}</td>
-                    <td><Badge status={client.category}>{client.category}</Badge></td>
+                    <td>{client.joinDate}</td>
+                    <td className="kfpl-table-cell-primary">{client.name}</td>
+                    <td>{client.email}</td>
+                    <td>{client.phone}</td>
+                    <td className="font-semibold" style={{ textAlign: 'right' }}>{formatCurrency(client.totalInvestment)}</td>
+                    <td style={{ textAlign: 'right' }}>{client.roiPercentage || 12}%</td>
+                    <td className="font-semibold" style={{ textAlign: 'right', color: 'var(--color-success)' }}>
+                      {formatCurrency(client.totalInvestment * ((agent.commissionOneTime || 2) / 100))}
+                    </td>
                     <td><Badge status={client.status}>{client.status}</Badge></td>
                   </tr>
                 ))}

@@ -150,12 +150,17 @@ export default function Settings() {
             emailToUse = currentLocalEmail;
           }
 
+          const is2FA = adminData?.is2FAEnabled === true || adminData?.is2FAEnabled === 'true';
+          setTwoFactor(is2FA);
+          localStorage.setItem('kfpl_tfa', String(is2FA));
+
           const updatedUser = {
             ...currentUser,
             admin: {
               ...(currentUser?.admin || {}),
               ...adminData,
-              email: emailToUse
+              email: emailToUse,
+              is2FAEnabled: is2FA
             }
           };
           console.log('DEBUG Settings: updatedUser to save:', updatedUser);

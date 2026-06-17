@@ -4,7 +4,7 @@
    ============================================================ */
 
 // ── Investment Segments ───────────────────────
-export const INVESTMENT_SEGMENTS = [
+const DEFAULT_SEGMENTS = [
   { id: 'film-making', name: 'Film Making', color: '#10B981' },
   { id: 'distribution', name: 'Distribution', color: '#1565C0' },
   { id: 'music', name: 'Music', color: '#2E7D32' },
@@ -12,6 +12,22 @@ export const INVESTMENT_SEGMENTS = [
   { id: 'content-ip', name: 'Content IP Bank', color: '#7B1FA2' },
   { id: 'exhibition', name: 'Film Exhibition', color: '#00838F' },
 ];
+
+let initialSegments = DEFAULT_SEGMENTS;
+if (typeof window !== 'undefined') {
+  try {
+    const stored = localStorage.getItem('kfpl_segments');
+    if (stored) {
+      initialSegments = JSON.parse(stored);
+    } else {
+      localStorage.setItem('kfpl_segments', JSON.stringify(DEFAULT_SEGMENTS));
+    }
+  } catch (e) {
+    console.warn('LocalStorage error:', e);
+  }
+}
+
+export const INVESTMENT_SEGMENTS = [...initialSegments];
 
 // ── Recognition Tiers ───────────────────────
 export const RECOGNITION_TIERS = [
@@ -158,7 +174,7 @@ export const investors = [
     phone: '+91 98765 43210', dob: '1985-03-15', address: '42, Marine Drive, Mumbai 400001',
     category: 'diamond', status: 'active', totalInvestment: 25000000, roiPercentage: 18,
     joinDate: '2024-01-10', kyc: 'Verified', pan: 'ABCPK1234L',
-    bankName: 'HDFC Bank', accountNo: 'XXXX4567', ifsc: 'HDFC0001234',
+    bankName: 'HDFC Bank', accountNo: 'XXXX4567', ifsc: 'HDFC0001234', riskProfile: 'Moderate',
     investments: [
       { id: 101, segment: 'Film Making', amount: 10000000, date: '2024-01-15', roi: 18, status: 'active', risk: 30 },
       { id: 102, segment: 'Distribution', amount: 8000000, date: '2024-02-20', roi: 15, status: 'active', risk: 25 },
@@ -178,7 +194,7 @@ export const investors = [
     phone: '+91 98765 43211', dob: '1990-07-22', address: '15, Banjara Hills, Hyderabad 500034',
     category: 'diamond', status: 'active', totalInvestment: 18000000, roiPercentage: 16,
     joinDate: '2024-02-05', kyc: 'Verified', pan: 'DEFPS5678M',
-    bankName: 'ICICI Bank', accountNo: 'XXXX8901', ifsc: 'ICIC0005678',
+    bankName: 'ICICI Bank', accountNo: 'XXXX8901', ifsc: 'ICIC0005678', riskProfile: 'Aggressive',
     investments: [
       { id: 104, segment: 'Film Making', amount: 8000000, date: '2024-02-10', roi: 16, status: 'active', risk: 35 },
       { id: 105, segment: 'Content IP Bank', amount: 5000000, date: '2024-03-15', roi: 14, status: 'active', risk: 30 },
@@ -196,7 +212,7 @@ export const investors = [
     phone: '+91 98765 43212', dob: '1988-11-08', address: '8, Koregaon Park, Pune 411001',
     category: 'diamond', status: 'active', totalInvestment: 12000000, roiPercentage: 15,
     joinDate: '2024-03-12', kyc: 'Verified', pan: 'GHIAD9012N',
-    bankName: 'SBI', accountNo: 'XXXX2345', ifsc: 'SBIN0009012',
+    bankName: 'SBI', accountNo: 'XXXX2345', ifsc: 'SBIN0009012', riskProfile: 'Conservative',
     investments: [
       { id: 107, segment: 'Trading & Syndication', amount: 6000000, date: '2024-03-20', roi: 15, status: 'active', risk: 40 },
       { id: 108, segment: 'Distribution', amount: 6000000, date: '2024-04-05', roi: 15, status: 'active', risk: 25 },
@@ -212,7 +228,7 @@ export const investors = [
     phone: '+91 98765 43213', dob: '1975-05-30', address: '25, CG Road, Ahmedabad 380006',
     category: 'platinum', status: 'active', totalInvestment: 8500000, roiPercentage: 14,
     joinDate: '2024-04-18', kyc: 'Verified', pan: 'JKLSP3456O',
-    bankName: 'Kotak Mahindra Bank', accountNo: 'XXXX6789', ifsc: 'KKBK0003456',
+    bankName: 'Kotak Mahindra Bank', accountNo: 'XXXX6789', ifsc: 'KKBK0003456', riskProfile: 'Conservative',
     investments: [
       { id: 109, segment: 'Film Making', amount: 5000000, date: '2024-04-25', roi: 14, status: 'active', risk: 30 },
       { id: 110, segment: 'Music', amount: 3500000, date: '2024-05-10', roi: 14, status: 'active', risk: 25 },
@@ -228,7 +244,7 @@ export const investors = [
     phone: '+91 98765 43214', dob: '1992-09-14', address: '12, Indiranagar, Bangalore 560038',
     category: 'platinum', status: 'active', totalInvestment: 7200000, roiPercentage: 13,
     joinDate: '2024-05-02', kyc: 'Verified', pan: 'MNOMI7890P',
-    bankName: 'Axis Bank', accountNo: 'XXXX0123', ifsc: 'UTIB0007890',
+    bankName: 'Axis Bank', accountNo: 'XXXX0123', ifsc: 'UTIB0007890', riskProfile: 'Moderate',
     investments: [
       { id: 111, segment: 'Content IP Bank', amount: 4000000, date: '2024-05-08', roi: 13, status: 'active', risk: 35 },
       { id: 112, segment: 'Film Exhibition', amount: 3200000, date: '2024-06-01', roi: 13, status: 'active', risk: 30 },
@@ -243,7 +259,7 @@ export const investors = [
     phone: '+91 98765 43215', dob: '1983-12-25', address: '55, Connaught Place, New Delhi 110001',
     category: 'gold', status: 'active', totalInvestment: 4500000, roiPercentage: 12,
     joinDate: '2024-06-15', kyc: 'Verified', pan: 'PQRAJ2345Q',
-    bankName: 'Punjab National Bank', accountNo: 'XXXX4567', ifsc: 'PUNB0002345',
+    bankName: 'Punjab National Bank', accountNo: 'XXXX4567', ifsc: 'PUNB0002345', riskProfile: 'Conservative',
     investments: [
       { id: 113, segment: 'Film Making', amount: 3000000, date: '2024-06-20', roi: 12, status: 'active', risk: 30 },
       { id: 114, segment: 'Distribution', amount: 1500000, date: '2024-07-01', roi: 12, status: 'active', risk: 20 },
@@ -258,7 +274,7 @@ export const investors = [
     phone: '+91 98765 43216', dob: '1995-02-18', address: '9, Jubilee Hills, Hyderabad 500033',
     category: 'gold', status: 'inactive', totalInvestment: 3200000, roiPercentage: 11,
     joinDate: '2024-07-10', kyc: 'Pending', pan: 'STUKR6789R',
-    bankName: 'Canara Bank', accountNo: 'XXXX8901', ifsc: 'CNRB0006789',
+    bankName: 'Canara Bank', accountNo: 'XXXX8901', ifsc: 'CNRB0006789', riskProfile: 'Aggressive',
     investments: [
       { id: 115, segment: 'Music', amount: 2000000, date: '2024-07-15', roi: 11, status: 'paused', risk: 25 },
       { id: 116, segment: 'Trading & Syndication', amount: 1200000, date: '2024-08-01', roi: 11, status: 'paused', risk: 30 },
@@ -271,7 +287,7 @@ export const investors = [
     phone: '+91 98765 43217', dob: '1980-06-07', address: '30, Civil Lines, Jaipur 302006',
     category: 'silver', status: 'suspended', totalInvestment: 800000, roiPercentage: 10,
     joinDate: '2024-08-20', kyc: 'Rejected', pan: 'VWXSV0123S',
-    bankName: 'Bank of Baroda', accountNo: 'XXXX2345', ifsc: 'BARB0000123',
+    bankName: 'Bank of Baroda', accountNo: 'XXXX2345', ifsc: 'BARB0000123', riskProfile: 'Aggressive',
     investments: [
       { id: 117, segment: 'Film Making', amount: 800000, date: '2024-08-25', roi: 10, status: 'suspended', risk: 100 },
     ],
@@ -290,6 +306,9 @@ export const agents = [
     bankName: 'HDFC Bank', accountNo: 'XXXX9876', ifsc: 'HDFC0004321',
     joinDate: '2023-11-01',
     clients: [1, 2, 3],
+    investments: [
+      { id: 401, segment: 'Film Making', amount: 5000000, date: '2024-01-20', roi: 12, status: 'active', risk: 'Medium' }
+    ],
     commissionHistory: [
       { id: 301, month: 'Jan 2025', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-01-31' },
       { id: 302, month: 'Feb 2025', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-02-28' },
@@ -305,6 +324,7 @@ export const agents = [
     bankName: 'ICICI Bank', accountNo: 'XXXX5432', ifsc: 'ICIC0008765',
     joinDate: '2023-12-15',
     clients: [4, 5],
+    investments: [],
     commissionHistory: [
       { id: 305, month: 'Jan 2025', amount: 26667, type: 'monthly', status: 'paid', paidAt: '2025-01-31' },
       { id: 306, month: 'Feb 2025', amount: 26667, type: 'monthly', status: 'pending', paidAt: null },
@@ -318,6 +338,7 @@ export const agents = [
     bankName: 'SBI', accountNo: 'XXXX1098', ifsc: 'SBIN0003456',
     joinDate: '2024-01-20',
     clients: [6],
+    investments: [],
     commissionHistory: [
       { id: 307, month: 'Jan 2025', amount: 11667, type: 'monthly', status: 'paid', paidAt: '2025-01-31' },
     ],
@@ -330,6 +351,7 @@ export const agents = [
     bankName: 'Axis Bank', accountNo: 'XXXX7654', ifsc: 'UTIB0006789',
     joinDate: '2024-03-05',
     clients: [7, 8],
+    investments: [],
     commissionHistory: [],
   },
 ];
@@ -366,6 +388,24 @@ export const perks = [
   { id: 705, name: 'Premiere Tickets', description: 'VIP premiere tickets for KFPL productions', tier: 'silver', minInvestment: 500000, status: 'active' },
   { id: 706, name: 'Tax Advisory', description: 'Free annual tax planning session', tier: 'platinum', minInvestment: 5000000, status: 'inactive' },
 ];
+
+// Initialize default portal login credentials dynamically
+investors.forEach(inv => {
+  if (!inv.portalEmail) inv.portalEmail = inv.email;
+  if (!inv.portalPassword) {
+    const firstWord = inv.name.split(' ')[0];
+    inv.portalPassword = `${firstWord}@${inv.clientId ? inv.clientId.split('-')[1] : '123'}`;
+  }
+});
+
+agents.forEach(agt => {
+  if (!agt.portalEmail) agt.portalEmail = agt.email;
+  if (!agt.portalPassword) {
+    const firstWord = agt.name.split(' ')[0];
+    const rawId = agt.agentId ? agt.agentId.split('-')[1] : '123';
+    agt.portalPassword = `${firstWord}@${rawId}`;
+  }
+});
 
 // ── Utility: Format Currency ───────────────────────
 export function formatCurrency(amount) {

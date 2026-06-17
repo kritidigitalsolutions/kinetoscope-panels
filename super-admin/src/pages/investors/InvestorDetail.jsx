@@ -98,6 +98,9 @@ export default function InvestorDetail() {
 
   const investor = investors.find(inv => inv.id === Number(id));
 
+  const [localRiskProfile, setLocalRiskProfile] = useState(investor ? (investor.riskProfile || 'Conservative') : 'Conservative');
+  const [localStatus, setLocalStatus] = useState(investor ? investor.status : 'active');
+
   if (!investor) {
     return (
       <div className="kfpl-page">
@@ -115,6 +118,44 @@ export default function InvestorDetail() {
   const totalPaidROI = investor.roiHistory.filter(r => r.status === 'paid').reduce((sum, r) => sum + r.amount, 0);
   const totalPendingROI = investor.roiHistory.filter(r => r.status === 'pending').reduce((sum, r) => sum + r.amount, 0);
 
+  const riskMap = {
+    'Conservative': 'active', // green
+    'Moderate': 'gold',       // gold
+    'Aggressive': 'rejected'   // red
+  };
+
+  const handleRiskProfileChange = (e) => {
+    const newRisk = e.target.value;
+    setLocalRiskProfile(newRisk);
+    investor.riskProfile = newRisk; // updates in-memory mock data
+    addToast(`Risk profile updated to ${newRisk}`, 'success', 'Profile Updated');
+  };
+
+  const handleBlockClient = () => {
+    const newStatus = localStatus === 'suspended' ? 'active' : 'suspended';
+    investor.status = newStatus;
+    setLocalStatus(newStatus);
+    addToast(`Client status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+  };
+
+  const handleHoldClient = () => {
+    const newStatus = localStatus === 'inactive' ? 'active' : 'inactive';
+    investor.status = newStatus;
+    setLocalStatus(newStatus);
+    addToast(`Client status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+  };
+
+  const handleDeleteClient = () => {
+    if (window.confirm(`Are you sure you want to completely delete client profile "${investor.name}"?`)) {
+      const idx = investors.findIndex(inv => inv.id === investor.id);
+      if (idx !== -1) {
+        investors.splice(idx, 1);
+      }
+      addToast('Client profile deleted successfully!', 'success', 'Client Deleted');
+      navigate('/investors');
+    }
+  };
+
   return (
     <div className="kfpl-page">
       {/* Premium Gradient Header Card */}
@@ -128,13 +169,23 @@ export default function InvestorDetail() {
             <div className="kfpl-detail-id" style={{ marginTop: '2px' }}>ID: {investor.clientId}</div>
             <div className="kfpl-detail-meta" style={{ marginTop: '8px' }}>
               <Badge status={investor.category}>{investor.category} Tier</Badge>
-              <Badge status={investor.status}>{investor.status}</Badge>
+              <Badge status={localStatus}>{localStatus}</Badge>
+              <Badge status={riskMap[localRiskProfile]}>{localRiskProfile} Risk</Badge>
             </div>
           </div>
         </div>
-        <div className="kfpl-detail-actions">
+        <div className="kfpl-detail-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: 'rgba(255, 255, 255, 0.05)' }} onClick={() => navigate('/investors')}>
             ← Back
+          </button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'suspended' ? '#EF4444' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleBlockClient}>
+            {localStatus === 'suspended' ? 'Unblock Client' : 'Block Client'}
+          </button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'inactive' ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleHoldClient}>
+            {localStatus === 'inactive' ? 'Resume Client' : 'Hold Client'}
+          </button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={handleDeleteClient}>
+            Delete Client
           </button>
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" style={{ background: '#10B981', color: 'var(--color-white)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }} onClick={() => navigate(`/investors/${id}/edit`)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
@@ -239,6 +290,37 @@ export default function InvestorDetail() {
                 <span className="kfpl-detail-info-item-value">
                   <Badge status={investor.kyc === 'Verified' ? 'active' : 'pending'}>{investor.kyc}</Badge>
                 </span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div className="kfpl-detail-info-item-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <div>
+                  <span className="kfpl-detail-info-item-label">Risk Profile</span>
+                  <span className="kfpl-detail-info-item-value">{localRiskProfile}</span>
+                </div>
+                <select
+                  value={localRiskProfile}
+                  onChange={handleRiskProfileChange}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.8rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text-primary)',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Conservative">Conservative</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Aggressive">Aggressive</option>
+                </select>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">

@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import Badge from '../../components/ui/Badge';
 import { agents, COMMISSION_SLABS } from '../../data/mockData';
+import FileDropzone from '../../components/ui/FileDropzone';
 
 export default function EditAgent() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function EditAgent() {
     bankName: '', accountNo: '', ifsc: '',
     commissionOneTime: '', commissionMonthly: '', commissionSpecial: '',
     status: '',
+    nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
   });
 
   useEffect(() => {
@@ -37,6 +39,10 @@ export default function EditAgent() {
         commissionMonthly: agent.commissionMonthly ?? '',
         commissionSpecial: agent.commissionSpecial ?? '',
         status: agent.status || '',
+        nomineeName: agent.nominee?.name || '',
+        nomineeRelation: agent.nominee?.relation || '',
+        nomineeContact: agent.nominee?.contact || '',
+        nomineeEmail: agent.nominee?.email || '',
       });
     }
   }, [agent]);
@@ -58,6 +64,10 @@ export default function EditAgent() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
+      alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
+      return;
+    }
     // Update mock data in-memory so changes reflect immediately
     const idx = agents.findIndex(a => a.id === Number(id));
     if (idx !== -1) {
@@ -74,6 +84,12 @@ export default function EditAgent() {
         commissionMonthly: parseFloat(form.commissionMonthly) || 0,
         commissionSpecial: parseFloat(form.commissionSpecial) || 0,
         status: form.status,
+        nominee: {
+          name: form.nomineeName,
+          relation: form.nomineeRelation,
+          contact: form.nomineeContact,
+          email: form.nomineeEmail,
+        }
       };
     }
     addToast(`Agent "${form.name}" updated successfully!`, 'success', 'Agent Updated');
@@ -181,6 +197,43 @@ export default function EditAgent() {
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Special Commission %</label>
                 <input className="kfpl-input" name="commissionSpecial" type="number" step="0.1" value={form.commissionSpecial} onChange={handleChange} placeholder="e.g. 0.5" />
+              </div>
+            </div>
+          </div>
+
+          {/* KYC Document Uploads */}
+          <FileDropzone label="PAN Card Upload" />
+          <FileDropzone label="ID Proof Upload (Aadhaar / Driving License / Passport)" />
+          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
+
+          {/* Nominee Details */}
+          <div className="kfpl-form-section">
+            <div className="kfpl-form-section-title">Nominee Details</div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Name {(form.nomineeRelation || form.nomineeContact) && <span className="required">*</span>}</label>
+                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
+              </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Relation</label>
+                <select className="kfpl-select" name="nomineeRelation" value={form.nomineeRelation} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                  <option value="">Select Relation</option>
+                  <option value="Spouse">Spouse</option>
+                  <option value="Parent">Parent</option>
+                  <option value="Child">Child</option>
+                  <option value="Sibling">Sibling</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Contact Number</label>
+                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
+              </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Email Address</label>
+                <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
               </div>
             </div>
           </div>
