@@ -5,49 +5,7 @@
 
 /* ── Tablet (768px - 1023px) ─────────────────────── */
 @media (max-width: 1023px) {
-  /* Auto-collapse sidebar on tablet */
-  .kfpl-sidebar {
-    width: var(--sidebar-collapsed-width);
-  }
-
-  .kfpl-sidebar .kfpl-sidebar-logo-text {
-    opacity: 0;
-    width: 0;
-  }
-
-  .kfpl-sidebar .kfpl-sidebar-section-title {
-    opacity: 0;
-    height: 0;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-  }
-
-  .kfpl-sidebar .kfpl-sidebar-item {
-    justify-content: center;
-    padding: 10px 0;
-    margin: 2px 8px;
-  }
-
-  .kfpl-sidebar .kfpl-sidebar-item-label {
-    opacity: 0;
-    width: 0;
-  }
-
-  .kfpl-sidebar .kfpl-sidebar-item-badge {
-    display: none;
-  }
-
-  .kfpl-sidebar .kfpl-sidebar-toggle svg {
-    transform: rotate(180deg);
-  }
-
-  .kfpl-main-area {
-    margin-left: var(--sidebar-collapsed-width);
-  }
-
   .kfpl-header {
-    left: var(--sidebar-collapsed-width);
     padding: 0 20px;
   }
 
@@ -105,33 +63,37 @@
   }
 
   .kfpl-sidebar.mobile-open {
-    transform: translateX(0);
+    width: var(--sidebar-width) !important;
+    transform: translateX(0) !important;
   }
 
   /* Restore full sidebar look when open on mobile */
   .kfpl-sidebar.mobile-open .kfpl-sidebar-logo-text {
-    opacity: 1;
-    width: auto;
+    opacity: 1 !important;
+    width: auto !important;
   }
 
   .kfpl-sidebar.mobile-open .kfpl-sidebar-section-title {
-    opacity: 1;
-    height: auto;
-    padding: 8px 20px 6px;
+    opacity: 1 !important;
+    height: auto !important;
+    padding: 12px 18px 6px !important;
+    margin: 0 !important;
+    overflow: visible !important;
   }
 
   .kfpl-sidebar.mobile-open .kfpl-sidebar-item {
-    justify-content: flex-start;
-    padding: 10px 20px;
+    justify-content: flex-start !important;
+    padding: 9px 18px !important;
+    margin: 1px 8px !important;
   }
 
   .kfpl-sidebar.mobile-open .kfpl-sidebar-item-label {
-    opacity: 1;
-    width: auto;
+    opacity: 1 !important;
+    width: auto !important;
   }
 
   .kfpl-sidebar.mobile-open .kfpl-sidebar-item-badge {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 
 
@@ -324,9 +286,10 @@
     flex-shrink: 0;
   }
 
-  /* Settings grid */
-  .kfpl-page > div[style*="grid-template-columns: 1fr 1fr"] {
+  /* Responsive grid helper */
+  .kfpl-grid-2col {
     grid-template-columns: 1fr !important;
+    gap: 16px !important;
   }
 }
 

@@ -18,6 +18,8 @@ export default function AssignInvestment() {
     INVESTMENT_SEGMENTS.reduce((acc, seg) => ({ ...acc, [seg.id]: 0 }), {})
   );
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -28,10 +30,54 @@ export default function AssignInvestment() {
 
   const totalRisk = Object.values(riskSliders).reduce((sum, v) => sum + v, 0);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    addToast('Investment assigned successfully!', 'success', 'Investment Created');
-    setTimeout(() => navigate('/investments'), 500);
+    setLoading(true);
+
+    const selectedInvestor = investors.find(i => String(i.id) === String(form.investorId));
+    const clientId = selectedInvestor?.clientId || '';
+    const segmentName = INVESTMENT_SEGMENTS.find(s => s.id === form.segment)?.name || form.segment;
+    const riskPercentage = riskSliders[form.segment] || 0;
+
+    const authData = localStorage.getItem('kfpl_auth');
+    const token = authData ? JSON.parse(authData)?.token : null;
+
+    if (!token) {
+      addToast('Authentication token not found. Please log in again.', 'error', 'Error');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/super-admin/investments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          clientId,
+          segment: segmentName,
+          investmentAmount: Number(form.amount),
+          roiPercentage: Number(form.roi),
+          riskPercentage,
+          investmentDate: new Date().toISOString().split('T')[0],
+          remarks: `Investment assigned for contract period of ${form.contractPeriod || 12} months`
+        })
+      });
+
+      if (response.ok) {
+        addToast('Investment assigned successfully!', 'success', 'Investment Created');
+        setTimeout(() => navigate('/investments'), 500);
+      } else {
+        const data = await response.json();
+        addToast(data.message || data.error || 'Failed to assign investment.', 'error', 'Error');
+      }
+    } catch (err) {
+      addToast('Unable to connect to server.', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -117,8 +163,10 @@ export default function AssignInvestment() {
           </div>
 
           <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/investments')}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary">Assign Investment</button>
+            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/investments')} disabled={loading}>Cancel</button>
+            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={loading}>
+              {loading ? 'Assigning...' : 'Assign Investment'}
+            </button>
           </div>
         </div>
       </form>

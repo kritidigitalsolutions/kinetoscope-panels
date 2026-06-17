@@ -1,0 +1,499 @@
+{
+  "info": {
+    "_postman_id": "3824d6f1-9438-4e27-af9a-92d2f748b0d4",
+    "name": "kinetoscope",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53567820",
+    "_collection_link": "https://go.postman.co/collection/53567820-3824d6f1-9438-4e27-af9a-92d2f748b0d4?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "super_admin",
+      "item": [
+        {
+          "name": "admin auth",
+          "item": [
+            {
+              "name": "Setup Admin",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"name\": \"KFPL Super Admin\",\r\n  \"email\": \"admin@kfpl.com\",\r\n  \"password\": \"Admin@1234\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/auth/setup-admin",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "setup-admin"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "admin login",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"newadmin@kfpl.com\",\r\n  \"password\": \"Admin@1234\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/auth/login",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2fa verify",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"admin@kfpl.com\",\r\n  \"otp\": \"701900\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/auth/verify-2fa",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "verify-2fa"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/auth/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  ""
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Investment module",
+          "item": [
+            {
+              "name": "create investment",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"clientId\": \"685ab1234\",\r\n  \"segment\": \"Film Making\",\r\n  \"investmentAmount\": 10000000,\r\n  \"roiPercentage\": 18,\r\n  \"riskPercentage\": 30,\r\n  \"investmentDate\": \"2025-06-16\",\r\n  \"remarks\": \"Initial Investment\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/investments",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "investments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Investments",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"investorName\": \"Rohit Sharma\",\r\n  \"investorEmail\": \"rohit@gmail.com\",\r\n  \"investmentAmount\": 500000,\r\n  \"investmentType\": \"Yearly\",\r\n  \"expectedROI\": 12,\r\n  \"investmentDate\": \"2026-06-15\",\r\n  \"maturityDate\": \"2027-06-15\",\r\n  \"remarks\": \"Premium Investor\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/investments",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "investments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get investmenrt by id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/super-admin/investments/:INVESTMENT_ID",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "investments",
+                    ":INVESTMENT_ID"
+                  ],
+                  "variable": [
+                    {
+                      "key": "INVESTMENT_ID",
+                      "value": "6a311d46855616bab2a4db84"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "settings",
+          "item": [
+            {
+              "name": "toggle 2fa",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"is2FAEnabled\": true\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/settings/2fa",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "settings",
+                    "2fa"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update profile",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"name\": \"updated KFPL Admin\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/auth/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "change email -Send OTP",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"currentEmail\": \"admin@kfpl.com\",\r\n  \"newEmail\": \"newadmin@kfpl.com\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/settings/change-email/send-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "settings",
+                    "change-email",
+                    "send-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "verify otp",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"otp\": \"139520\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/settings/change-email/verify-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "settings",
+                    "change-email",
+                    "verify-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "chnage password",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"currentPassword\": \"Admin@1234\",\r\n  \"newPassword\": \"Admin@12345\",\r\n  \"confirmPassword\": \"Admin@12345\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/settings/change-password/send-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "settings",
+                    "change-password",
+                    "send-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "logout",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"name\": \"updated KFPL Admin\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/api/auth/logout",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "verify otp - chnage password",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"otp\": \"764856\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/super-admin/settings/change-password/verify-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "super-admin",
+                    "settings",
+                    "change-password",
+                    "verify-otp"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMzExY2IwODU1NjE2YmFiMmE0ZGI4MyIsInJvbGUiOiJzdXBlci1hZG1pbiIsImlhdCI6MTc4MTYwMzU1MiwiZXhwIjoxNzg0MTk1NTUyfQ.tH25fH2MPhKTtNaBCjVV_yOJAlBH8z5J6H2TgQ4T7-g",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{url}}/health",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "supabase_service_role_api_key_1da1",
+      "secret": true
+    },
+    {
+      "key": "supabase_service_role_api_key_0m1k",
+      "secret": true
+    }
+  ]
+}

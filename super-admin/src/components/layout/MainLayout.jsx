@@ -9,13 +9,38 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 
 export default function MainLayout() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return window.innerWidth >= 768 && window.innerWidth <= 1023;
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Listen for window resize to auto-manage sidebar state
   useEffect(() => {
+    const getBreakpointCategory = (width) => {
+      if (width < 768) return 'mobile';
+      if (width <= 1023) return 'tablet';
+      return 'desktop';
+    };
+
+    let prevCategory = getBreakpointCategory(window.innerWidth);
+
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      const currentWidth = window.innerWidth;
+      const currentCategory = getBreakpointCategory(currentWidth);
+
+      // Toggle state automatically when crossing breakpoint category boundary
+      if (currentCategory !== prevCategory) {
+        if (currentCategory === 'tablet') {
+          setIsCollapsed(true);
+        } else if (currentCategory === 'desktop') {
+          setIsCollapsed(false);
+        } else if (currentCategory === 'mobile') {
+          setIsCollapsed(false);
+        }
+        prevCategory = currentCategory;
+      }
+
+      if (currentWidth >= 768) {
         setIsMobileOpen(false);
       }
     };

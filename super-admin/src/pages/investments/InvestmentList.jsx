@@ -3,6 +3,7 @@
    Description: All investments across all clients
    ============================================================ */
 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
@@ -10,34 +11,71 @@ import { investors, formatCurrency } from '../../data/mockData';
 
 export default function InvestmentList() {
   const navigate = useNavigate();
+  const [investments, setInvestments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Flatten all investments from all investors
-  const allInvestments = investors.flatMap(inv =>
+  useEffect(() => {
+    const fetchInvestments = async () => {
+      const authData = localStorage.getItem('kfpl_auth');
+      const token = authData ? JSON.parse(authData)?.token : null;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/super-admin/investments', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setInvestments(Array.isArray(data) ? data : (data.investments || []));
+        }
+      } catch (err) {
+        console.error('Failed to fetch investments from API', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvestments();
+  }, []);
+
+  // Flatten mock investments for fallback
+  const mockInvestments = investors.flatMap(inv =>
     inv.investments.map(investment => ({
       ...investment,
       investorName: inv.name,
       clientId: inv.clientId,
       investorId: inv.id,
+      investmentAmount: investment.amount,
+      roiPercentage: investment.roi,
+      riskPercentage: investment.risk,
+      investmentDate: investment.date,
     }))
   );
+
+  const displayData = investments.length > 0 ? investments : mockInvestments;
 
   const columns = [
     {
       header: 'Client',
-      accessor: 'investorName',
+      accessor: 'clientId',
       render: (row) => (
         <div>
-          <div className="kfpl-table-cell-primary">{row.investorName}</div>
+          <div className="kfpl-table-cell-primary">{row.investorName || row.clientId || 'N/A'}</div>
           <div className="kfpl-table-cell-secondary">{row.clientId}</div>
         </div>
       ),
     },
     { header: 'Segment', accessor: 'segment', render: (row) => <span className="font-medium">{row.segment}</span> },
-    { header: 'Amount', accessor: 'amount', render: (row) => <span className="font-semibold">{formatCurrency(row.amount)}</span> },
-    { header: 'ROI %', accessor: 'roi', render: (row) => `${row.roi}%` },
-    { header: 'Risk %', accessor: 'risk', render: (row) => `${row.risk}%` },
-    { header: 'Date', accessor: 'date' },
-    { header: 'Status', accessor: 'status', render: (row) => <Badge status={row.status}>{row.status}</Badge> },
+    { header: 'Amount', accessor: 'investmentAmount', render: (row) => <span className="font-semibold">{formatCurrency(row.investmentAmount || row.amount || 0)}</span> },
+    { header: 'ROI %', accessor: 'roiPercentage', render: (row) => `${row.roiPercentage || row.roi || 0}%` },
+    { header: 'Risk %', accessor: 'riskPercentage', render: (row) => `${row.riskPercentage || row.risk || 0}%` },
+    { header: 'Date', accessor: 'investmentDate', render: (row) => row.investmentDate || row.date || 'N/A' },
+    { header: 'Status', accessor: 'status', render: (row) => <Badge status={row.status || 'active'}>{row.status || 'active'}</Badge> },
   ];
 
   return (
@@ -59,8 +97,8 @@ export default function InvestmentList() {
 
       <DataTable
         columns={columns}
-        data={allInvestments}
-        onRowClick={(row) => navigate(`/investors/${row.investorId}`)}
+        data={displayData}
+        onRowClick={(row) => row.investorId ? navigate(`/investors/${row.investorId}`) : null}
         searchPlaceholder="Search by investor, segment..."
       />
     </div>

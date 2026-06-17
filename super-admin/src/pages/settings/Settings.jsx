@@ -261,16 +261,18 @@ export default function Settings() {
     setSendingOtp(true);
 
     try {
-      const response = await fetch('/api/auth/send-otp', {
+      const response = await fetch('/api/super-admin/settings/change-email/send-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ email: currentEmail }),
+        body: JSON.stringify({ currentEmail, newEmail }),
       });
 
       const data = await response.json();
+      console.log('📩 Email Change OTP response:', data);
+      console.log('📩 Email Change OTP (from API):', data.otp || data.code || 'Check email');
 
       if (response.ok) {
         setOtpSent(true);
@@ -305,14 +307,13 @@ export default function Settings() {
     setVerifyingOtp(true);
 
     try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PATCH',
+      const response = await fetch('/api/super-admin/settings/change-email/verify-otp', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          email: newEmail,
           otp: emailOtp,
         }),
       });
@@ -373,16 +374,22 @@ export default function Settings() {
     setSendingPwdOtp(true);
 
     try {
-      const response = await fetch('/api/auth/send-otp', {
+      const response = await fetch('/api/super-admin/settings/change-password/send-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ email: currentEmail }),
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
       });
 
       const data = await response.json();
+      console.log('📩 Password Change OTP response:', data);
+      console.log('📩 Password Change OTP (from API):', data.otp || data.code || 'Check email');
 
       if (response.ok) {
         setPwdOtpSent(true);
@@ -420,15 +427,13 @@ export default function Settings() {
         return;
       }
 
-      const response = await fetch('/api/auth/change-password', {
-        method: 'PATCH',
+      const response = await fetch('/api/super-admin/settings/change-password/verify-otp', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          currentPassword,
-          newPassword,
           otp: pwdOtp,
         }),
       });
@@ -483,15 +488,52 @@ export default function Settings() {
   });
 
   // Handle TFA toggle
-  const handleTfaToggle = () => {
+  const handleTfaToggle = async () => {
     const newValue = !twoFactor;
-    setTwoFactor(newValue);
-    localStorage.setItem('kfpl_tfa', String(newValue));
-    addToast(
-      `Two-Factor Authentication turned ${newValue ? 'ON' : 'OFF'}`,
-      newValue ? 'success' : 'info',
-      'Security Update'
-    );
+    const token = getToken();
+    if (!token) {
+      addToast('Authentication token not found. Please log in again.', 'error', 'Error');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/super-admin/settings/2fa', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is2FAEnabled: newValue }),
+      });
+
+      if (response.ok) {
+        setTwoFactor(newValue);
+        localStorage.setItem('kfpl_tfa', String(newValue));
+
+        if (currentUser) {
+          const updatedUser = {
+            ...currentUser,
+            admin: {
+              ...currentUser.admin,
+              is2FAEnabled: newValue,
+            }
+          };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('kfpl_auth', JSON.stringify(updatedUser));
+        }
+
+        addToast(
+          `Two-Factor Authentication turned ${newValue ? 'ON' : 'OFF'}`,
+          newValue ? 'success' : 'info',
+          'Security Update'
+        );
+      } else {
+        const data = await response.json();
+        addToast(data.message || data.error || 'Failed to update 2FA setting.', 'error', 'Error');
+      }
+    } catch (err) {
+      addToast('Unable to connect to server.', 'error', 'Error');
+    }
   };
 
   return (
@@ -503,7 +545,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <div className="kfpl-grid-2col">
         {/* Left Column: Change Email & Security Options */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           

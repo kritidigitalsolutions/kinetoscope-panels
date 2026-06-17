@@ -321,7 +321,7 @@ export default function InvestorDetail() {
       {activeTab === 'roi' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* ROI Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="kfpl-grid-2col" style={{ gap: '20px' }}>
             <div className="kfpl-detail-kpi-summary-card" style={{ borderLeft: '4px solid #10B981' }}>
               <span className="kfpl-detail-kpi-summary-label">Total ROI Paid</span>
               <span className="kfpl-detail-kpi-summary-value" style={{ color: '#10B981' }}>{formatCurrency(totalPaidROI)}</span>

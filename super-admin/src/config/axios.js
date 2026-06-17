@@ -1,47 +1,56 @@
 /* ============================================================
    Config: axios.js
    Description: Centralized Axios instance with auth token,
-                base URL from env, and interceptors
+                base URL and interceptors
    ============================================================ */
 
 import axios from 'axios';
 
+// Local + Production URLs
+const BASE_URL =
+  window.location.hostname === 'localhost'
+    ? 'http://192.168.1.23:5000/api'
+    : 'https://kinetoscope-backend.vercel.app/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 15000,
 });
 
-// ── Request Interceptor: Attach Bearer token ──────────────
+// ── Request Interceptor: Attach Bearer Token ──────────────
 api.interceptors.request.use(
   (config) => {
     try {
       const authData = localStorage.getItem('kfpl_auth');
+
       if (authData) {
         const token = JSON.parse(authData)?.token;
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
     } catch (err) {
-      console.error('Failed to parse auth data', err);
+      console.error('Failed to parse auth data:', err);
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ── Response Interceptor: Handle 401 (session expired) ────
+// ── Response Interceptor: Handle 401 ─────────────────────
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear auth and redirect to login
       localStorage.removeItem('kfpl_auth');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

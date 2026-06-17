@@ -926,4 +926,11 @@
   align-items: center;
 }
 
+/* ── Responsive 2 Column Grid ─────────────────────── */
+.kfpl-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
 /* ============ END: components.css ============ */

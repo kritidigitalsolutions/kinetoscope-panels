@@ -114,7 +114,21 @@ export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileC
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const authData = localStorage.getItem('kfpl_auth');
+    const token = authData ? JSON.parse(authData)?.token : null;
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (err) {
+        console.error('Failed to log out from server', err);
+      }
+    }
     localStorage.removeItem('kfpl_auth');
     window.location.href = '/login';
   };
