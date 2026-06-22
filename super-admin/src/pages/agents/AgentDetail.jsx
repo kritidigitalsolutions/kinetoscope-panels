@@ -340,9 +340,7 @@ export default function AgentDetail() {
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Bank</span><span className="kfpl-detail-info-value">{agent.bankName}</span></div>
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Account No.</span><span className="kfpl-detail-info-value">{agent.accountNo}</span></div>
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">IFSC</span><span className="kfpl-detail-info-value">{agent.ifsc}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">One-Time %</span><span className="kfpl-detail-info-value">{agent.commissionOneTime}%</span></div>
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Monthly Slab %</span><span className="kfpl-detail-info-value">{agent.commissionMonthly}%</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Special %</span><span className="kfpl-detail-info-value">{agent.commissionSpecial}%</span></div>
           </div>
         </div>
       )}
