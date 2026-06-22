@@ -114,6 +114,32 @@ export default function AssignInvestment() {
     } catch (err) {
       // Prototype fallback - save to in-memory/mock and proceed on client side
       console.warn('API error, falling back to client-side mock action:', err);
+      
+      const selectedInvestor = investors.find(i => String(i.id) === String(form.investorId));
+      if (selectedInvestor) {
+        const period = Number(form.contractPeriod) || 24;
+        const newIdBase = Date.now();
+        selectedSegments.forEach((segId, index) => {
+          const segName = INVESTMENT_SEGMENTS.find(s => s.id === segId)?.name || segId;
+          const percentage = parseFloat(allocations[segId]) || 0;
+          const allocatedAmount = Number(form.amount) * (percentage / 100);
+          
+          selectedInvestor.investments.push({
+            id: newIdBase + index,
+            segment: segName,
+            amount: allocatedAmount,
+            roi: Number(form.roi),
+            risk: 25, // default mock risk
+            date: form.dateOfJoining,
+            status: 'Active',
+            contractPeriod: period
+          });
+        });
+        
+        // Also update total investment
+        selectedInvestor.totalInvestment += Number(form.amount);
+      }
+
       addToast('Investment assigned successfully (Prototype Mock Mode)!', 'success', 'Investment Created');
       setTimeout(() => navigate('/investments'), 500);
     } finally {

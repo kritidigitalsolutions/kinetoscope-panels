@@ -14,6 +14,7 @@ export default function ROIList() {
   const navigate = useNavigate();
   const addToast = useToast();
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // ROI / Commission records state
   const [clientROI, setClientROI] = useState([]);
@@ -231,15 +232,23 @@ export default function ROIList() {
   ].sort((a, b) => b.id - a.id);
 
   const filteredRecords = unifiedRecords.filter(r => {
-    if (filter === 'all') return true;
-    return r.status === filter;
+    if (filter !== 'all' && r.status !== filter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const haystack = [
+        r.name, r.subText, r.month, r.payoutDetail,
+        r.paymentMode, r.transactionRef
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
   });
 
   return (
     <div className="kfpl-page animate-fade-slide-up">
       <div className="kfpl-page-header">
         <div className="kfpl-page-header-left">
-          <h2 className="kfpl-page-title">Return on Investment</h2>
+          <h2 className="kfpl-page-title">Complete Transaction Details</h2>
           <p className="kfpl-page-subtitle">Track and record ROI returns and agent commission payouts</p>
         </div>
         <div className="kfpl-page-header-actions">
@@ -261,6 +270,23 @@ export default function ROIList() {
             {f !== 'all' && ` (${unifiedRecords.filter(r => r.status === f).length})`}
           </span>
         ))}
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ position: 'relative', maxWidth: '400px' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--color-text-muted)' }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            className="kfpl-input"
+            placeholder="Search by name, ID, month, reference..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ paddingLeft: '36px' }}
+          />
+        </div>
       </div>
 
       {/* Table */}

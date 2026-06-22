@@ -29,6 +29,9 @@ import InvestmentStatus from './pages/investments/InvestmentStatus';
 import ROIList from './pages/roi/ROIList';
 import ROIDetail from './pages/roi/ROIDetail';
 
+// ── Portfolio Pages ───────────────────────
+import PortfolioManagement from './pages/portfolio/PortfolioManagement';
+
 // ── Agent Pages ───────────────────────
 import AgentList from './pages/agents/AgentList';
 import AddAgent from './pages/agents/AddAgent';
@@ -105,6 +108,9 @@ export default function App() {
 
             {/* Status of Investment */}
             <Route path="investment-status" element={<InvestmentStatus />} />
+
+            {/* Portfolio Management */}
+            <Route path="portfolio" element={<PortfolioManagement />} />
 
             {/* Manage Agents */}
             <Route path="agents" element={<AgentList />} />

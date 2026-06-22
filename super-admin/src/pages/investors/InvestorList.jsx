@@ -20,6 +20,19 @@ export default function InvestorList() {
     return 'silver';
   };
 
+  // Calculate contract end date (joinDate + longest contract period, default 24 months)
+  const getContractEndDate = (row) => {
+    if (row.contractEndDate) return row.contractEndDate;
+    if (row.joinDate) {
+      const d = new Date(row.joinDate);
+      d.setMonth(d.getMonth() + 24);
+      const day = String(d.getDate()).padStart(2, '0');
+      const mon = String(d.getMonth() + 1).padStart(2, '0');
+      return `${day}/${mon}/${d.getFullYear()}`;
+    }
+    return '—';
+  };
+
   // Filter investors based on agentFilter
   const filteredInvestors = investors.filter(inv => {
     const hasAgent = agents.some(agent => agent.clients.includes(inv.id));
@@ -31,6 +44,10 @@ export default function InvestorList() {
   const columns = [
     { header: 'Client ID', accessor: 'clientId' },
     { header: 'Join Date', accessor: 'joinDate' },
+    {
+      header: 'Contract End',
+      render: (row) => <span>{getContractEndDate(row)}</span>,
+    },
     {
       header: 'Client Name',
       accessor: 'name',
@@ -60,9 +77,34 @@ export default function InvestorList() {
       render: (row) => {
         const agent = agents.find(a => a.clients.includes(row.id));
         return agent ? (
-          <span style={{ fontWeight: 500, color: 'var(--color-navy)' }}>{agent.name}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/agents/${agent.id}`);
+            }}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              fontWeight: 600, color: 'var(--color-gold-dark)',
+              textDecoration: 'underline', textUnderlineOffset: '3px',
+              cursor: 'pointer', fontSize: '0.875rem',
+            }}
+          >
+            {agent.name}
+          </button>
         ) : (
           <Badge status="inactive">Non Agent Client</Badge>
+        );
+      }
+    },
+    {
+      header: 'Agent Commission',
+      render: (row) => {
+        const agent = agents.find(a => a.clients.includes(row.id));
+        if (!agent) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+        return (
+          <span className="font-semibold" style={{ color: 'var(--color-success)' }}>
+            {agent.commissionMonthly}% monthly
+          </span>
         );
       }
     },

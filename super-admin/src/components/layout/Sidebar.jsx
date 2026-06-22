@@ -37,6 +37,11 @@ const icons = {
       <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
     </svg>
   ),
+  portfolio: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+  ),
   perks: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
@@ -105,8 +110,9 @@ const navSections = [
     title: 'Investment Management',
     items: [
       { path: '/investments', icon: 'investment', label: 'Manage Investments' },
-      { path: '/roi', icon: 'roi', label: 'Return on Investment' },
-      { path: '/investment-status', icon: 'status', label: 'Status of Investment' },
+      { path: '/roi', icon: 'roi', label: 'Complete Transaction Details' },
+      { path: '/investment-status', icon: 'status', label: 'Investment Status' },
+      { path: '/portfolio', icon: 'portfolio', label: 'Portfolio' },
       { path: '/perks', icon: 'perks', label: 'Perks & Recognition' },
     ],
   },

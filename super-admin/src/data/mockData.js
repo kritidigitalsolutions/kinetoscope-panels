@@ -310,10 +310,48 @@ export const agents = [
       { id: 401, segment: 'Film Making', amount: 5000000, date: '2024-01-20', roi: 12, status: 'active', risk: 'Medium' }
     ],
     commissionHistory: [
-      { id: 301, month: 'Jan 2025', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-01-31' },
-      { id: 302, month: 'Feb 2025', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-02-28' },
-      { id: 303, month: 'Mar 2025', amount: 33750, type: 'monthly', status: 'pending', paidAt: null },
-      { id: 304, month: 'Onboarding', amount: 900000, type: 'one-time', status: 'paid', paidAt: '2024-01-15' },
+      { id: 301, month: 'Jan 2025', date: '2025-01-31', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-01-31',
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 0.75, amount: 15625 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 0.75, amount: 11250 },
+          { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 0.75, amount: 6875 },
+        ]
+      },
+      { id: 302, month: 'Feb 2025', date: '2025-02-28', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-02-28',
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 0.75, amount: 15625 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 0.75, amount: 11250 },
+          { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 0.75, amount: 6875 },
+        ]
+      },
+      { id: 303, month: 'Mar 2025', date: '2025-03-31', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-03-31',
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 0.75, amount: 15625 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 0.75, amount: 11250 },
+          { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 0.75, amount: 6875 },
+        ]
+      },
+      { id: 308, month: 'Apr 2025', date: '2025-04-30', amount: 33750, type: 'monthly', status: 'paid', paidAt: '2025-04-30',
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 0.75, amount: 15625 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 0.75, amount: 11250 },
+          { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 0.75, amount: 6875 },
+        ]
+      },
+      { id: 309, month: 'May 2025', date: '2025-05-31', amount: 33750, type: 'monthly', status: 'pending', paidAt: null,
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 0.75, amount: 15625 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 0.75, amount: 11250 },
+          { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 0.75, amount: 6875 },
+        ]
+      },
+      { id: 304, month: 'Onboarding', date: '2024-01-15', amount: 900000, type: 'one-time', status: 'paid', paidAt: '2024-01-15',
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 2, amount: 500000 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 2, amount: 360000 },
+          { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 2, amount: 40000 },
+        ]
+      },
     ],
   },
   {
@@ -326,8 +364,24 @@ export const agents = [
     clients: [4, 5],
     investments: [],
     commissionHistory: [
-      { id: 305, month: 'Jan 2025', amount: 26667, type: 'monthly', status: 'paid', paidAt: '2025-01-31' },
-      { id: 306, month: 'Feb 2025', amount: 26667, type: 'monthly', status: 'pending', paidAt: null },
+      { id: 305, month: 'Jan 2025', date: '2025-01-31', amount: 26667, type: 'monthly', status: 'paid', paidAt: '2025-01-31',
+        breakdown: [
+          { clientName: 'Suresh Patel', clientId: 'KFPL-1004', investment: 8500000, rate: 1.0, amount: 7083 },
+          { clientName: 'Meera Iyer', clientId: 'KFPL-1005', investment: 7200000, rate: 1.0, amount: 6000 },
+        ]
+      },
+      { id: 306, month: 'Feb 2025', date: '2025-02-28', amount: 26667, type: 'monthly', status: 'paid', paidAt: '2025-02-28',
+        breakdown: [
+          { clientName: 'Suresh Patel', clientId: 'KFPL-1004', investment: 8500000, rate: 1.0, amount: 7083 },
+          { clientName: 'Meera Iyer', clientId: 'KFPL-1005', investment: 7200000, rate: 1.0, amount: 6000 },
+        ]
+      },
+      { id: 310, month: 'Mar 2025', date: '2025-03-31', amount: 26667, type: 'monthly', status: 'pending', paidAt: null,
+        breakdown: [
+          { clientName: 'Suresh Patel', clientId: 'KFPL-1004', investment: 8500000, rate: 1.0, amount: 7083 },
+          { clientName: 'Meera Iyer', clientId: 'KFPL-1005', investment: 7200000, rate: 1.0, amount: 6000 },
+        ]
+      },
     ],
   },
   {
@@ -340,7 +394,21 @@ export const agents = [
     clients: [6],
     investments: [],
     commissionHistory: [
-      { id: 307, month: 'Jan 2025', amount: 11667, type: 'monthly', status: 'paid', paidAt: '2025-01-31' },
+      { id: 307, month: 'Jan 2025', date: '2025-01-31', amount: 11667, type: 'monthly', status: 'paid', paidAt: '2025-01-31',
+        breakdown: [
+          { clientName: 'Amit Joshi', clientId: 'KFPL-1006', investment: 4500000, rate: 0.5, amount: 1875 },
+        ]
+      },
+      { id: 311, month: 'Feb 2025', date: '2025-02-28', amount: 11667, type: 'monthly', status: 'paid', paidAt: '2025-02-28',
+        breakdown: [
+          { clientName: 'Amit Joshi', clientId: 'KFPL-1006', investment: 4500000, rate: 0.5, amount: 1875 },
+        ]
+      },
+      { id: 312, month: 'Mar 2025', date: '2025-03-31', amount: 11667, type: 'monthly', status: 'pending', paidAt: null,
+        breakdown: [
+          { clientName: 'Amit Joshi', clientId: 'KFPL-1006', investment: 4500000, rate: 0.5, amount: 1875 },
+        ]
+      },
     ],
   },
   {

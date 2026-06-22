@@ -50,19 +50,12 @@
 .kfpl-table-scroll {
   width: 100%;
   overflow-x: auto;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 .kfpl-table-scroll::-webkit-scrollbar {
-  height: 4px;
-}
-
-.kfpl-table-scroll::-webkit-scrollbar-track {
-  background: var(--color-surface);
-}
-
-.kfpl-table-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-full);
+  display: none;
 }
 
 /* ── Table Element ─────────────────────── */
@@ -322,12 +315,15 @@
 /* Media query to allow tables to fit without horizontal scrolling on large devices */
 @media (min-width: 1024px) {
   .kfpl-table-scroll {
-    overflow-x: visible;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .kfpl-table-scroll::-webkit-scrollbar {
+    display: none;
   }
   .kfpl-table td, .kfpl-table th {
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
   }
   /* Prevent critical values and metadata from wrapping awkwardly */
   .kfpl-badge,

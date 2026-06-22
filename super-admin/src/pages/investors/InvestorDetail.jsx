@@ -4,6 +4,7 @@
    ============================================================ */
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import Badge from '../../components/ui/Badge';
 import { investors, formatCurrency } from '../../data/mockData';
@@ -29,6 +30,11 @@ const tabIcons = {
   perks: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+  documents: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
     </svg>
   )
 };
@@ -112,7 +118,8 @@ export default function InvestorDetail() {
     );
   }
 
-  const tabs = ['profile', 'investments', 'roi', 'perks'];
+  const tabs = ['profile', 'investments', 'roi', 'perks', 'documents'];
+  const [viewingDoc, setViewingDoc] = useState(null);
 
   // ROI tab calculations
   const totalPaidROI = investor.roiHistory.filter(r => r.status === 'paid').reduce((sum, r) => sum + r.amount, 0);
@@ -505,6 +512,168 @@ export default function InvestorDetail() {
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === 'documents' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="kfpl-page-header" style={{ marginBottom: '4px' }}>
+            <div>
+              <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Onboarded Documents</h3>
+              <p className="kfpl-page-subtitle" style={{ margin: '2px 0 0 0' }}>KYC, financial verification, agreement, and nominee documents</p>
+            </div>
+          </div>
+
+          <div className="kfpl-detail-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+            {[
+              { id: 'pan', label: 'PAN Card Upload', desc: 'Proof of PAN Card Identification', filename: `${investor.name.replace(/\s/g, '_')}_PAN.pdf`, size: '1.2 MB' },
+              { id: 'aadhar', label: 'Aadhaar Card Upload', desc: 'Proof of Identity and Address', filename: `${investor.name.replace(/\s/g, '_')}_Aadhaar.pdf`, size: '2.4 MB' },
+              { id: 'bank', label: 'Bank Details Document', desc: 'Cancelled Cheque or Bank Statement', filename: `${investor.name.replace(/\s/g, '_')}_BankProof.pdf`, size: '1.8 MB' },
+              {
+                id: 'nominee',
+                label: 'Nominee ID Proof',
+                desc: `ID Proof for Nominee (${investor.nominee?.name || 'Assigned Nominee'})`,
+                filename: `${(investor.nominee?.name || 'Nominee').replace(/\s/g, '_')}_ID.pdf`,
+                size: '1.5 MB'
+              },
+              { id: 'agreement', label: 'Agreement Document', desc: 'Signed Investment Agreement Contract', filename: `${investor.name.replace(/\s/g, '_')}_Agreement.pdf`, size: '3.1 MB' }
+            ].map((doc, idx) => (
+              <div key={idx} className="kfpl-detail-info-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', minHeight: '160px', position: 'relative' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <div style={{ background: 'var(--color-gold-glow, #fef3c7)', color: 'var(--color-gold-dark, #b38600)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="20" height="20">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{doc.label}</h4>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>PDF Document • {doc.size}</span>
+                    </div>
+                  </div>
+                  <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                    {doc.desc}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
+                  <button 
+                    className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
+                    style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
+                    onClick={() => setViewingDoc({ ...doc, investorName: investor.name, status: 'Verified', uploadedAt: investor.joinDate || '2024-01-10' })}
+                  >
+                    View Document
+                  </button>
+                  <button 
+                    className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
+                    style={{ padding: '6px 10px' }}
+                    onClick={() => {
+                      const blob = new Blob([`Dummy file content for ${doc.label} of ${investor.name}`], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = doc.filename;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                      addToast(`${doc.label} downloaded`, 'success', 'Downloaded');
+                    }}
+                    title="Download File"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Document Viewer Modal ─── */}
+      {viewingDoc && createPortal(
+        <div
+          className="kfpl-modal-overlay"
+          onClick={() => setViewingDoc(null)}
+        >
+          <div
+            className="kfpl-modal"
+            style={{ maxWidth: '680px', width: '90%' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="kfpl-modal-header">
+              <h3 className="kfpl-modal-title">{viewingDoc.label}</h3>
+              <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '380px' }}>
+              <div style={{
+                background: '#ffffff', width: '100%', maxWidth: '480px', borderRadius: '12px',
+                border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)', padding: '24px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, var(--color-gold) 0%, #0F766E 100%)' }} />
+                
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-gold-dark, #b38600)" strokeWidth="1.5" strokeLinecap="round" width="64" height="64" style={{ marginBottom: '16px', opacity: 0.85 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                </svg>
+                
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800 }}>{viewingDoc.label}</h4>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '20px' }}>{viewingDoc.filename}</span>
+                
+                <div style={{
+                  width: '100%', background: '#f1f5f9', borderRadius: '8px', border: '1px dashed #cbd5e1',
+                  padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                    <span style={{ fontWeight: 600, color: '#64748b' }}>Holder:</span>
+                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.investorName}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                    <span style={{ fontWeight: 600, color: '#64748b' }}>Status:</span>
+                    <span style={{ fontWeight: 700, color: '#10b981' }}>{viewingDoc.status}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                    <span style={{ fontWeight: 600, color: '#64748b' }}>Verification:</span>
+                    <span style={{ fontWeight: 700, color: '#1e293b' }}>Digital Signatures Valid</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ fontWeight: 600, color: '#64748b' }}>Uploaded:</span>
+                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.uploadedAt}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '20px', color: '#64748b', fontSize: '0.75rem' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <span>Secured PDF Document. Download to view raw scan.</span>
+                </div>
+              </div>
+            </div>
+            <div className="kfpl-modal-footer">
+              <button
+                className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                onClick={() => setViewingDoc(null)}
+              >Close</button>
+              <button
+                className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
+                onClick={() => {
+                  const blob = new Blob([`Dummy file content for ${viewingDoc.label} of ${viewingDoc.investorName}`], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = viewingDoc.filename;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                  addToast(`${viewingDoc.label} downloaded`, 'success', 'Downloaded');
+                  setViewingDoc(null);
+                }}
+              >Download Original File</button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
