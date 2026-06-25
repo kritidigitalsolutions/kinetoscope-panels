@@ -8,10 +8,329 @@ import { mockInvestments, mockROIHistory, mockTotalInvested, mockDividendBonus, 
 
 const CHART_COLORS = ['#10B981', '#0F766E', '#2563EB', '#F59E0B', '#7C3AED', '#0891B2'];
 
+/* ── helpers for downloading statements ─────────────────────── */
+function downloadClientROISingleCSV(roi, client) {
+  const rows = [
+    ['ROI Payout Statement'],
+    ['Client Name', client.name],
+    ['Client ID', client.clientId],
+    ['Period / Month', roi.month],
+    ['Payout Date', new Date(roi.date).toLocaleDateString('en-IN')],
+    ['Expected Return', `₹${roi.expected}`],
+    ['Received Return', `₹${roi.received}`],
+    ['Status', roi.status],
+  ];
+  const csvContent = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ROI_Statement_${roi.month.replace(/\s/g, '_')}_${client.name.replace(/\s/g, '_')}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadClientROISinglePDF(roi, client, investments) {
+  const dateStr = new Date(roi.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const activeSegments = investments.filter(inv => {
+    const invDate = new Date(inv.date);
+    const roiMonthName = roi.month.split(' ')[0];
+    const roiYear = parseInt(roi.month.split(' ')[1]);
+    const monthsMap = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    };
+    const roiMonthIndex = monthsMap[roiMonthName];
+    if (roiMonthIndex === undefined) return true;
+    const targetDate = new Date(roiYear, roiMonthIndex, 28);
+    return invDate <= targetDate;
+  });
+
+  const rowsHtml = activeSegments.map(inv => {
+    const monthlyROI = Math.round((inv.amount * inv.roiAllocated) / 100);
+    return `
+      <tr>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; font-weight: 500;">${inv.segment}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${new Date(inv.date).toLocaleDateString('en-IN')}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${inv.contractPeriod}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: 600;">₹${inv.amount.toLocaleString('en-IN')}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right;">${inv.roiAllocated}%</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: bold; color: #0F766E;">₹${monthlyROI.toLocaleString('en-IN')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>ROI Payout Statement - ${roi.month} - ${client.name}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #11221A; background-color: #FFFFFF; padding: 40px; margin: 0; }
+        .header { margin-bottom: 30px; border-bottom: 3px solid #0F766E; padding-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .title { font-size: 28px; font-weight: 800; color: #061D13; margin: 0; text-transform: uppercase; letter-spacing: -0.5px; }
+        .meta-info { margin-bottom: 30px; background-color: #F3F7F5; border: 1px solid #CFDDD5; border-radius: 12px; padding: 20px; }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .meta-item { display: flex; justify-content: space-between; border-bottom: 1px solid #E2ECE7; padding-bottom: 6px; font-size: 14px; }
+        .meta-label { font-weight: 600; color: #6D7E75; }
+        .meta-val { font-weight: 700; color: #11221A; }
+        .section-title { font-size: 18px; font-weight: 700; color: #061D13; margin-top: 40px; margin-bottom: 14px; border-bottom: 1.5px solid #CFDDD5; padding-bottom: 6px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .table th { background-color: #E5ECE8; border: 1px solid #CFDDD5; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; font-weight: 800; color: #2E3E36; letter-spacing: 0.5px; }
+        .table td { border: 1px solid #CFDDD5; padding: 10px 12px; color: #11221A; }
+        .total-row { background-color: #F3F7F5; font-weight: bold; }
+        @media print {
+          body { padding: 0; }
+          .print-btn-bar { display: none !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-btn-bar" style="display: flex; justify-content: flex-end; margin-bottom: 20px; gap: 10px;">
+        <button onclick="window.print();" style="background: #0F766E; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);">Print / Save PDF</button>
+        <button onclick="window.close();" style="background: #e2ece7; color: #2e3e36; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px;">Close Window</button>
+      </div>
+
+      <div class="header">
+        <div>
+          <div class="title">ROI Payout Statement</div>
+          <div style="font-size: 12px; color: #6D7E75; margin-top: 4px; font-weight: 500;">KINETOSCOPE CAPITAL PARTNERS LTD</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; font-weight: 600; color: #2E3E36;">Date Generated:</div>
+          <div style="font-size: 14px; font-weight: 700; color: #11221A;">${new Date().toLocaleDateString('en-GB')}</div>
+        </div>
+      </div>
+      
+      <div class="meta-info">
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Client Name:</span>
+            <span class="meta-val">${client.name}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Client ID:</span>
+            <span class="meta-val">${client.clientId}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Period:</span>
+            <span class="meta-val">${roi.month}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Payout Date:</span>
+            <span class="meta-val">${dateStr}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Status:</span>
+            <span class="meta-val" style="color: ${roi.status === 'Paid' ? '#059669' : '#D97706'};">${roi.status.toUpperCase()}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Expected Amount:</span>
+            <span class="meta-val">₹${roi.expected.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="meta-item" style="grid-column: span 2; border-bottom: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #CFDDD5;">
+            <span class="meta-label" style="font-size: 16px; color: #061D13;">Total ROI Received:</span>
+            <span class="meta-val" style="font-size: 20px; color: #059669;">₹${roi.received.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section-title">Active Investments Breakdown</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Segment</th>
+            <th style="text-align: center;">Start Date</th>
+            <th style="text-align: center;">Contract Period</th>
+            <th style="text-align: right;">Principal Investment</th>
+            <th style="text-align: right;">Allocated ROI %</th>
+            <th style="text-align: right;">Proportional Monthly ROI</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <script>
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+          }, 300);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+function downloadAllClientROICSV(roiList, client) {
+  const rows = [
+    ['Client ROI Statement History'],
+    ['Client Name', client.name],
+    ['Client ID', client.clientId],
+    [''],
+    ['Month', 'Expected ROI', 'Received ROI', 'Payment Date', 'Status']
+  ];
+  roiList.forEach(roi => {
+    rows.push([
+      roi.month,
+      roi.expected,
+      roi.received,
+      roi.date,
+      roi.status
+    ]);
+  });
+  const csvContent = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ROI_Statement_All_${client.name.replace(/\s/g, '_')}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadAllClientROIPDF(roiList, client) {
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
+  const totalExpected = roiList.reduce((sum, r) => sum + r.expected, 0);
+  const totalReceived = roiList.reduce((sum, r) => sum + r.received, 0);
+
+  const rowsHtml = roiList.map(roi => {
+    return `
+      <tr>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; font-weight: 500;">${roi.month}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right;">₹${roi.expected.toLocaleString('en-IN')}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: bold; color: ${roi.received > 0 ? '#059669' : '#11221A'};">₹${roi.received.toLocaleString('en-IN')}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${new Date(roi.date).toLocaleDateString('en-IN')}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center; color: ${roi.status === 'Paid' ? '#059669' : '#D97706'}; font-weight: 600;">${roi.status}</td>
+      </tr>
+    `;
+  }).join('');
+
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>ROI Statement History - ${client.name}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #11221A; background-color: #FFFFFF; padding: 40px; margin: 0; }
+        .header { margin-bottom: 30px; border-bottom: 3px solid #0F766E; padding-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .title { font-size: 28px; font-weight: 800; color: #061D13; margin: 0; text-transform: uppercase; letter-spacing: -0.5px; }
+        .meta-info { margin-bottom: 30px; background-color: #F3F7F5; border: 1px solid #CFDDD5; border-radius: 12px; padding: 20px; }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .meta-item { display: flex; justify-content: space-between; border-bottom: 1px solid #E2ECE7; padding-bottom: 6px; font-size: 14px; }
+        .meta-label { font-weight: 600; color: #6D7E75; }
+        .meta-val { font-weight: 700; color: #11221A; }
+        .section-title { font-size: 18px; font-weight: 700; color: #061D13; margin-top: 40px; margin-bottom: 14px; border-bottom: 1.5px solid #CFDDD5; padding-bottom: 6px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .table th { background-color: #E5ECE8; border: 1px solid #CFDDD5; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; font-weight: 800; color: #2E3E36; letter-spacing: 0.5px; }
+        .table td { border: 1px solid #CFDDD5; padding: 10px 12px; color: #11221A; }
+        .total-row { background-color: #F3F7F5; font-weight: bold; }
+        @media print {
+          body { padding: 0; }
+          .print-btn-bar { display: none !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-btn-bar" style="display: flex; justify-content: flex-end; margin-bottom: 20px; gap: 10px;">
+        <button onclick="window.print();" style="background: #0F766E; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);">Print / Save PDF</button>
+        <button onclick="window.close();" style="background: #e2ece7; color: #2e3e36; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px;">Close Window</button>
+      </div>
+
+      <div class="header">
+        <div>
+          <div class="title">ROI Statement History</div>
+          <div style="font-size: 12px; color: #6D7E75; margin-top: 4px; font-weight: 500;">KINETOSCOPE CAPITAL PARTNERS LTD</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; font-weight: 600; color: #2E3E36;">Date Generated:</div>
+          <div style="font-size: 14px; font-weight: 700; color: #11221A;">${new Date().toLocaleDateString('en-GB')}</div>
+        </div>
+      </div>
+      
+      <div class="meta-info">
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Client Name:</span>
+            <span class="meta-val">${client.name}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Client ID:</span>
+            <span class="meta-val">${client.clientId}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Total Expected ROI:</span>
+            <span class="meta-val">₹${totalExpected.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Total Received ROI:</span>
+            <span class="meta-val" style="color: #059669;">₹${totalReceived.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section-title">ROI Payment Log</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Month / Period</th>
+            <th style="text-align: right;">Expected ROI</th>
+            <th style="text-align: right;">Received ROI</th>
+            <th style="text-align: center;">Payment Date</th>
+            <th style="text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+          <tr class="total-row">
+            <td style="text-align: left; font-weight: 800; font-size: 14px; padding: 12px;">Total Summary</td>
+            <td style="text-align: right; font-weight: 800; font-size: 14px; padding: 12px;">₹${totalExpected.toLocaleString('en-IN')}</td>
+            <td style="text-align: right; font-weight: 800; color: #059669; font-size: 14px; padding: 12px;">₹${totalReceived.toLocaleString('en-IN')}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+      <script>
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+          }, 300);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
 export default function InvestmentOverview() {
   const [roiFilter, setRoiFilter] = useState('All');
   const [calcPrincipal, setCalcPrincipal] = useState(6000000);
-  const [calcRate, setCalcRate] = useState(13.5);
+  const [calcRate, setCalcRate] = useState(1.2);
+  const [segmentFilter, setSegmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [commissionStatusFilter, setCommissionStatusFilter] = useState('all');
+
+  const uniqueSegments = Array.from(new Set(mockInvestments.map(i => i.segment)));
+  const uniqueStatuses = Array.from(new Set(mockInvestments.map(i => i.status)));
+  const uniqueYears = Array.from(new Set(mockROIHistory.map(r => new Date(r.date).getFullYear().toString()))).sort();
+
+  const filteredInvestments = mockInvestments.filter(inv => {
+    if (segmentFilter !== 'all' && inv.segment !== segmentFilter) return false;
+    if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
+    return true;
+  });
+
+  const filteredCommissionHistory = mockClient.agentCommission?.history
+    ? mockClient.agentCommission.history.filter(com => {
+        if (commissionStatusFilter !== 'all' && com.status.toLowerCase() !== commissionStatusFilter.toLowerCase()) return false;
+        return true;
+      })
+    : [];
 
   const formatAmount = (num) => {
     if (num >= 10000000) return `\u20B9${(num / 10000000).toFixed(2)} Cr`;
@@ -24,8 +343,8 @@ export default function InvestmentOverview() {
   };
 
   const total = mockInvestments.reduce((sum, investment) => sum + investment.amount, 0);
-  const monthlyReturn = Math.round((calcPrincipal * calcRate) / 100 / 12);
-  const annualReturn = Math.round((calcPrincipal * calcRate) / 100);
+  const monthlyReturn = Math.round((calcPrincipal * calcRate) / 100);
+  const annualReturn = Math.round(monthlyReturn * 12);
   const weightedROI = total
     ? mockInvestments.reduce((sum, investment) => sum + investment.amount * investment.roiAllocated, 0) / total
     : 0;
@@ -47,13 +366,36 @@ export default function InvestmentOverview() {
     };
   });
 
-  const filteredROI = roiFilter === 'All' ? mockROIHistory : mockROIHistory.filter(roi => roi.status === roiFilter);
+  const filteredROI = mockROIHistory.filter(roi => {
+    if (roiFilter !== 'All' && roi.status !== roiFilter) return false;
+    if (yearFilter !== 'all') {
+      const year = new Date(roi.date).getFullYear().toString();
+      if (year !== yearFilter) return false;
+    }
+    return true;
+  });
   const summaryCards = [
     { label: 'Total Invested', value: formatAmount(mockTotalInvested), meta: `${mockInvestments.length} active segments` },
     { label: 'Monthly ROI', value: formatAmount(monthlyReturn), meta: `${calcRate}% annual projection` },
     { label: 'Weighted ROI', value: `${weightedROI.toFixed(1)}%`, meta: 'Allocated across portfolio' },
     { label: 'ROI Received', value: formatAmount(receivedROI), meta: `${paidMonths} payouts completed` },
   ];
+
+  const handleDownloadAllCSV = () => {
+    downloadAllClientROICSV(mockROIHistory, mockClient);
+  };
+
+  const handleDownloadAllPDF = () => {
+    downloadAllClientROIPDF(mockROIHistory, mockClient);
+  };
+
+  const handleDownloadSingleCSV = (roi) => {
+    downloadClientROISingleCSV(roi, mockClient);
+  };
+
+  const handleDownloadSinglePDF = (roi) => {
+    downloadClientROISinglePDF(roi, mockClient, mockInvestments);
+  };
 
   return (
     <div className="kfpl-page kfpl-investment-page">
@@ -133,7 +475,7 @@ export default function InvestmentOverview() {
 
           <div className="kfpl-form-section kfpl-investment-calculator-fields">
             <div className="kfpl-input-group">
-              <label className="kfpl-input-label">Principal Amount ({'\u20B9'})</label>
+              <label className="kfpl-input-label">Principal Amount (₹)</label>
               <input
                 type="number"
                 className="kfpl-input"
@@ -143,7 +485,7 @@ export default function InvestmentOverview() {
             </div>
 
             <div className="kfpl-input-group">
-              <label className="kfpl-input-label">ROI Rate (% per annum)</label>
+              <label className="kfpl-input-label">Monthly ROI %</label>
               <input
                 type="number"
                 className="kfpl-input"
@@ -165,10 +507,30 @@ export default function InvestmentOverview() {
       </div>
 
       <div className="kfpl-table-wrapper kfpl-investment-table">
-        <div className="kfpl-table-header">
+        <div className="kfpl-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <h3 className="kfpl-table-title">Investment by Segment</h3>
             <p className="kfpl-investment-card-subtitle">Contract status, allocation, and received ROI by category</p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <select
+              value={segmentFilter}
+              onChange={e => setSegmentFilter(e.target.value)}
+              className="kfpl-select"
+              style={{ width: '160px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+            >
+              <option value="all">All Segments</option>
+              {uniqueSegments.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="kfpl-select"
+              style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+            >
+              <option value="all">All Statuses</option>
+              {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
         </div>
 
@@ -186,7 +548,7 @@ export default function InvestmentOverview() {
               </tr>
             </thead>
             <tbody>
-              {mockInvestments.map(investment => (
+              {filteredInvestments.map(investment => (
                 <tr key={investment.id}>
                   <td className="kfpl-table-cell-primary">{investment.segment}</td>
                   <td className="kfpl-table-cell-mono">{formatAmount(investment.amount)}</td>
@@ -203,23 +565,57 @@ export default function InvestmentOverview() {
       </div>
 
       <div className="kfpl-table-wrapper kfpl-investment-table">
-        <div className="kfpl-table-header">
+        <div className="kfpl-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <h3 className="kfpl-table-title">Monthly ROI History</h3>
             <p className="kfpl-investment-card-subtitle">Expected versus credited return history</p>
           </div>
 
-          <div className="kfpl-filter-chips">
-            {['All', 'Paid', 'Pending'].map(filter => (
-              <button
-                key={filter}
-                type="button"
-                className={`kfpl-filter-chip ${roiFilter === filter ? 'active' : ''}`}
-                onClick={() => setRoiFilter(filter)}
-              >
-                {filter}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="kfpl-filter-chips" style={{ marginBottom: 0 }}>
+              {['All', 'Paid', 'Pending'].map(filter => (
+                <button
+                  key={filter}
+                  type="button"
+                  className={`kfpl-filter-chip ${roiFilter === filter ? 'active' : ''}`}
+                  onClick={() => setRoiFilter(filter)}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={yearFilter}
+              onChange={e => setYearFilter(e.target.value)}
+              className="kfpl-select"
+              style={{ width: '120px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+            >
+              <option value="all">All Years</option>
+              {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            
+            <button
+              className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+              onClick={handleDownloadAllCSV}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontSize: '0.8125rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export CSV (All)
+            </button>
+
+            <button
+              className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+              onClick={handleDownloadAllPDF}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontSize: '0.8125rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Print Statement (All)
+            </button>
           </div>
         </div>
 
@@ -232,6 +628,7 @@ export default function InvestmentOverview() {
                 <th>Received</th>
                 <th>Payment Date</th>
                 <th>Status</th>
+                <th style={{ textAlign: 'center' }}>Statement</th>
               </tr>
             </thead>
             <tbody>
@@ -242,6 +639,32 @@ export default function InvestmentOverview() {
                   <td className="kfpl-table-cell-mono">{roi.received > 0 ? formatAmount(roi.received) : '\u2014'}</td>
                   <td>{formatDate(roi.date)}</td>
                   <td><span className={`kfpl-badge kfpl-badge--${roi.status.toLowerCase()}`}>{roi.status}</span></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'center' }}>
+                      <button
+                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                        onClick={() => handleDownloadSingleCSV(roi)}
+                        style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid var(--color-border)' }}
+                        title="Download CSV"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+                        </svg>
+                        CSV
+                      </button>
+                      <button
+                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                        onClick={() => handleDownloadSinglePDF(roi)}
+                        style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid var(--color-border)' }}
+                        title="Print / PDF"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+                        </svg>
+                        PDF
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -252,10 +675,22 @@ export default function InvestmentOverview() {
       {/* Agent Commission Section */}
       {mockClient.agentCommission && (
         <div className="kfpl-table-wrapper kfpl-investment-table">
-          <div className="kfpl-table-header">
+          <div className="kfpl-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h3 className="kfpl-table-title">Agent Commission</h3>
               <p className="kfpl-investment-card-subtitle">Commission earned by your agent ({mockClient.agentName}) on your investment</p>
+              <div style={{ marginTop: '12px' }}>
+                <select
+                  value={commissionStatusFilter}
+                  onChange={e => setCommissionStatusFilter(e.target.value)}
+                  className="kfpl-select"
+                  style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <div style={{
@@ -293,7 +728,7 @@ export default function InvestmentOverview() {
                 </tr>
               </thead>
               <tbody>
-                {mockClient.agentCommission.history.map(com => (
+                {filteredCommissionHistory.map(com => (
                   <tr key={com.id}>
                     <td className="kfpl-table-cell-primary">{com.month}</td>
                     <td>{new Date(com.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>

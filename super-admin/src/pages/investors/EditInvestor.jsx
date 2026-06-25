@@ -10,6 +10,14 @@ import Badge from '../../components/ui/Badge';
 import FileDropzone from '../../components/ui/FileDropzone';
 import { investors, agents } from '../../data/mockData';
 
+const COMMISSION_PRESETS = [
+  { id: 'slab-1', name: 'Slab 1 (Basic): 1.0% One-Time / 0.50% Monthly', oneTime: 1.0, monthly: 0.50 },
+  { id: 'slab-2', name: 'Slab 2 (Standard): 1.5% One-Time / 0.75% Monthly', oneTime: 1.5, monthly: 0.75 },
+  { id: 'slab-3', name: 'Slab 3 (Premium): 2.0% One-Time / 1.00% Monthly', oneTime: 2.0, monthly: 1.00 },
+  { id: 'slab-4', name: 'Slab 4 (Elite): 2.5% One-Time / 1.25% Monthly', oneTime: 2.5, monthly: 1.25 },
+  { id: 'custom', name: 'Custom Rates...', oneTime: '', monthly: '' },
+];
+
 export default function EditInvestor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,6 +32,12 @@ export default function EditInvestor() {
     category: '', status: '',
     nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
     riskProfile: '',
+    citizenship: 'National',
+    nomineeCitizenship: 'National',
+    commissionSlab: 'slab-2',
+    commissionOneTime: '1.5',
+    commissionMonthly: '0.75',
+    roiPercentage: '',
   });
 
   useEffect(() => {
@@ -45,6 +59,12 @@ export default function EditInvestor() {
         nomineeContact: investor.nominee?.contact || '',
         nomineeEmail: investor.nominee?.email || '',
         riskProfile: investor.riskProfile || 'Conservative',
+        citizenship: investor.citizenship || 'National',
+        nomineeCitizenship: investor.nominee?.citizenship || 'National',
+        commissionSlab: investor.agentCommission?.slabSelected || 'slab-2',
+        commissionOneTime: investor.agentCommission?.oneTimePercent ?? '1.5',
+        commissionMonthly: investor.agentCommission?.monthlyPercent ?? '0.75',
+        roiPercentage: investor.roiPercentage || 10,
       });
       // Find current agent
       const currentAgent = agents.find(a => a.clients.includes(investor.id));
@@ -65,6 +85,17 @@ export default function EditInvestor() {
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSlabChange = (e) => {
+    const slabId = e.target.value;
+    const preset = COMMISSION_PRESETS.find(p => p.id === slabId);
+    setForm(prev => ({
+      ...prev,
+      commissionSlab: slabId,
+      commissionOneTime: preset && slabId !== 'custom' ? String(preset.oneTime) : prev.commissionOneTime,
+      commissionMonthly: preset && slabId !== 'custom' ? String(preset.monthly) : prev.commissionMonthly,
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -90,11 +121,19 @@ export default function EditInvestor() {
         category: form.category,
         status: form.status,
         riskProfile: form.riskProfile,
+        citizenship: form.citizenship,
+        roiPercentage: parseFloat(form.roiPercentage) || 10,
+        agentCommission: selectedAgentId ? {
+          oneTimePercent: parseFloat(form.commissionOneTime) || 0,
+          monthlyPercent: parseFloat(form.commissionMonthly) || 0,
+          slabSelected: form.commissionSlab,
+        } : null,
         nominee: {
           name: form.nomineeName,
           relation: form.nomineeRelation,
           contact: form.nomineeContact,
           email: form.nomineeEmail,
+          citizenship: form.nomineeCitizenship,
         }
       };
     }
@@ -183,8 +222,8 @@ export default function EditInvestor() {
                 <select className="kfpl-input" name="category" value={form.category} onChange={handleChange}>
                   <option value="silver">Silver</option>
                   <option value="gold">Gold</option>
-                  <option value="platinum">Platinum</option>
                   <option value="diamond">Diamond</option>
+                  <option value="platinum">Platinum</option>
                 </select>
               </div>
               <div className="kfpl-input-group">
@@ -206,6 +245,13 @@ export default function EditInvestor() {
             </div>
             <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
               <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Residency / Citizenship</label>
+                <select className="kfpl-select" name="citizenship" value={form.citizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                  <option value="National">National (Domestic)</option>
+                  <option value="International">International</option>
+                </select>
+              </div>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
                 <label className="kfpl-input-label">Agent / Source of Client</label>
                 <select 
                   className="kfpl-select" 
@@ -219,20 +265,80 @@ export default function EditInvestor() {
                   ))}
                 </select>
               </div>
-              <div className="kfpl-input-group" style={{ flex: 2 }}></div>
             </div>
+
+            <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Monthly ROI % <span className="required">*</span></label>
+                <input 
+                  type="number" 
+                  step="0.1" 
+                  className="kfpl-input" 
+                  name="roiPercentage" 
+                  value={form.roiPercentage} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div style={{ flex: 1 }}></div>
+            </div>
+
+            {selectedAgentId && (
+              <div className="kfpl-form-row-3" style={{ marginTop: '16px' }}>
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">Agent Commission Slab</label>
+                  <select 
+                    className="kfpl-select" 
+                    name="commissionSlab"
+                    value={form.commissionSlab} 
+                    onChange={handleSlabChange}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+                  >
+                    {COMMISSION_PRESETS.map(preset => (
+                      <option key={preset.id} value={preset.id}>{preset.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">One-Time Commission (%)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    className="kfpl-input" 
+                    name="commissionOneTime" 
+                    value={form.commissionOneTime} 
+                    onChange={handleChange} 
+                    disabled={form.commissionSlab !== 'custom'} 
+                    placeholder="e.g. 1.5"
+                  />
+                </div>
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">Monthly Commission (%)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    className="kfpl-input" 
+                    name="commissionMonthly" 
+                    value={form.commissionMonthly} 
+                    onChange={handleChange} 
+                    disabled={form.commissionSlab !== 'custom'} 
+                    placeholder="e.g. 0.75"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* KYC Document Uploads */}
-          <FileDropzone label="PAN Card Upload" />
-          <FileDropzone label="Aadhaar Card Upload" />
+          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} />
+          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'Aadhaar Card Upload'} />
           <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
           <div className="kfpl-form-section">
             <div className="kfpl-form-section-title">KYC & Bank Details</div>
             <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">PAN Number</label>
-                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder="ABCPK1234L" />
+                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'Tax ID / SSN Number' : 'PAN Number'}</label>
+                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'Tax ID or SSN' : 'ABCPK1234L'} />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Bank Name</label>
@@ -245,8 +351,8 @@ export default function EditInvestor() {
             </div>
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">IFSC Code</label>
-                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder="HDFC0001234" />
+                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}</label>
+                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0001234'} />
               </div>
               <div></div>
             </div>
@@ -272,7 +378,7 @@ export default function EditInvestor() {
                 </select>
               </div>
             </div>
-            <div className="kfpl-form-row">
+            <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Contact Number</label>
                 <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
@@ -281,8 +387,18 @@ export default function EditInvestor() {
                 <label className="kfpl-input-label">Nominee Email Address</label>
                 <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
               </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Residency / Citizenship</label>
+                <select className="kfpl-select" name="nomineeCitizenship" value={form.nomineeCitizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                  <option value="National">National (Domestic)</option>
+                  <option value="International">International</option>
+                </select>
+              </div>
             </div>
           </div>
+
+          {/* Nominee ID Proof Upload */}
+          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} />
 
           {/* Agreement Upload */}
           <FileDropzone label="Agreement Document" />

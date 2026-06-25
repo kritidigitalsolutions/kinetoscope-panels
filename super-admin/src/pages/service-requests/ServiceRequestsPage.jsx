@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
 import Badge from '../../components/ui/Badge';
+import { investors, agents } from '../../data/mockData';
 
 const DEFAULT_REQUESTS = [
   { id: 'SR-101', raisedBy: 'Rajesh Kumar', raiserType: 'Client', dateRaised: '2026-06-10', subject: 'Address Update Request', description: 'I want to update my address to Flat 202, Marina Apartments, Mumbai. Please verify.', status: 'Open', adminNote: '' },
@@ -32,6 +33,7 @@ export default function ServiceRequestsPage() {
   // Form edit states
   const [editStatus, setEditStatus] = useState('');
   const [editNote, setEditNote] = useState('');
+  const [sendEmail, setSendEmail] = useState(false);
 
   useEffect(() => {
     const data = localStorage.getItem('kfpl_service_requests');
@@ -55,6 +57,7 @@ export default function ServiceRequestsPage() {
     setSelectedReq(req);
     setEditStatus(req.status);
     setEditNote(req.adminNote || '');
+    setSendEmail(false);
     setShowDetailModal(true);
   };
 
@@ -77,6 +80,20 @@ export default function ServiceRequestsPage() {
 
     saveRequests(updated);
     setShowDetailModal(false);
+    
+    // Simulate email notification if checked
+    if (sendEmail) {
+      let emailAddress = 'user@email.com';
+      if (selectedReq.raiserType === 'Client') {
+        const match = investors.find(i => i.name === selectedReq.raisedBy);
+        if (match) emailAddress = match.email;
+      } else if (selectedReq.raiserType === 'Agent') {
+        const match = agents.find(a => a.name === selectedReq.raisedBy);
+        if (match) emailAddress = match.email;
+      }
+      addToast(`Notification email sent to ${emailAddress}`, 'info', 'Email Sent');
+    }
+
     setSelectedReq(null);
     addToast('Service Request updated successfully', 'success', 'Request Updated');
   };
@@ -236,7 +253,7 @@ export default function ServiceRequestsPage() {
               </div>
             </div>
 
-            <div className="kfpl-form-row" style={{ gap: '16px' }}>
+            <div className="kfpl-form-row" style={{ gap: '16px', alignItems: 'flex-end' }}>
               <div className="kfpl-input-group" style={{ flex: 1 }}>
                 <label className="kfpl-input-label">Update Status</label>
                 <select className="kfpl-select" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
@@ -246,7 +263,44 @@ export default function ServiceRequestsPage() {
                   <option value="Closed">Closed</option>
                 </select>
               </div>
-              <div style={{ flex: 1 }}></div>
+              <div className="kfpl-input-group" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '62px', justifyContent: 'flex-end' }}>
+                <label className="kfpl-input-label" style={{ marginBottom: '6px' }}>Email Notification</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '38px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSendEmail(!sendEmail)}
+                    style={{
+                      position: 'relative',
+                      width: '46px',
+                      height: '24px',
+                      borderRadius: '12px',
+                      background: sendEmail ? 'var(--color-success, #10b981)' : '#cbd5e1',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.25s ease',
+                      padding: 0,
+                      outline: 'none',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: sendEmail ? 'translateX(26px)' : 'translateX(4px)'
+                      }}
+                    />
+                  </button>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: sendEmail ? 'var(--color-text)' : 'var(--color-text-muted)', transition: 'color 0.2s' }}>
+                    {sendEmail ? 'Notify Raiser via Email' : 'Do Not Notify'}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="kfpl-input-group">

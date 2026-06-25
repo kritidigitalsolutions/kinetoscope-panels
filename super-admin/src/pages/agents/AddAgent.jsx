@@ -17,6 +17,8 @@ export default function AddAgent() {
     bankName: '', accountNo: '', ifsc: '',
     commissionOneTime: '', commissionMonthly: '', commissionSpecial: '',
     nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
+    citizenship: 'National',
+    nomineeCitizenship: 'National',
   });
 
   const [portalEmail, setPortalEmail] = useState('');
@@ -103,6 +105,7 @@ export default function AddAgent() {
       accountNo: form.accountNo,
       ifsc: form.ifsc,
       joinDate: new Date().toISOString().split('T')[0],
+      citizenship: form.citizenship,
       clients: [],
       investments: [],
       commissionHistory: [],
@@ -113,6 +116,7 @@ export default function AddAgent() {
         relation: form.nomineeRelation,
         contact: form.nomineeContact,
         email: form.nomineeEmail,
+        citizenship: form.nomineeCitizenship,
       }
     };
     
@@ -161,9 +165,19 @@ export default function AddAgent() {
                 <input className="kfpl-input" name="phone" value={form.phone} onChange={handleChange} placeholder="+91 99887 76650" required />
               </div>
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">PAN Number</label>
-                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder="ABCVP1234T" />
+                <label className="kfpl-input-label">Residency / Citizenship</label>
+                <select className="kfpl-select" name="citizenship" value={form.citizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                  <option value="National">National (Domestic)</option>
+                  <option value="International">International</option>
+                </select>
               </div>
+            </div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'Tax ID / SSN Number' : 'PAN Number'}</label>
+                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'Tax ID or SSN' : 'ABCVP1234T'} />
+              </div>
+              <div></div>
             </div>
           </div>
 
@@ -179,15 +193,15 @@ export default function AddAgent() {
                 <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" />
               </div>
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">IFSC Code</label>
-                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder="HDFC0004321" />
+                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}</label>
+                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0004321'} />
               </div>
             </div>
           </div>
 
           {/* KYC Document Uploads */}
-          <FileDropzone label="PAN Card Upload" />
-          <FileDropzone label="ID Proof Upload (Aadhaar / Driving License / Passport)" />
+          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} />
+          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'ID Proof Upload (Aadhaar / Driving License / Passport)'} />
           <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
 
           <div className="kfpl-form-section">
@@ -233,7 +247,7 @@ export default function AddAgent() {
                 </select>
               </div>
             </div>
-            <div className="kfpl-form-row">
+            <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Contact Number</label>
                 <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
@@ -242,11 +256,18 @@ export default function AddAgent() {
                 <label className="kfpl-input-label">Nominee Email Address</label>
                 <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
               </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Nominee Residency / Citizenship</label>
+                <select className="kfpl-select" name="nomineeCitizenship" value={form.nomineeCitizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                  <option value="National">National (Domestic)</option>
+                  <option value="International">International</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Nominee ID Proof Upload */}
-          <FileDropzone label="Nominee ID Proof" />
+          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} />
 
           {/* Agent Portal Credentials Generation */}
           <div className="kfpl-form-section">

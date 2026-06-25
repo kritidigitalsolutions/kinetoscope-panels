@@ -4,6 +4,7 @@
                 custom SVG charts, quick actions, and personal widgets.
    ============================================================ */
 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { JOURNEY_STEPS, PERK_TIERS } from '../../constants';
 import {
@@ -18,9 +19,77 @@ import {
 } from '../../data/mockData';
 import DonutChart from '../../components/charts/DonutChart';
 import LineChart from '../../components/charts/LineChart';
+import Modal from '../../components/ui/Modal';
 
 export default function DashboardHome() {
   const navigate = useNavigate();
+
+  const [statusHistory, setStatusHistory] = useState([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [selectedUpdate, setSelectedUpdate] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historySegmentFilter, setHistorySegmentFilter] = useState('all');
+
+  const SEGMENT_COLORS = {
+    'Film Making': '#10B981', Distribution: '#1565C0', Music: '#7C3AED',
+    'Trading & Syndication': '#F59E0B', 'Content IP Bank': '#0F766E', 'Film Exhibition': '#0891B2',
+  };
+
+  useEffect(() => {
+    const storedHistory = localStorage.getItem('kfpl_investment_status_history');
+    if (storedHistory) {
+      setStatusHistory(JSON.parse(storedHistory));
+    } else {
+      const defaultHistory = [
+        {
+          id: 1,
+          type: 'project',
+          segment: 'Film Making',
+          project: 'Project Astra',
+          status: 'In Production',
+          progress: 65,
+          note: 'Post-production phase begins next week',
+          date: '2025-04-10',
+          media: [
+            {
+              id: 'mock-1',
+              name: 'astra_poster.png',
+              type: 'image/png',
+              size: 154200,
+              dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="100%" height="100%" fill="%230b3020"/><circle cx="150" cy="150" r="80" fill="%2310b981"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23061d13" font-family="sans-serif" font-weight="bold" font-size="24">PROJECT ASTRA</text></svg>',
+              uploadedAt: '2025-04-10T12:00:00.000Z'
+            }
+          ]
+        },
+        { id: 2, type: 'project', segment: 'Distribution', project: 'Meridian Release', status: 'Active', progress: 80, note: 'Distribution across 3 states confirmed', date: '2025-04-08', media: [] },
+        { id: 3, type: 'project', segment: 'Music', project: 'Rhythm Series', status: 'Recording', progress: 40, note: '4 tracks completed, 6 remaining', date: '2025-04-05', media: [] },
+        { id: 4, type: 'project', segment: 'Trading & Syndication', project: 'Content Deal Q2', status: 'Negotiation', progress: 30, note: 'Final terms under discussion', date: '2025-04-12', media: [] },
+        { id: 5, type: 'project', segment: 'Content IP Bank', project: 'Archive Digitization', status: 'Ongoing', progress: 55, note: '550 titles digitized so far', date: '2025-04-09', media: [] },
+        { id: 6, type: 'project', segment: 'Film Exhibition', project: 'Screen Network', status: 'Planning', progress: 15, note: '3 new screen locations identified', date: '2025-04-11', media: [] }
+      ];
+      setStatusHistory(defaultHistory);
+      localStorage.setItem('kfpl_investment_status_history', JSON.stringify(defaultHistory));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (statusHistory.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlideIndex(prev => (prev + 1) % statusHistory.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [statusHistory]);
+
+  const handlePrevSlide = () => {
+    if (statusHistory.length === 0) return;
+    setCurrentSlideIndex(prev => (prev - 1 + statusHistory.length) % statusHistory.length);
+  };
+
+  const handleNextSlide = () => {
+    if (statusHistory.length === 0) return;
+    setCurrentSlideIndex(prev => (prev + 1) % statusHistory.length);
+  };
 
   // Calculate journey progress
   const completedSteps = JOURNEY_STEPS.filter(step => mockJourney[step.key]).length;
@@ -90,6 +159,186 @@ export default function DashboardHome() {
           <div className="kfpl-welcome-circle kfpl-welcome-circle--2" />
           <div className="kfpl-welcome-circle kfpl-welcome-circle--3" />
         </div>
+      </div>
+
+      {/* ═══════════════ LIVE INVESTMENT STATUS UPDATES SLIDER ═══════════════ */}
+      <div className="kfpl-section-header" style={{ marginTop: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 className="kfpl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width: 18, height: 18, color: 'var(--color-success)' }}>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Live Portfolio & Segment Updates
+        </h3>
+        <button
+          className="kfpl-btn kfpl-btn--ghost kfpl-btn--xs"
+          onClick={() => setShowHistoryModal(true)}
+          style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          View Full History Log
+        </button>
+      </div>
+
+      <div className="kfpl-status-slider-container" style={{ position: 'relative', marginBottom: '28px' }}>
+        {statusHistory.length === 0 ? (
+          <div className="kfpl-card" style={{ padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+            No status updates published yet.
+          </div>
+        ) : (
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            {/* Slider Navigation Buttons */}
+            <button
+              onClick={handlePrevSlide}
+              className="kfpl-slider-nav-btn prev"
+              style={{
+                position: 'absolute', left: '-15px', zIndex: 10,
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s', fontWeight: 'bold'
+              }}
+            >
+              &larr;
+            </button>
+
+            {/* Slider Viewport */}
+            <div className="kfpl-slider-viewport" style={{ overflow: 'hidden', width: '100%', borderRadius: '12px' }}>
+              <div
+                className="kfpl-slider-track"
+                style={{
+                  display: 'flex',
+                  transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: `translateX(-${currentSlideIndex * 100}%)`
+                }}
+              >
+                {statusHistory.map((update) => {
+                  const accent = SEGMENT_COLORS[update.segment] || '#10B981';
+                  return (
+                    <div
+                      key={update.id}
+                      className="kfpl-slider-slide"
+                      style={{
+                        minWidth: '100%', boxSizing: 'border-box',
+                        padding: '4px'
+                      }}
+                    >
+                      <div
+                        className="kfpl-card kfpl-status-slider-card"
+                        style={{
+                          borderLeft: `4px solid ${accent}`,
+                          padding: '20px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          cursor: 'pointer',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          backdropFilter: 'blur(10px)',
+                          boxShadow: 'var(--shadow-card)',
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                        }}
+                        onClick={() => setSelectedUpdate(update)}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span
+                              className="kfpl-badge"
+                              style={{
+                                background: `${accent}15`,
+                                color: accent,
+                                border: `1px solid ${accent}40`,
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                padding: '4px 8px',
+                                borderRadius: '4px'
+                              }}
+                            >
+                              {update.segment}
+                            </span>
+                            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text)', marginTop: '8px', marginBottom: 0 }}>
+                              {update.type === 'segment' || !update.project ? 'Segment-Wide Update' : update.project}
+                            </h4>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span className="text-xs text-muted" style={{ display: 'block', fontWeight: 600 }}>{update.date}</span>
+                            <span
+                              className="kfpl-badge"
+                              style={{
+                                background: 'var(--color-surface-alt)',
+                                border: '1px solid var(--color-border)',
+                                fontSize: '0.65rem',
+                                color: 'var(--color-text-secondary)',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                marginTop: '4px',
+                                display: 'inline-block'
+                              }}
+                            >
+                              {update.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <p style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--color-text-secondary)',
+                          lineHeight: '1.5',
+                          margin: 0,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          fontStyle: 'italic'
+                        }}>
+                          "{update.note}"
+                        </p>
+
+                        {/* Progress and Attachments Footer */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, maxWidth: '200px' }}>
+                            <span className="text-xs text-muted" style={{ fontWeight: 600, minWidth: '30px' }}>{update.progress}%</span>
+                            <div className="kfpl-progress" style={{ height: '6px', flex: 1, margin: 0 }}>
+                              <div className="kfpl-progress-fill" style={{ width: `${update.progress}%`, background: accent }}></div>
+                            </div>
+                          </div>
+                          
+                          {(update.media || []).length > 0 && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                              </svg>
+                              {update.media.length} File(s)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={handleNextSlide}
+              className="kfpl-slider-nav-btn next"
+              style={{
+                position: 'absolute', right: '-15px', zIndex: 10,
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s', fontWeight: 'bold'
+              }}
+            >
+              &rarr;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Onboarding Profile Alert Banner */}
@@ -202,7 +451,7 @@ export default function DashboardHome() {
             </div>
           </div>
           <span className="kfpl-kpi-value">
-            {new Date(mockStats.nextROIDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {mockStats.nextROIDate && mockStats.nextROIDate !== '—' ? new Date(mockStats.nextROIDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
           </span>
           <span className="kfpl-kpi-meta">Upcoming payout schedule</span>
         </div>
@@ -389,6 +638,192 @@ export default function DashboardHome() {
           </div>
         </div>
 
+      {/* ═══════ Selected Update Detail Modal ═══════ */}
+      <Modal
+        isOpen={!!selectedUpdate}
+        onClose={() => setSelectedUpdate(null)}
+        title={selectedUpdate ? (selectedUpdate.type === 'segment' || !selectedUpdate.project ? `${selectedUpdate.segment} Segment Update` : selectedUpdate.project) : 'Update Details'}
+        size={selectedUpdate?.media?.length > 0 ? 'lg' : 'md'}
+        footer={
+          <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setSelectedUpdate(null)}>Close</button>
+        }
+      >
+        {selectedUpdate && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="kfpl-badge" style={{ background: `${SEGMENT_COLORS[selectedUpdate.segment] || '#10B981'}15`, color: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981', border: `1px solid ${SEGMENT_COLORS[selectedUpdate.segment] || '#10B981'}40` }}>
+                {selectedUpdate.segment}
+              </span>
+              <span className="text-xs text-muted" style={{ fontWeight: 600 }}>{selectedUpdate.date}</span>
+            </div>
+
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--color-text)', fontStyle: 'italic' }}>
+                "{selectedUpdate.note}"
+              </p>
+            </div>
+
+            {/* Progress */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
+                <span className="text-muted">Milestone Completion</span>
+                <span style={{ color: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981' }}>{selectedUpdate.progress}%</span>
+              </div>
+              <div className="kfpl-progress" style={{ height: '8px', margin: 0 }}>
+                <div className="kfpl-progress-fill" style={{ width: `${selectedUpdate.progress}%`, background: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981' }}></div>
+              </div>
+            </div>
+
+            {/* Attached Files */}
+            {(selectedUpdate.media || []).length > 0 && (
+              <div>
+                <h5 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px', color: 'var(--color-text)' }}>Attached Files</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                  {selectedUpdate.media.map(m => (
+                    <div key={m.id} style={{
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      alignItems: 'center',
+                      textAlign: 'center'
+                    }}>
+                      {m.type?.startsWith('image/') ? (
+                        <img src={m.dataUrl} alt={m.name} style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{
+                          height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'var(--color-surface)', width: '100%', borderRadius: '4px',
+                          fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-secondary)'
+                        }}>
+                          {m.name?.split('.').pop()?.toUpperCase() || 'FILE'}
+                        </div>
+                      )}
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                        {m.name}
+                      </span>
+                      <a
+                        href={m.dataUrl}
+                        download={m.name}
+                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--xs"
+                        style={{ width: '100%', textDecoration: 'none', textAlign: 'center', display: 'block', padding: '4px' }}
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ═══════ History Log Modal ═══════ */}
+      <Modal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        title="Investment Status History"
+        size="lg"
+        footer={
+          <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowHistoryModal(false)}>Close</button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input
+              type="text"
+              className="kfpl-input"
+              placeholder="Search history by project or note..."
+              value={historySearch}
+              onChange={e => setHistorySearch(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <select
+              className="kfpl-select"
+              value={historySegmentFilter}
+              onChange={e => setHistorySegmentFilter(e.target.value)}
+              style={{ width: '180px' }}
+            >
+              <option value="all">All Segments</option>
+              {Object.keys(SEGMENT_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          {/* List of historical records */}
+          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+            {statusHistory
+              .filter(log => {
+                const matchesSearch =
+                  (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
+                  (log.note || '').toLowerCase().includes(historySearch.toLowerCase());
+                const matchesSegment =
+                  historySegmentFilter === 'all' || log.segment === historySegmentFilter;
+                return matchesSearch && matchesSegment;
+              })
+              .length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px' }}>
+                No update history found matching your filters.
+              </div>
+            ) : statusHistory
+                .filter(log => {
+                  const matchesSearch =
+                    (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
+                    (log.note || '').toLowerCase().includes(historySearch.toLowerCase());
+                  const matchesSegment =
+                    historySegmentFilter === 'all' || log.segment === historySegmentFilter;
+                  return matchesSearch && matchesSegment;
+                })
+                .map(log => {
+                  const accent = SEGMENT_COLORS[log.segment] || '#10B981';
+                  return (
+                    <div key={log.id} style={{
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      background: 'var(--color-surface)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => { setShowHistoryModal(false); setSelectedUpdate(log); }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="kfpl-badge" style={{ background: `${accent}15`, color: accent, borderColor: `${accent}30`, fontSize: '0.65rem', padding: '2px 6px' }}>{log.segment}</span>
+                          <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>
+                            {log.type === 'segment' || !log.project ? 'Segment-Wide Update' : log.project}
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>{log.date}</span>
+                      </div>
+                      
+                      <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0, fontStyle: 'italic' }}>
+                        "{log.note || 'No notes posted.'}"
+                      </p>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border-light)', paddingTop: '6px', marginTop: '2px' }}>
+                        <span>Status: <strong>{log.status}</strong> • Progress: <strong>{log.progress}%</strong></span>
+                        {(log.media || []).length > 0 && (
+                          <span style={{ color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
+                              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                            {log.media.length} File(s)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+          </div>
+        </div>
+      </Modal>
       </div>
     </div>
   );

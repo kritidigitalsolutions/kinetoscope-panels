@@ -15,14 +15,229 @@ export default function ROIList() {
   const addToast = useToast();
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [recipientTypeFilter, setRecipientTypeFilter] = useState('all');
+  const [paymentModeFilter, setPaymentModeFilter] = useState('all');
 
   // ROI / Commission records state
   const [clientROI, setClientROI] = useState([]);
   const [agentCommissions, setAgentCommissions] = useState([]);
 
+  // Modal & Upload State
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFeedback, setUploadFeedback] = useState({ validCount: 0, invalidCount: 0, previewRecords: [] });
+
+  const parseCSV = (text) => {
+    const lines = text.split(/\r?\n/);
+    if (lines.length <= 1) return [];
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+    
+    const records = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const cells = [];
+      let currentCell = '';
+      let inQuotes = false;
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"' || char === "'") {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          cells.push(currentCell.trim());
+          currentCell = '';
+        } else {
+          currentCell += char;
+        }
+      }
+      cells.push(currentCell.trim());
+
+      const record = {};
+      headers.forEach((header, index) => {
+        let val = cells[index] || '';
+        val = val.replace(/^["']|["']$/g, '').trim();
+        record[header] = val;
+      });
+      records.push(record);
+    }
+    return records;
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const parsed = parseCSV(text);
+      
+      const validated = parsed.map((rec, index) => {
+        const errors = [];
+        const type = (rec['recipient type'] || rec['type'] || '').toLowerCase().trim();
+        const recipientId = (rec['recipient id'] || rec['id'] || '').toUpperCase().trim();
+        const month = (rec['month'] || rec['period'] || '').trim();
+        const amount = parseFloat(rec['amount'] || '0');
+        const mode = rec['payment mode'] || rec['mode'] || 'Bank Transfer';
+        const ref = rec['transaction ref'] || rec['ref'] || `TXN-BULK-${Date.now()}-${index}`;
+        const status = (rec['status'] || 'paid').toLowerCase().trim();
+        const paidAt = rec['paid at'] || rec['date'] || new Date().toISOString().split('T')[0];
+
+        if (type !== 'client' && type !== 'agent') {
+          errors.push("Invalid type. Use 'client' or 'agent'.");
+        }
+        
+        let name = '';
+        let idInternal = '';
+        if (type === 'client') {
+          const inv = investors.find(i => i.clientId.toUpperCase() === recipientId);
+          if (!inv) {
+            errors.push(`Client ID '${recipientId}' not found.`);
+          } else {
+            name = inv.name;
+            idInternal = inv.id;
+          }
+        } else if (type === 'agent') {
+          const agt = agents.find(a => a.agentId.toUpperCase() === recipientId);
+          if (!agt) {
+            errors.push(`Agent ID '${recipientId}' not found.`);
+          } else {
+            name = agt.name;
+            idInternal = agt.id;
+          }
+        }
+
+        if (isNaN(amount) || amount <= 0) {
+          errors.push("Amount must be positive.");
+        }
+
+        const isClientRefUsed = clientROI.some(r => r.transactionRef?.toUpperCase() === ref.toUpperCase());
+        const isAgentRefUsed = agentCommissions.some(c => c.transactionRef?.toUpperCase() === ref.toUpperCase());
+        if (isClientRefUsed || isAgentRefUsed) {
+          errors.push(`Reference '${ref}' already exists.`);
+        }
+
+        return {
+          id: Date.now() + index,
+          type,
+          recipientId,
+          name,
+          idInternal,
+          month,
+          amount,
+          paymentMode: mode,
+          transactionRef: ref,
+          status: status === 'paid' ? 'paid' : 'pending',
+          paidAt: status === 'paid' ? paidAt : null,
+          isValid: errors.length === 0,
+          errors
+        };
+      });
+
+      const validCount = validated.filter(r => r.isValid).length;
+      const invalidCount = validated.filter(r => !r.isValid).length;
+      setUploadFeedback({
+        validCount,
+        invalidCount,
+        previewRecords: validated
+      });
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmUpload = () => {
+    const validRecords = uploadFeedback.previewRecords.filter(r => r.isValid);
+    if (validRecords.length === 0) {
+      addToast('No valid records to upload.', 'error', 'Upload Failed');
+      return;
+    }
+
+    const newClientROI = [];
+    const newAgentComm = [];
+
+    validRecords.forEach(rec => {
+      if (rec.type === 'client') {
+        newClientROI.push({
+          id: rec.id,
+          investorId: rec.idInternal,
+          investorName: rec.name,
+          clientId: rec.recipientId,
+          roiPercentage: investors.find(i => i.id === rec.idInternal)?.roiPercentage || 1.2,
+          month: rec.month,
+          amount: rec.amount,
+          status: rec.status,
+          paidAt: rec.paidAt,
+          paymentMode: rec.paymentMode,
+          transactionRef: rec.transactionRef
+        });
+      } else {
+        newAgentComm.push({
+          id: rec.id,
+          agentName: rec.name,
+          agentId: rec.recipientId,
+          idInternal: rec.idInternal,
+          type: 'monthly',
+          month: rec.month,
+          amount: rec.amount,
+          status: rec.status,
+          paidAt: rec.paidAt,
+          paymentMode: rec.paymentMode,
+          transactionRef: rec.transactionRef,
+          remarks: 'Bulk Uploaded'
+        });
+      }
+    });
+
+    const updatedClientROI = [...newClientROI, ...clientROI];
+    const updatedAgentComm = [...newAgentComm, ...agentCommissions];
+
+    setClientROI(updatedClientROI);
+    setAgentCommissions(updatedAgentComm);
+
+    localStorage.setItem('kfpl_client_roi', JSON.stringify(updatedClientROI));
+    localStorage.setItem('kfpl_agent_commissions', JSON.stringify(updatedAgentComm));
+
+    addToast(`Successfully uploaded ${validRecords.length} records!`, 'success', 'Upload Successful');
+    setShowUploadModal(false);
+    setUploadFeedback({ validCount: 0, invalidCount: 0, previewRecords: [] });
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Recipient Name', 'Recipient ID', 'Recipient Type', 'Month / Period', 'Payout Detail', 'Amount (₹)', 'Payment Mode', 'Transaction Ref', 'Status', 'Paid At'];
+    const rows = filteredRecords.map(r => [
+      r.name,
+      r.subText,
+      r.recordType,
+      r.month,
+      r.payoutDetail,
+      r.amount,
+      r.paymentMode || '—',
+      r.transactionRef || '—',
+      r.status.toUpperCase(),
+      r.paidAt || '—'
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `KFPL_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    addToast('Standard CSV exported successfully!', 'success', 'Export Success');
+  };
+
   // Modal State
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [recipientType, setRecipientType] = useState('client'); // 'client' | 'agent'
+  const [isAmountEditable, setIsAmountEditable] = useState(false);
+  const [showPayoutWarningModal, setShowPayoutWarningModal] = useState(false);
+  const [showPayoutConfirmModal, setShowPayoutConfirmModal] = useState(false);
   
   // Form fields
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -79,6 +294,7 @@ export default function ROIList() {
 
   const handleRecipientTypeChange = (type) => {
     setRecipientType(type);
+    setIsAmountEditable(false);
     setSelectedClientId('');
     setSelectedAgentId('');
     setCommissionType('Monthly');
@@ -89,10 +305,11 @@ export default function ROIList() {
 
   const handleClientChange = (id) => {
     setSelectedClientId(id);
+    setIsAmountEditable(false);
     const client = investors.find(c => String(c.id) === String(id));
     if (client) {
-      // Monthly ROI = (totalInvestment * roiPercentage) / 100 / 12
-      const monthlyReturn = Math.round((client.totalInvestment * (client.roiPercentage || 12)) / 1200);
+      // Monthly ROI = (totalInvestment * roiPercentage) / 100
+      const monthlyReturn = Math.round((client.totalInvestment * (client.roiPercentage || 1.2)) / 100);
       setAmountPaid(monthlyReturn);
     } else {
       setAmountPaid('');
@@ -150,6 +367,13 @@ export default function ROIList() {
 
     if (isClientRefUsed || isAgentRefUsed) {
       alert('Transaction reference must be unique. This reference has already been used.');
+      return;
+    }
+
+    // Two-step verification sequence (Warning then Confirmation)
+    alert('WARNING: You are about to record a payout transaction. Please verify that the Recipient, Payout Amount, and Transaction Reference ID are correct. Recorded payouts cannot be undone.');
+    const proceedSubmit = confirm('Are you sure you want to proceed and record this payout?');
+    if (!proceedSubmit) {
       return;
     }
 
@@ -231,8 +455,12 @@ export default function ROIList() {
     }))
   ].sort((a, b) => b.id - a.id);
 
+  const uniquePaymentModes = Array.from(new Set(unifiedRecords.map(r => r.paymentMode).filter(Boolean)));
+
   const filteredRecords = unifiedRecords.filter(r => {
     if (filter !== 'all' && r.status !== filter) return false;
+    if (recipientTypeFilter !== 'all' && r.recordType.toLowerCase() !== recipientTypeFilter.toLowerCase()) return false;
+    if (paymentModeFilter !== 'all' && r.paymentMode !== paymentModeFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       const haystack = [
@@ -251,7 +479,23 @@ export default function ROIList() {
           <h2 className="kfpl-page-title">Complete Transaction Details</h2>
           <p className="kfpl-page-subtitle">Track and record ROI returns and agent commission payouts</p>
         </div>
-        <div className="kfpl-page-header-actions">
+        <div className="kfpl-page-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={handleExportCSV}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '16px', height: '16px', marginRight: '6px' }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+          </button>
+          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => setShowUploadModal(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '16px', height: '16px', marginRight: '6px' }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Bulk CSV Upload
+          </button>
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={() => setShowPayoutModal(true)}>
             + Record Payout
           </button>
@@ -272,9 +516,9 @@ export default function ROIList() {
         ))}
       </div>
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ position: 'relative', maxWidth: '400px' }}>
+      {/* Search and Filters */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <div style={{ position: 'relative', maxWidth: '400px', flex: 1, minWidth: '240px' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--color-text-muted)' }}>
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
@@ -287,6 +531,27 @@ export default function ROIList() {
             style={{ paddingLeft: '36px' }}
           />
         </div>
+
+        <select
+          value={recipientTypeFilter}
+          onChange={e => setRecipientTypeFilter(e.target.value)}
+          className="kfpl-select"
+          style={{ width: '160px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+        >
+          <option value="all">All Recipients</option>
+          <option value="client">Client</option>
+          <option value="agent">Agent</option>
+        </select>
+
+        <select
+          value={paymentModeFilter}
+          onChange={e => setPaymentModeFilter(e.target.value)}
+          className="kfpl-select"
+          style={{ width: '180px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+        >
+          <option value="all">All Payment Modes</option>
+          {uniquePaymentModes.map(mode => <option key={mode} value={mode}>{mode}</option>)}
+        </select>
       </div>
 
       {/* Table */}
@@ -474,7 +739,33 @@ export default function ROIList() {
                 onChange={(e) => setAmountPaid(e.target.value)}
                 placeholder="Enter payout amount"
                 required
+                readOnly={recipientType === 'client' && !isAmountEditable}
+                style={recipientType === 'client' && !isAmountEditable ? { backgroundColor: 'var(--color-surface-hover)', cursor: 'not-allowed' } : {}}
               />
+              {recipientType === 'client' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                  <input
+                    type="checkbox"
+                    id="override-amount"
+                    checked={isAmountEditable}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setShowPayoutWarningModal(true);
+                      } else {
+                        setIsAmountEditable(false);
+                        const client = investors.find(c => String(c.id) === String(selectedClientId));
+                        if (client) {
+                          const monthlyReturn = Math.round((client.totalInvestment * (client.roiPercentage || 1.2)) / 100);
+                          setAmountPaid(monthlyReturn);
+                        }
+                      }
+                    }}
+                  />
+                  <label htmlFor="override-amount" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+                    Edit Payout Amount Manually
+                  </label>
+                </div>
+              )}
             </div>
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Payout Date <span className="required">*</span></label>
@@ -516,6 +807,191 @@ export default function ROIList() {
             </div>
           </div>
 
+        </div>
+      </Modal>
+
+      {/* Bulk CSV Upload Modal */}
+      <Modal
+        isOpen={showUploadModal}
+        onClose={() => {
+          setShowUploadModal(false);
+          setUploadFeedback({ validCount: 0, invalidCount: 0, previewRecords: [] });
+        }}
+        title="Bulk Payout Import (CSV)"
+        footer={
+          <>
+            <button 
+              className="kfpl-btn kfpl-btn--ghost" 
+              onClick={() => {
+                setShowUploadModal(false);
+                setUploadFeedback({ validCount: 0, invalidCount: 0, previewRecords: [] });
+              }}
+            >
+              Cancel
+            </button>
+            <button 
+              className="kfpl-btn kfpl-btn--primary" 
+              onClick={handleConfirmUpload}
+              disabled={uploadFeedback.validCount === 0}
+            >
+              Process Payouts ({uploadFeedback.validCount})
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ backgroundColor: 'rgba(15, 118, 110, 0.05)', border: '1px solid rgba(15, 118, 110, 0.2)', padding: '12px 16px', borderRadius: '8px' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0F766E', marginBottom: '6px' }}>CSV File Template Format</h4>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>
+              Your file must contain a header row. Use the exact columns or aliases below:
+            </p>
+            <div style={{ backgroundColor: 'var(--color-surface, #FFFFFF)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '8px', fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)', marginTop: '8px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+              Recipient Type,Recipient ID,Month,Amount,Payment Mode,Transaction Ref,Status,Paid At<br />
+              client,C-1002,Jun 2026,18000,UPI,TXN-JUN-01,paid,2026-06-25<br />
+              agent,A-2001,Jun 2026,4500,Bank Transfer,TXN-JUN-02,paid,2026-06-25
+            </div>
+            <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              • Recipient Type: <strong>client</strong> or <strong>agent</strong><br />
+              • Recipient ID: Match client/agent ID (e.g. C-1002 or A-2001)<br />
+              • Status: <strong>paid</strong> or <strong>pending</strong>
+            </div>
+          </div>
+
+          <div style={{ border: '2px dashed var(--color-border)', borderRadius: '12px', padding: '30px 20px', textAlign: 'center', backgroundColor: 'var(--color-surface)', cursor: 'pointer', transition: 'border-color 0.2s', position: 'relative' }}>
+            <input 
+              type="file" 
+              accept=".csv" 
+              onChange={handleFileUpload} 
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+            />
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0F766E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '40px', height: '40px', margin: '0 auto 12px', opacity: 0.8 }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text)' }}>Click to upload or drag & drop CSV file</span>
+            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Accepts only standard .csv files</span>
+          </div>
+
+          {uploadFeedback.previewRecords.length > 0 && (
+            <div style={{ marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text)' }}>Parsing Preview</h4>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <span style={{ backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                    {uploadFeedback.validCount} Valid
+                  </span>
+                  {uploadFeedback.invalidCount > 0 && (
+                    <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                      {uploadFeedback.invalidCount} Invalid
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px 8px', backgroundColor: 'var(--color-background-subtle, #F8FAFC)' }}>
+                {uploadFeedback.previewRecords.map((record, idx) => (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '4px', 
+                      padding: '8px 0', 
+                      borderBottom: idx === uploadFeedback.previewRecords.length - 1 ? 'none' : '1px solid var(--color-border)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>
+                        Row #{idx + 1}: {record.type ? record.type.toUpperCase() : 'Unknown type'} ({record.recipientId || 'No ID'})
+                      </span>
+                      <span style={{ fontWeight: 600, color: record.isValid ? '#0F766E' : '#EF4444' }}>
+                        {record.isValid ? 'Valid' : 'Invalid'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      Period: {record.month || '—'} | Amount: ₹{(record.amount || 0).toLocaleString('en-IN')} | Ref: {record.transactionRef || '—'}
+                    </div>
+                    {!record.isValid && (
+                      <div style={{ fontSize: '0.75rem', color: '#EF4444', marginTop: '2px', fontWeight: 500 }}>
+                        • {record.errors.join(' • ')}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Payout Manual Override Warning Modal */}
+      <Modal
+        isOpen={showPayoutWarningModal}
+        onClose={() => setShowPayoutWarningModal(false)}
+        title="Override Payout Warning"
+        footer={
+          <>
+            <button 
+              className="kfpl-btn kfpl-btn--ghost" 
+              onClick={() => setShowPayoutWarningModal(false)}
+            >
+              Cancel
+            </button>
+            <button 
+              className="kfpl-btn kfpl-btn--danger" 
+              onClick={() => {
+                setShowPayoutWarningModal(false);
+                setShowPayoutConfirmModal(true);
+              }}
+              style={{ backgroundColor: '#EF4444', color: '#FFFFFF', borderColor: 'transparent' }}
+            >
+              Override Payout
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#EF4444', lineHeight: '1.4', fontWeight: 500 }}>
+              WARNING: You are choosing to edit the calculated ROI payout amount manually. 
+              This breaks the automated payout checks and should only be used for special adjustment scenarios.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Payout Manual Override Confirmation Modal */}
+      <Modal
+        isOpen={showPayoutConfirmModal}
+        onClose={() => setShowPayoutConfirmModal(false)}
+        title="Confirm Manual Override"
+        footer={
+          <>
+            <button 
+              className="kfpl-btn kfpl-btn--ghost" 
+              onClick={() => setShowPayoutConfirmModal(false)}
+            >
+              Cancel
+            </button>
+            <button 
+              className="kfpl-btn kfpl-btn--primary" 
+              onClick={() => {
+                setIsAmountEditable(true);
+                setShowPayoutConfirmModal(false);
+              }}
+            >
+              Unlock Field
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text)', lineHeight: '1.4' }}>
+            Are you absolutely sure you want to unlock the Amount field for manual entry? 
+            Please double-check the final numbers before submitting.
+          </p>
         </div>
       </Modal>
     </div>

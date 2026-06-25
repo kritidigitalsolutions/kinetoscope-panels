@@ -6,7 +6,7 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
-import { investors, agents, formatCurrency } from '../../data/mockData';
+import { investors, agents, formatCurrency, getCategoryFromAmount } from '../../data/mockData';
 
 export default function AgentClientsView() {
   const navigate = useNavigate();
@@ -18,44 +18,85 @@ export default function AgentClientsView() {
   const agentName = agent?.name || location.state?.agentName || 'Agent';
   const clientIds = agent?.clients || [];
 
-  // Filter global investors list
+  // Filter global investors list — only this agent's clients
   const agentClients = investors.filter(inv => clientIds.includes(inv.id));
 
+  const getPerkTier = (amount) => {
+    return getCategoryFromAmount(amount);
+  };
+
+  // Calculate contract end date (joinDate + longest contract period, default 24 months)
+  const getContractEndDate = (row) => {
+    if (row.contractEndDate) return row.contractEndDate;
+    if (row.joinDate) {
+      const d = new Date(row.joinDate);
+      d.setMonth(d.getMonth() + 24);
+      const day = String(d.getDate()).padStart(2, '0');
+      const mon = String(d.getMonth() + 1).padStart(2, '0');
+      return `${day}/${mon}/${d.getFullYear()}`;
+    }
+    return '—';
+  };
+
+  // Same columns as InvestorList (Manage Clients) — minus Agent column
   const columns = [
-    {
-      header: 'Client',
-      accessor: 'name',
-      render: (row) => (
-        <div>
-          <div className="kfpl-table-cell-primary">{row.name}</div>
-          <div className="kfpl-table-cell-secondary">{row.email}</div>
-        </div>
-      ),
-    },
     { header: 'Client ID', accessor: 'clientId' },
+    { header: 'Join Date', accessor: 'joinDate' },
     {
-      header: 'Category',
-      accessor: 'category',
-      render: (row) => <Badge status={row.category}>{row.category}</Badge>,
+      header: 'Contract End',
+      render: (row) => <span>{getContractEndDate(row)}</span>,
     },
+    {
+      header: 'Client Name',
+      accessor: 'name',
+      render: (row) => <span style={{ fontWeight: 600 }}>{row.name}</span>,
+    },
+    { header: 'Email Address', accessor: 'email' },
     {
       header: 'Total Investment',
       accessor: 'totalInvestment',
       render: (row) => <span className="font-semibold">{formatCurrency(row.totalInvestment)}</span>,
     },
     {
-      header: 'ROI %',
+      header: 'ROI % Allocated',
       accessor: 'roiPercentage',
       render: (row) => `${row.roiPercentage}%`,
+    },
+    {
+      header: 'Perks',
+      accessor: 'totalInvestment',
+      render: (row) => {
+        const perk = getPerkTier(row.totalInvestment);
+        return <Badge status={perk}>{perk.toUpperCase()}</Badge>;
+      },
+    },
+    {
+      header: 'Agent Commission',
+      render: () => {
+        if (!agent) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+        return (
+          <span className="font-semibold" style={{ color: 'var(--color-success)' }}>
+            {agent.commissionMonthly}% monthly
+          </span>
+        );
+      }
+    },
+    {
+      header: 'Risk Profile',
+      render: (row) => {
+        const risk = row.riskProfile || 'Conservative';
+        const statusMap = {
+          'Conservative': 'active',
+          'Moderate': 'gold',
+          'Aggressive': 'rejected'
+        };
+        return <Badge status={statusMap[risk]}>{risk}</Badge>;
+      }
     },
     {
       header: 'Status',
       accessor: 'status',
       render: (row) => <Badge status={row.status}>{row.status}</Badge>,
-    },
-    {
-      header: 'Join Date',
-      accessor: 'joinDate',
     },
   ];
 
@@ -70,6 +111,12 @@ export default function AgentClientsView() {
           <p className="kfpl-page-subtitle">Clients brought to the platform by {agentName}</p>
         </div>
         <div className="kfpl-page-header-actions">
+          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export CSV
+          </button>
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => navigate('/agents')}>
             Back to Agents
           </button>
@@ -80,7 +127,7 @@ export default function AgentClientsView() {
         columns={columns}
         data={agentClients}
         onRowClick={(row) => navigate(`/investors/${row.id}`)}
-        searchPlaceholder="Search clients..."
+        searchPlaceholder="Search clients by name, email, ID..."
       />
     </div>
   );

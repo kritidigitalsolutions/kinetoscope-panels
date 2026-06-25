@@ -53,6 +53,7 @@ const SEGMENT_COLORS = {
 
 const LS_KEY = 'kfpl_investment_status';
 const LS_CUSTOM_SEGMENTS_KEY = 'kfpl_custom_segments';
+const LS_HISTORY_KEY = 'kfpl_investment_status_history';
 
 export default function InvestmentStatus() {
   const addToast = useToast();
@@ -60,13 +61,19 @@ export default function InvestmentStatus() {
 
   // ── State ──────────────────────────────
   const [statusUpdates, setStatusUpdates] = useState([]);
-  const [customSegments, setCustomSegments] = useState([]);
+  const [segmentsConfig, setSegmentsConfig] = useState([]);
+  const [historyLogs, setHistoryLogs] = useState([]);
   const [editId, setEditId] = useState(null);
   const [updateNote, setUpdateNote] = useState('');
+  const [isSegmentWidePost, setIsSegmentWidePost] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
+  const [showHistoryLogModal, setShowHistoryLogModal] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historySegmentFilter, setHistorySegmentFilter] = useState('all');
   const [editingItem, setEditingItem] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [uploadTarget, setUploadTarget] = useState(null);
@@ -74,7 +81,12 @@ export default function InvestmentStatus() {
 
   // Form state
   const [formData, setFormData] = useState({
-    project: '', segment: '', status: 'Planning', progress: 0, note: '',
+    isSegmentWide: false,
+    project: '',
+    segment: '',
+    status: '',
+    progress: 0,
+    note: '',
   });
   const [newSegmentName, setNewSegmentName] = useState('');
 
@@ -88,9 +100,61 @@ export default function InvestmentStatus() {
       localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT_STATUS_UPDATES));
     }
 
+    // Load segments and statuses configuration
+    const storedConfig = localStorage.getItem('kfpl_portfolio_segments_config');
+    let config = [];
+    if (storedConfig) {
+      config = JSON.parse(storedConfig);
+    } else {
+      config = [
+        { name: 'Film Making', statuses: ['Planning', 'In Production', 'Active', 'Ongoing', 'Completed'] },
+        { name: 'Distribution', statuses: ['Planning', 'Active', 'Ongoing', 'Negotiation', 'Completed'] },
+        { name: 'Music', statuses: ['Planning', 'Recording', 'Active', 'Ongoing', 'Completed', 'Released'] },
+        { name: 'Trading & Syndication', statuses: ['Planning', 'Negotiation', 'Active', 'Ongoing', 'Completed'] },
+        { name: 'Content IP Bank', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
+        { name: 'Film Exhibition', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
+      ];
+      localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(config));
+    }
+
+    // Migrate any legacy custom segments
     const storedSegs = localStorage.getItem(LS_CUSTOM_SEGMENTS_KEY);
     if (storedSegs) {
-      setCustomSegments(JSON.parse(storedSegs));
+      try {
+        const parsedCustom = JSON.parse(storedSegs);
+        let migrated = false;
+        parsedCustom.forEach(segName => {
+          if (segName && !config.some(c => c.name.toLowerCase() === segName.toLowerCase())) {
+            config.push({
+              name: segName,
+              statuses: ['Planning', 'Active', 'Ongoing', 'Completed']
+            });
+            migrated = true;
+          }
+        });
+        if (migrated) {
+          localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(config));
+        }
+      } catch (e) {
+        console.error('Error migrating custom segments:', e);
+      }
+    }
+    setSegmentsConfig(config);
+
+    const storedHistory = localStorage.getItem(LS_HISTORY_KEY);
+    if (storedHistory) {
+      setHistoryLogs(JSON.parse(storedHistory));
+    } else {
+      const defaultHistory = [
+        { id: 1, type: 'project', segment: 'Film Making', project: 'Project Astra', status: 'In Production', progress: 65, note: 'Post-production phase begins next week', date: '2025-04-10', media: DEFAULT_STATUS_UPDATES[0].media },
+        { id: 2, type: 'project', segment: 'Distribution', project: 'Meridian Release', status: 'Active', progress: 80, note: 'Distribution across 3 states confirmed', date: '2025-04-08', media: [] },
+        { id: 3, type: 'project', segment: 'Music', project: 'Rhythm Series', status: 'Recording', progress: 40, note: '4 tracks completed, 6 remaining', date: '2025-04-05', media: [] },
+        { id: 4, type: 'project', segment: 'Trading & Syndication', project: 'Content Deal Q2', status: 'Negotiation', progress: 30, note: 'Final terms under discussion', date: '2025-04-12', media: [] },
+        { id: 5, type: 'project', segment: 'Content IP Bank', project: 'Archive Digitization', status: 'Ongoing', progress: 55, note: '550 titles digitized so far', date: '2025-04-09', media: [] },
+        { id: 6, type: 'project', segment: 'Film Exhibition', project: 'Screen Network', status: 'Planning', progress: 15, note: '3 new screen locations identified', date: '2025-04-11', media: [] }
+      ];
+      setHistoryLogs(defaultHistory);
+      localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(defaultHistory));
     }
   }, []);
 
@@ -99,20 +163,37 @@ export default function InvestmentStatus() {
     localStorage.setItem(LS_KEY, JSON.stringify(updated));
   };
 
-  const persistSegments = (segs) => {
-    setCustomSegments(segs);
-    localStorage.setItem(LS_CUSTOM_SEGMENTS_KEY, JSON.stringify(segs));
+  const logToHistory = (item, customNote = null) => {
+    const history = JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || '[]');
+    const newLog = {
+      id: Date.now(),
+      targetId: item.id,
+      type: item.isSegmentWide ? 'segment' : 'project',
+      segment: item.segment,
+      project: item.isSegmentWide ? '' : item.project,
+      status: item.status,
+      progress: item.progress,
+      note: customNote !== null ? customNote : item.note,
+      date: new Date().toISOString().split('T')[0],
+      media: item.media || []
+    };
+    const updatedHistory = [newLog, ...history];
+    localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(updatedHistory));
+    setHistoryLogs(updatedHistory);
   };
 
   // ── All available segments ─────────────────
-  const allSegments = [
-    ...INVESTMENT_SEGMENTS.map(s => s.name),
-    ...customSegments,
-  ];
+  const allSegments = segmentsConfig.map(s => s.name);
+
+  // Derive customSegments list from segmentsConfig
+  const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
+  const customSegments = segmentsConfig
+    .map(c => c.name)
+    .filter(n => !defaultSegmentNames.includes(n));
 
   // ── CRUD Handlers ─────────────────────────
   const resetForm = () => {
-    setFormData({ project: '', segment: '', status: 'Planning', progress: 0, note: '' });
+    setFormData({ isSegmentWide: false, project: '', segment: '', status: 'Planning', progress: 0, note: '' });
   };
 
   const openAddModal = () => {
@@ -123,11 +204,12 @@ export default function InvestmentStatus() {
 
   const openEditModal = (item) => {
     setFormData({
-      project: item.project,
+      isSegmentWide: !!item.isSegmentWide,
+      project: item.project || '',
       segment: item.segment,
       status: item.status,
       progress: item.progress,
-      note: item.note,
+      note: item.note || '',
     });
     setEditingItem(item);
     setShowAddModal(true);
@@ -142,21 +224,31 @@ export default function InvestmentStatus() {
     if (editingItem) {
       const updated = statusUpdates.map(item =>
         item.id === editingItem.id
-          ? { ...item, ...formData, progress: parseInt(formData.progress) || 0, lastUpdate: new Date().toISOString().split('T')[0] }
+          ? {
+              ...item,
+              ...formData,
+              isSegmentWide: false,
+              progress: parseInt(formData.progress) || 0,
+              lastUpdate: new Date().toISOString().split('T')[0]
+            }
           : item
       );
       persist(updated);
-      addToast(`${formData.project} updated successfully`, 'success', 'Project Updated');
+      const editedItem = updated.find(x => x.id === editingItem.id);
+      logToHistory(editedItem);
+      addToast(`${formData.project} updated successfully`, 'success', 'Updated');
     } else {
       const newItem = {
         id: Date.now(),
         ...formData,
+        isSegmentWide: false,
         progress: parseInt(formData.progress) || 0,
         lastUpdate: new Date().toISOString().split('T')[0],
         media: [],
       };
       persist([...statusUpdates, newItem]);
-      addToast(`${formData.project} added successfully`, 'success', 'Project Added');
+      logToHistory(newItem);
+      addToast(`${formData.project} added successfully`, 'success', 'Added');
     }
 
     setShowAddModal(false);
@@ -172,15 +264,25 @@ export default function InvestmentStatus() {
   };
 
   const handlePostUpdate = (item) => {
+    const noteToPost = updateNote.trim() || item.note;
     const updated = statusUpdates.map(s =>
       s.id === item.id
-        ? { ...s, note: updateNote || s.note, lastUpdate: new Date().toISOString().split('T')[0] }
+        ? { ...s, note: noteToPost, lastUpdate: new Date().toISOString().split('T')[0] }
         : s
     );
     persist(updated);
-    addToast(`Status update posted for ${item.project}`, 'success', 'Update Posted');
+    
+    // Log this update to history!
+    logToHistory({
+      ...item,
+      isSegmentWide: isSegmentWidePost,
+      note: noteToPost
+    }, noteToPost);
+
+    addToast(`Status update posted for ${isSegmentWidePost ? item.segment : item.project}`, 'success', 'Update Posted');
     setEditId(null);
     setUpdateNote('');
+    setIsSegmentWidePost(false);
   };
 
   // ── Segment Management ─────────────────────
@@ -189,19 +291,41 @@ export default function InvestmentStatus() {
       addToast('Please enter a segment name', 'error', 'Validation Error');
       return;
     }
-    if (allSegments.includes(newSegmentName.trim())) {
+    if (allSegments.some(s => s.toLowerCase() === newSegmentName.trim().toLowerCase())) {
       addToast('Segment already exists', 'error', 'Duplicate');
       return;
     }
-    const updated = [...customSegments, newSegmentName.trim()];
-    persistSegments(updated);
+
+    const updatedConfig = [
+      ...segmentsConfig,
+      { name: newSegmentName.trim(), statuses: ['Planning', 'Active', 'Ongoing', 'Completed'] }
+    ];
+    setSegmentsConfig(updatedConfig);
+    localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
+
+    // Sync to legacy custom segments key
+    const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
+    const customSegNames = updatedConfig
+      .map(c => c.name)
+      .filter(n => !defaultSegmentNames.includes(n));
+    localStorage.setItem(LS_CUSTOM_SEGMENTS_KEY, JSON.stringify(customSegNames));
+
     addToast(`Segment "${newSegmentName.trim()}" added`, 'success', 'Segment Added');
     setNewSegmentName('');
   };
 
   const handleRemoveSegment = (seg) => {
-    const updated = customSegments.filter(s => s !== seg);
-    persistSegments(updated);
+    const updatedConfig = segmentsConfig.filter(s => s.name !== seg);
+    setSegmentsConfig(updatedConfig);
+    localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
+
+    // Sync to legacy custom segments key
+    const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
+    const customSegNames = updatedConfig
+      .map(c => c.name)
+      .filter(n => !defaultSegmentNames.includes(n));
+    localStorage.setItem(LS_CUSTOM_SEGMENTS_KEY, JSON.stringify(customSegNames));
+
     addToast(`Segment "${seg}" removed`, 'success', 'Segment Removed');
   };
 
@@ -248,6 +372,13 @@ export default function InvestmentStatus() {
     addToast('Media removed', 'success', 'Removed');
   };
 
+  const filteredUpdates = statusUpdates.filter(item => {
+    const proj = item.isSegmentWide ? `${item.segment} Segment Update` : (item.project || '');
+    const seg = item.segment || '';
+    return proj.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           seg.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
   return (
     <div className="kfpl-page animate-fade-slide-up">
       {/* Hidden file input */}
@@ -259,6 +390,12 @@ export default function InvestmentStatus() {
           <p className="kfpl-page-subtitle">Project-wise segment-wise investment status updates</p>
         </div>
         <div className="kfpl-page-header-actions" style={{ display: 'flex', gap: '8px' }}>
+          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => setShowHistoryLogModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            View Update History
+          </button>
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => setShowSegmentModal(true)}>
             + Add Segment
           </button>
@@ -268,12 +405,29 @@ export default function InvestmentStatus() {
         </div>
       </div>
 
+      {/* Search Filter Row */}
+      <div className="kfpl-search-filter-row" style={{ marginBottom: '20px', display: 'flex', gap: '12px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="text"
+            className="kfpl-input"
+            placeholder="Search updates by project or segment name..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{ paddingLeft: '36px' }}
+          />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: 'var(--color-text-muted)' }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </div>
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {statusUpdates.length === 0 ? (
+        {filteredUpdates.length === 0 ? (
           <div className="kfpl-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-            No projects found. Click "Add Project" to create one.
+            No updates found.
           </div>
-        ) : statusUpdates.map(item => {
+        ) : filteredUpdates.map(item => {
           const accent = SEGMENT_COLORS[item.segment] || '#10B981';
           return (
             <div
@@ -284,9 +438,14 @@ export default function InvestmentStatus() {
               {/* Header block with title, segment, and action buttons */}
               <div className="kfpl-status-card-header">
                 <div className="kfpl-status-card-title-group">
-                  <div className="kfpl-status-card-title-row">
-                    <h3 className="kfpl-status-card-title">{item.project}</h3>
+                  <div className="kfpl-status-card-title-row" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h3 className="kfpl-status-card-title">
+                      {item.isSegmentWide ? `${item.segment} Segment Update` : item.project}
+                    </h3>
                     <Badge status={['Active', 'Ongoing', 'In Production'].includes(item.status) ? 'active' : 'pending'}>{item.status}</Badge>
+                    {item.isSegmentWide && (
+                      <Badge status="info">Segment Wide</Badge>
+                    )}
                   </div>
                   
                   {/* Meta tag pills */}
@@ -318,7 +477,7 @@ export default function InvestmentStatus() {
                 <div className="kfpl-status-card-actions" onClick={e => e.stopPropagation()}>
                   <button
                     className="kfpl-status-card-btn"
-                    onClick={() => { setEditId(editId === item.id ? null : item.id); setUpdateNote(''); }}
+                    onClick={() => { setEditId(editId === item.id ? null : item.id); setUpdateNote(''); setIsSegmentWidePost(false); }}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -458,8 +617,17 @@ export default function InvestmentStatus() {
               {/* Inline note edit container */}
               {editId === item.id && (
                 <div style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid var(--color-border-light)', animation: 'fadeIn 0.2s' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                    <input
+                      type="checkbox"
+                      checked={isSegmentWidePost}
+                      onChange={(e) => setIsSegmentWidePost(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span>Apply update segment-wide (this update will represent the entire <strong>{item.segment}</strong> segment)</span>
+                  </label>
                   <div className="kfpl-input-group" style={{ marginBottom: '12px' }}>
-                    <label className="kfpl-input-label">Post New Project Status Note</label>
+                    <label className="kfpl-input-label">Post New Status Note</label>
                     <textarea
                       className="kfpl-textarea"
                       value={updateNote}
@@ -496,31 +664,78 @@ export default function InvestmentStatus() {
       <Modal
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); setEditingItem(null); resetForm(); }}
-        title={editingItem ? 'Edit Project' : 'Add New Project'}
+        title={editingItem ? (formData.isSegmentWide ? 'Edit Segment Update' : 'Edit Project') : (formData.isSegmentWide ? 'Add Segment Update' : 'Add New Project')}
         footer={
           <>
             <button className="kfpl-btn kfpl-btn--ghost" onClick={() => { setShowAddModal(false); setEditingItem(null); resetForm(); }}>Cancel</button>
-            <button className="kfpl-btn kfpl-btn--primary" onClick={handleSaveProject}>{editingItem ? 'Update' : 'Add Project'}</button>
+            <button className="kfpl-btn kfpl-btn--primary" onClick={handleSaveProject}>{editingItem ? 'Update' : (formData.isSegmentWide ? 'Add Update' : 'Add Project')}</button>
           </>
         }
       >
         <div className="kfpl-form" style={{ gap: '16px' }}>
           <div className="kfpl-input-group">
-            <label className="kfpl-input-label">Project Name <span className="required">*</span></label>
-            <input type="text" className="kfpl-input" value={formData.project} onChange={e => setFormData({ ...formData, project: e.target.value })} placeholder="Enter project name" />
+            <label className="kfpl-input-label">Update Scope</label>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem' }}>
+                <input
+                  type="radio"
+                  name="updateScope"
+                  checked={!formData.isSegmentWide}
+                  onChange={() => setFormData({ ...formData, isSegmentWide: false })}
+                />
+                Specific Project
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem' }}>
+                <input
+                  type="radio"
+                  name="updateScope"
+                  checked={formData.isSegmentWide}
+                  onChange={() => setFormData({ ...formData, isSegmentWide: true })}
+                />
+                Segment-Wide Update
+              </label>
+            </div>
           </div>
+          
+          {!formData.isSegmentWide && (
+            <div className="kfpl-input-group animate-fade-slide-up">
+              <label className="kfpl-input-label">Project Name <span className="required">*</span></label>
+              <input type="text" className="kfpl-input" value={formData.project} onChange={e => setFormData({ ...formData, project: e.target.value })} placeholder="Enter project name" />
+            </div>
+          )}
+
           <div className="kfpl-form-row">
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Segment <span className="required">*</span></label>
-              <select className="kfpl-select" value={formData.segment} onChange={e => setFormData({ ...formData, segment: e.target.value })}>
+              <select
+                className="kfpl-select"
+                value={formData.segment}
+                onChange={e => {
+                  const selectedSeg = e.target.value;
+                  const segConfig = segmentsConfig.find(s => s.name === selectedSeg);
+                  const defaultStatus = segConfig && segConfig.statuses.length > 0 ? segConfig.statuses[0] : '';
+                  setFormData({ ...formData, segment: selectedSeg, status: defaultStatus });
+                }}
+              >
                 <option value="">Select segment</option>
                 {allSegments.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Status</label>
-              <select className="kfpl-select" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                {['Planning', 'In Production', 'Recording', 'Active', 'Ongoing', 'Negotiation', 'Completed'].map(s => <option key={s} value={s}>{s}</option>)}
+              <select
+                className="kfpl-select"
+                value={formData.status}
+                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                disabled={!formData.segment}
+              >
+                <option value="">Select status</option>
+                {((segmentsConfig.find(s => s.name === formData.segment)?.statuses) || []).map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+                {formData.status && !((segmentsConfig.find(s => s.name === formData.segment)?.statuses) || []).includes(formData.status) && (
+                  <option value={formData.status}>{formData.status} (Current)</option>
+                )}
               </select>
             </div>
           </div>
@@ -530,7 +745,7 @@ export default function InvestmentStatus() {
           </div>
           <div className="kfpl-input-group">
             <label className="kfpl-input-label">Notes</label>
-            <textarea className="kfpl-textarea" value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Brief project description or status note..." rows="3" />
+            <textarea className="kfpl-textarea" value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Brief description or status note..." rows="3" />
           </div>
         </div>
       </Modal>
@@ -673,6 +888,106 @@ export default function InvestmentStatus() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ═══════ History Log Modal ═══════ */}
+      <Modal
+        isOpen={showHistoryLogModal}
+        onClose={() => setShowHistoryLogModal(false)}
+        title="Investment Status Update History"
+        size="lg"
+        footer={
+          <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowHistoryLogModal(false)}>Close</button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input
+              type="text"
+              className="kfpl-input"
+              placeholder="Search history by project or note..."
+              value={historySearch}
+              onChange={e => setHistorySearch(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <select
+              className="kfpl-select"
+              value={historySegmentFilter}
+              onChange={e => setHistorySegmentFilter(e.target.value)}
+              style={{ width: '180px' }}
+            >
+              <option value="all">All Segments</option>
+              {allSegments.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          {/* List of historical records */}
+          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+            {historyLogs
+              .filter(log => {
+                const matchesSearch =
+                  (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
+                  (log.note || '').toLowerCase().includes(historySearch.toLowerCase());
+                const matchesSegment =
+                  historySegmentFilter === 'all' || log.segment === historySegmentFilter;
+                return matchesSearch && matchesSegment;
+              })
+              .length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px' }}>
+                No update history found matching your filters.
+              </div>
+            ) : historyLogs
+                .filter(log => {
+                  const matchesSearch =
+                    (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
+                    (log.note || '').toLowerCase().includes(historySearch.toLowerCase());
+                  const matchesSegment =
+                    historySegmentFilter === 'all' || log.segment === historySegmentFilter;
+                  return matchesSearch && matchesSegment;
+                })
+                .map(log => {
+                  const accent = SEGMENT_COLORS[log.segment] || '#10B981';
+                  return (
+                    <div key={log.id} style={{
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      background: 'var(--color-surface)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="kfpl-badge" style={{ background: `${accent}15`, color: accent, borderColor: `${accent}30` }}>{log.segment}</span>
+                          <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>
+                            {log.type === 'segment' || !log.project ? 'Segment-Wide Update' : log.project}
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>{log.date}</span>
+                      </div>
+                      
+                      <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0, fontStyle: 'italic' }}>
+                        "{log.note || 'No notes posted.'}"
+                      </p>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border-light)', paddingTop: '6px', marginTop: '2px' }}>
+                        <span>Status: <strong>{log.status}</strong> • Progress: <strong>{log.progress}%</strong></span>
+                        {(log.media || []).length > 0 && (
+                          <span style={{ color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
+                              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                            {log.media.length} File(s)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+          </div>
+        </div>
       </Modal>
     </div>
   );

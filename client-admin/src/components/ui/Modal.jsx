@@ -23,7 +23,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   if (!isOpen) return null;
 
-  const maxWidth = size === 'xl' ? '880px' : size === 'lg' ? '720px' : size === 'sm' ? '400px' : '560px';
+  const maxWidth = size === 'lg' ? '720px' : size === 'sm' ? '400px' : '560px';
 
   return createPortal(
     <div className="kfpl-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>

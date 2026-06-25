@@ -51,6 +51,8 @@ export default function InvestmentList() {
   const [renderTrigger, setRenderTrigger] = useState(0);
   const [extendingInvestment, setExtendingInvestment] = useState(null);
   const [extensionEndDate, setExtensionEndDate] = useState('');
+  const [segmentFilter, setSegmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     const fetchInvestments = async () => {
@@ -142,7 +144,23 @@ export default function InvestmentList() {
     );
   }, [renderTrigger]);
 
-  const displayData = investments.length > 0 ? investments : mockInvestments;
+  const rawDisplayData = investments.length > 0 ? investments : mockInvestments;
+
+  const uniqueSegments = useMemo(() => {
+    return Array.from(new Set(rawDisplayData.map(inv => inv.segment))).filter(Boolean);
+  }, [rawDisplayData]);
+
+  const uniqueStatuses = useMemo(() => {
+    return Array.from(new Set(rawDisplayData.map(inv => inv.status || 'Active'))).filter(Boolean);
+  }, [rawDisplayData]);
+
+  const filteredDisplayData = useMemo(() => {
+    return rawDisplayData.filter(inv => {
+      if (segmentFilter !== 'all' && inv.segment !== segmentFilter) return false;
+      if (statusFilter !== 'all' && (inv.status || 'Active') !== statusFilter) return false;
+      return true;
+    });
+  }, [rawDisplayData, segmentFilter, statusFilter]);
 
   const columns = [
     {
@@ -202,7 +220,27 @@ export default function InvestmentList() {
           <h2 className="kfpl-page-title">Investments</h2>
           <p className="kfpl-page-subtitle">All investments across all clients & agents</p>
         </div>
-        <div className="kfpl-page-header-actions">
+        <div className="kfpl-page-header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <select
+            value={segmentFilter}
+            onChange={e => setSegmentFilter(e.target.value)}
+            className="kfpl-select"
+            style={{ width: '160px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+          >
+            <option value="all">All Segments</option>
+            {uniqueSegments.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="kfpl-select"
+            style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+          >
+            <option value="all">All Statuses</option>
+            {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={() => navigate('/investments/assign')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -214,7 +252,7 @@ export default function InvestmentList() {
 
       <DataTable
         columns={columns}
-        data={displayData}
+        data={filteredDisplayData}
         onRowClick={(row) => row.investorId ? navigate(`/investors/${row.investorId}`) : null}
         searchPlaceholder="Search by investor, segment..."
       />

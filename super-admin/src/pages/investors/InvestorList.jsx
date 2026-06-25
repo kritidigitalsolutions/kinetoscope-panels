@@ -7,17 +7,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
-import { investors, agents, formatCurrency } from '../../data/mockData';
+import { investors, agents, formatCurrency, getCategoryFromAmount } from '../../data/mockData';
 
 export default function InvestorList() {
   const navigate = useNavigate();
   const [agentFilter, setAgentFilter] = useState('all');
+  const [residencyFilter, setResidencyFilter] = useState('all');
+  const [tierFilter, setTierFilter] = useState('all');
 
   const getPerkTier = (amount) => {
-    if (amount >= 10000000) return 'diamond';
-    if (amount >= 5000000) return 'platinum';
-    if (amount >= 1000000) return 'gold';
-    return 'silver';
+    return getCategoryFromAmount(amount);
   };
 
   // Calculate contract end date (joinDate + longest contract period, default 24 months)
@@ -33,11 +32,22 @@ export default function InvestorList() {
     return '—';
   };
 
-  // Filter investors based on agentFilter
+  // Filter investors based on agentFilter, residencyFilter, and tierFilter
   const filteredInvestors = investors.filter(inv => {
     const hasAgent = agents.some(agent => agent.clients.includes(inv.id));
-    if (agentFilter === 'with-agent') return hasAgent;
-    if (agentFilter === 'non-agent') return !hasAgent;
+    if (agentFilter === 'with-agent' && !hasAgent) return false;
+    if (agentFilter === 'non-agent' && hasAgent) return false;
+
+    if (residencyFilter !== 'all') {
+      const isInt = residencyFilter === 'international';
+      const actualInt = inv.citizenship === 'International';
+      if (isInt !== actualInt) return false;
+    }
+
+    if (tierFilter !== 'all') {
+      if ((inv.category || 'silver').toLowerCase() !== tierFilter.toLowerCase()) return false;
+    }
+
     return true;
   });
 
@@ -60,7 +70,7 @@ export default function InvestorList() {
       render: (row) => <span className="font-semibold">{formatCurrency(row.totalInvestment)}</span>,
     },
     {
-      header: 'ROI % Allocated',
+      header: 'Monthly ROI % Allocated',
       accessor: 'roiPercentage',
       render: (row) => `${row.roiPercentage}%`,
     },
@@ -135,12 +145,38 @@ export default function InvestorList() {
           <p className="kfpl-page-subtitle">Manage all client profiles — clients are brought in by agents</p>
         </div>
         <div className="kfpl-page-header-actions">
+          {/* Residency Filter Dropdown */}
+          <select
+            className="kfpl-select"
+            value={residencyFilter}
+            onChange={(e) => setResidencyFilter(e.target.value)}
+            style={{ width: '150px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', marginRight: '8px' }}
+          >
+            <option value="all">All Residency</option>
+            <option value="national">National</option>
+            <option value="international">International</option>
+          </select>
+
+          {/* Tier Filter Dropdown */}
+          <select
+            className="kfpl-select"
+            value={tierFilter}
+            onChange={(e) => setTierFilter(e.target.value)}
+            style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', marginRight: '8px' }}
+          >
+            <option value="all">All Tiers</option>
+            <option value="silver">Silver</option>
+            <option value="gold">Gold</option>
+            <option value="diamond">Diamond</option>
+            <option value="platinum">Platinum</option>
+          </select>
+
           {/* Agent Filter Dropdown */}
           <select
             className="kfpl-select"
             value={agentFilter}
             onChange={(e) => setAgentFilter(e.target.value)}
-            style={{ width: '180px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}
+            style={{ width: '160px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', marginRight: '8px' }}
           >
             <option value="all">All Clients</option>
             <option value="with-agent">With Agent</option>

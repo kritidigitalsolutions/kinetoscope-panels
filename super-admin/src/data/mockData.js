@@ -29,12 +29,65 @@ if (typeof window !== 'undefined') {
 
 export const INVESTMENT_SEGMENTS = [...initialSegments];
 
+// Deep Proxy Helper to auto-save updates to LocalStorage
+function makeAutoSaveProxy(initialData, storageKey) {
+  let rawData = initialData;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        rawData = JSON.parse(stored);
+      } else {
+        localStorage.setItem(storageKey, JSON.stringify(initialData));
+      }
+    } catch (e) {
+      console.warn('LocalStorage error in auto save proxy:', e);
+    }
+  }
+
+  const save = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(rawData));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+    }
+  };
+
+  const handler = {
+    get(target, prop, receiver) {
+      const val = Reflect.get(target, prop, receiver);
+      if (typeof val === 'object' && val !== null) {
+        // Bind functions so methods like push work in target context
+        if (typeof val === 'function') {
+          return val.bind(target);
+        }
+        return new Proxy(val, handler);
+      }
+      return val;
+    },
+    set(target, prop, val, receiver) {
+      const res = Reflect.set(target, prop, val, receiver);
+      save();
+      return res;
+    },
+    deleteProperty(target, prop) {
+      const res = Reflect.deleteProperty(target, prop);
+      save();
+      return res;
+    }
+  };
+
+  return new Proxy(rawData, handler);
+}
+
 // ── Recognition Tiers ───────────────────────
 export const RECOGNITION_TIERS = [
-  { id: 'silver', name: 'Silver', minAmount: 500000, color: '#C0C0C0' },
+  { id: 'silver', name: 'Silver', minAmount: 0, color: '#C0C0C0' },
   { id: 'gold', name: 'Gold', minAmount: 2500000, color: '#10B981' },
-  { id: 'platinum', name: 'Platinum', minAmount: 5000000, color: '#B8C5D1' },
   { id: 'diamond', name: 'Diamond', minAmount: 10000000, color: '#80DEEA' },
+  { id: 'platinum', name: 'Platinum', minAmount: 30000000, color: '#B8C5D1' },
 ];
 
 // ── Commission Slabs ───────────────────────
@@ -168,17 +221,17 @@ export const monthlyInvestmentData = [
 ];
 
 // ── Investors ───────────────────────
-export const investors = [
+const defaultInvestors = [
   {
     id: 1, name: 'Rajesh Kumar', clientId: 'KFPL-1001', email: 'rajesh.kumar@email.com',
     phone: '+91 98765 43210', dob: '1985-03-15', address: '42, Marine Drive, Mumbai 400001',
-    category: 'diamond', status: 'active', totalInvestment: 25000000, roiPercentage: 18,
+    category: 'diamond', status: 'active', totalInvestment: 25000000, roiPercentage: 1.5,
     joinDate: '2024-01-10', kyc: 'Verified', pan: 'ABCPK1234L',
     bankName: 'HDFC Bank', accountNo: 'XXXX4567', ifsc: 'HDFC0001234', riskProfile: 'Moderate',
     investments: [
-      { id: 101, segment: 'Film Making', amount: 10000000, date: '2024-01-15', roi: 18, status: 'active', risk: 30 },
-      { id: 102, segment: 'Distribution', amount: 8000000, date: '2024-02-20', roi: 15, status: 'active', risk: 25 },
-      { id: 103, segment: 'Music', amount: 7000000, date: '2024-03-10', roi: 20, status: 'active', risk: 20 },
+      { id: 101, segment: 'Film Making', amount: 10000000, date: '2024-01-15', roi: 1.5, status: 'active', risk: 30 },
+      { id: 102, segment: 'Distribution', amount: 8000000, date: '2024-02-20', roi: 1.25, status: 'active', risk: 25 },
+      { id: 103, segment: 'Music', amount: 7000000, date: '2024-03-10', roi: 1.67, status: 'active', risk: 20 },
     ],
     roiHistory: [
       { id: 201, month: 'Jan 2025', amount: 375000, status: 'paid', paidAt: '2025-01-31' },
@@ -192,13 +245,13 @@ export const investors = [
   {
     id: 2, name: 'Priya Sharma', clientId: 'KFPL-1002', email: 'priya.sharma@email.com',
     phone: '+91 98765 43211', dob: '1990-07-22', address: '15, Banjara Hills, Hyderabad 500034',
-    category: 'diamond', status: 'active', totalInvestment: 18000000, roiPercentage: 16,
+    category: 'diamond', status: 'active', totalInvestment: 18000000, roiPercentage: 1.33,
     joinDate: '2024-02-05', kyc: 'Verified', pan: 'DEFPS5678M',
     bankName: 'ICICI Bank', accountNo: 'XXXX8901', ifsc: 'ICIC0005678', riskProfile: 'Aggressive',
     investments: [
-      { id: 104, segment: 'Film Making', amount: 8000000, date: '2024-02-10', roi: 16, status: 'active', risk: 35 },
-      { id: 105, segment: 'Content IP Bank', amount: 5000000, date: '2024-03-15', roi: 14, status: 'active', risk: 30 },
-      { id: 106, segment: 'Film Exhibition', amount: 5000000, date: '2024-04-01', roi: 18, status: 'active', risk: 35 },
+      { id: 104, segment: 'Film Making', amount: 8000000, date: '2024-02-10', roi: 1.33, status: 'active', risk: 35 },
+      { id: 105, segment: 'Content IP Bank', amount: 5000000, date: '2024-03-15', roi: 1.17, status: 'active', risk: 30 },
+      { id: 106, segment: 'Film Exhibition', amount: 5000000, date: '2024-04-01', roi: 1.5, status: 'active', risk: 35 },
     ],
     roiHistory: [
       { id: 206, month: 'Jan 2025', amount: 240000, status: 'paid', paidAt: '2025-01-31' },
@@ -210,12 +263,12 @@ export const investors = [
   {
     id: 3, name: 'Anita Desai', clientId: 'KFPL-1003', email: 'anita.desai@email.com',
     phone: '+91 98765 43212', dob: '1988-11-08', address: '8, Koregaon Park, Pune 411001',
-    category: 'diamond', status: 'active', totalInvestment: 12000000, roiPercentage: 15,
+    category: 'diamond', status: 'active', totalInvestment: 12000000, roiPercentage: 1.25,
     joinDate: '2024-03-12', kyc: 'Verified', pan: 'GHIAD9012N',
     bankName: 'SBI', accountNo: 'XXXX2345', ifsc: 'SBIN0009012', riskProfile: 'Conservative',
     investments: [
-      { id: 107, segment: 'Trading & Syndication', amount: 6000000, date: '2024-03-20', roi: 15, status: 'active', risk: 40 },
-      { id: 108, segment: 'Distribution', amount: 6000000, date: '2024-04-05', roi: 15, status: 'active', risk: 25 },
+      { id: 107, segment: 'Trading & Syndication', amount: 6000000, date: '2024-03-20', roi: 1.25, status: 'active', risk: 40 },
+      { id: 108, segment: 'Distribution', amount: 6000000, date: '2024-04-05', roi: 1.25, status: 'active', risk: 25 },
     ],
     roiHistory: [
       { id: 209, month: 'Jan 2025', amount: 150000, status: 'paid', paidAt: '2025-01-31' },
@@ -226,12 +279,12 @@ export const investors = [
   {
     id: 4, name: 'Suresh Patel', clientId: 'KFPL-1004', email: 'suresh.patel@email.com',
     phone: '+91 98765 43213', dob: '1975-05-30', address: '25, CG Road, Ahmedabad 380006',
-    category: 'platinum', status: 'active', totalInvestment: 8500000, roiPercentage: 14,
+    category: 'gold', status: 'active', totalInvestment: 8500000, roiPercentage: 1.17,
     joinDate: '2024-04-18', kyc: 'Verified', pan: 'JKLSP3456O',
     bankName: 'Kotak Mahindra Bank', accountNo: 'XXXX6789', ifsc: 'KKBK0003456', riskProfile: 'Conservative',
     investments: [
-      { id: 109, segment: 'Film Making', amount: 5000000, date: '2024-04-25', roi: 14, status: 'active', risk: 30 },
-      { id: 110, segment: 'Music', amount: 3500000, date: '2024-05-10', roi: 14, status: 'active', risk: 25 },
+      { id: 109, segment: 'Film Making', amount: 5000000, date: '2024-04-25', roi: 1.17, status: 'active', risk: 30 },
+      { id: 110, segment: 'Music', amount: 3500000, date: '2024-05-10', roi: 1.17, status: 'active', risk: 25 },
     ],
     roiHistory: [
       { id: 211, month: 'Jan 2025', amount: 99167, status: 'paid', paidAt: '2025-01-31' },
@@ -242,12 +295,12 @@ export const investors = [
   {
     id: 5, name: 'Meera Iyer', clientId: 'KFPL-1005', email: 'meera.iyer@email.com',
     phone: '+91 98765 43214', dob: '1992-09-14', address: '12, Indiranagar, Bangalore 560038',
-    category: 'platinum', status: 'active', totalInvestment: 7200000, roiPercentage: 13,
+    category: 'gold', status: 'active', totalInvestment: 7200000, roiPercentage: 1.08,
     joinDate: '2024-05-02', kyc: 'Verified', pan: 'MNOMI7890P',
     bankName: 'Axis Bank', accountNo: 'XXXX0123', ifsc: 'UTIB0007890', riskProfile: 'Moderate',
     investments: [
-      { id: 111, segment: 'Content IP Bank', amount: 4000000, date: '2024-05-08', roi: 13, status: 'active', risk: 35 },
-      { id: 112, segment: 'Film Exhibition', amount: 3200000, date: '2024-06-01', roi: 13, status: 'active', risk: 30 },
+      { id: 111, segment: 'Content IP Bank', amount: 4000000, date: '2024-05-08', roi: 1.08, status: 'active', risk: 35 },
+      { id: 112, segment: 'Film Exhibition', amount: 3200000, date: '2024-06-01', roi: 1.08, status: 'active', risk: 30 },
     ],
     roiHistory: [
       { id: 213, month: 'Jan 2025', amount: 78000, status: 'paid', paidAt: '2025-01-31' },
@@ -257,12 +310,12 @@ export const investors = [
   {
     id: 6, name: 'Amit Joshi', clientId: 'KFPL-1006', email: 'amit.joshi@email.com',
     phone: '+91 98765 43215', dob: '1983-12-25', address: '55, Connaught Place, New Delhi 110001',
-    category: 'gold', status: 'active', totalInvestment: 4500000, roiPercentage: 12,
+    category: 'gold', status: 'active', totalInvestment: 4500000, roiPercentage: 1.0,
     joinDate: '2024-06-15', kyc: 'Verified', pan: 'PQRAJ2345Q',
     bankName: 'Punjab National Bank', accountNo: 'XXXX4567', ifsc: 'PUNB0002345', riskProfile: 'Conservative',
     investments: [
-      { id: 113, segment: 'Film Making', amount: 3000000, date: '2024-06-20', roi: 12, status: 'active', risk: 30 },
-      { id: 114, segment: 'Distribution', amount: 1500000, date: '2024-07-01', roi: 12, status: 'active', risk: 20 },
+      { id: 113, segment: 'Film Making', amount: 3000000, date: '2024-06-20', roi: 1.0, status: 'active', risk: 30 },
+      { id: 114, segment: 'Distribution', amount: 1500000, date: '2024-07-01', roi: 1.0, status: 'active', risk: 20 },
     ],
     roiHistory: [
       { id: 214, month: 'Jan 2025', amount: 45000, status: 'paid', paidAt: '2025-01-31' },
@@ -272,12 +325,12 @@ export const investors = [
   {
     id: 7, name: 'Kavita Reddy', clientId: 'KFPL-1007', email: 'kavita.reddy@email.com',
     phone: '+91 98765 43216', dob: '1995-02-18', address: '9, Jubilee Hills, Hyderabad 500033',
-    category: 'gold', status: 'inactive', totalInvestment: 3200000, roiPercentage: 11,
+    category: 'gold', status: 'inactive', totalInvestment: 3200000, roiPercentage: 0.92,
     joinDate: '2024-07-10', kyc: 'Pending', pan: 'STUKR6789R',
     bankName: 'Canara Bank', accountNo: 'XXXX8901', ifsc: 'CNRB0006789', riskProfile: 'Aggressive',
     investments: [
-      { id: 115, segment: 'Music', amount: 2000000, date: '2024-07-15', roi: 11, status: 'paused', risk: 25 },
-      { id: 116, segment: 'Trading & Syndication', amount: 1200000, date: '2024-08-01', roi: 11, status: 'paused', risk: 30 },
+      { id: 115, segment: 'Music', amount: 2000000, date: '2024-07-15', roi: 0.92, status: 'paused', risk: 25 },
+      { id: 116, segment: 'Trading & Syndication', amount: 1200000, date: '2024-08-01', roi: 0.92, status: 'paused', risk: 30 },
     ],
     roiHistory: [],
     perks: [],
@@ -285,16 +338,18 @@ export const investors = [
   {
     id: 8, name: 'Sunil Verma', clientId: 'KFPL-1008', email: 'sunil.verma@email.com',
     phone: '+91 98765 43217', dob: '1980-06-07', address: '30, Civil Lines, Jaipur 302006',
-    category: 'silver', status: 'suspended', totalInvestment: 800000, roiPercentage: 10,
+    category: 'silver', status: 'suspended', totalInvestment: 800000, roiPercentage: 0.83,
     joinDate: '2024-08-20', kyc: 'Rejected', pan: 'VWXSV0123S',
     bankName: 'Bank of Baroda', accountNo: 'XXXX2345', ifsc: 'BARB0000123', riskProfile: 'Aggressive',
     investments: [
-      { id: 117, segment: 'Film Making', amount: 800000, date: '2024-08-25', roi: 10, status: 'suspended', risk: 100 },
+      { id: 117, segment: 'Film Making', amount: 800000, date: '2024-08-25', roi: 0.83, status: 'suspended', risk: 100 },
     ],
     roiHistory: [],
     perks: [],
   },
 ];
+
+export const investors = makeAutoSaveProxy(defaultInvestors, 'kfpl_investors');
 
 // ── Agents ───────────────────────
 export const agents = [
@@ -350,6 +405,12 @@ export const agents = [
           { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 2, amount: 500000 },
           { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 2, amount: 360000 },
           { clientName: 'Anita Desai', clientId: 'KFPL-1003', investment: 12000000, rate: 2, amount: 40000 },
+        ]
+      },
+      { id: 315, month: 'Special Campaign', date: '2025-06-10', amount: 16250, type: 'special', status: 'paid', paidAt: '2025-06-10',
+        breakdown: [
+          { clientName: 'Rajesh Kumar', clientId: 'KFPL-1001', investment: 25000000, rate: 0.05, amount: 12500 },
+          { clientName: 'Priya Sharma', clientId: 'KFPL-1002', investment: 18000000, rate: 0.02, amount: 3750 },
         ]
       },
     ],
@@ -425,27 +486,31 @@ export const agents = [
 ];
 
 // ── Approvals ───────────────────────
-export const approvals = {
+const defaultApprovals = {
   deposits: [
-    { id: 501, type: 'deposit', investorName: 'Rajesh Kumar', clientId: 'KFPL-1001', amount: 5000000, date: '2025-04-10', status: 'pending', note: '' },
-    { id: 502, type: 'deposit', investorName: 'Amit Joshi', clientId: 'KFPL-1006', amount: 2000000, date: '2025-04-11', status: 'pending', note: '' },
-    { id: 503, type: 'deposit', investorName: 'Priya Sharma', clientId: 'KFPL-1002', amount: 3000000, date: '2025-04-09', status: 'approved', note: 'Verified bank transfer', approvedAt: '2025-04-09' },
+    { id: 501, type: 'deposit', investorName: 'Rajesh Kumar', clientId: 'KFPL-1001', amount: 5000000, date: '2025-04-10', status: 'pending', note: '', mode: 'Bank Transfer', referenceId: 'TXN987654321', proofFile: '' },
+    { id: 502, type: 'deposit', investorName: 'Amit Joshi', clientId: 'KFPL-1006', amount: 2000000, date: '2025-04-11', status: 'pending', note: '', mode: 'UPI', referenceId: 'UPI1122334455', proofFile: '' },
+    { id: 503, type: 'deposit', investorName: 'Priya Sharma', clientId: 'KFPL-1002', amount: 3000000, date: '2025-04-09', status: 'approved', note: 'Verified bank transfer', approvedAt: '2025-04-09', mode: 'Bank Transfer', referenceId: 'TXN112233445', proofFile: '' },
   ],
   withdrawals: [
-    { id: 504, type: 'withdrawal', investorName: 'Suresh Patel', clientId: 'KFPL-1004', amount: 1000000, date: '2025-04-12', status: 'pending', note: '' },
-    { id: 505, type: 'withdrawal', investorName: 'Meera Iyer', clientId: 'KFPL-1005', amount: 500000, date: '2025-04-11', status: 'pending', note: '' },
-    { id: 506, type: 'withdrawal', investorName: 'Anita Desai', clientId: 'KFPL-1003', amount: 2000000, date: '2025-04-08', status: 'rejected', reason: 'Insufficient notice period', rejectedAt: '2025-04-08' },
+    { id: 504, type: 'withdrawal', investorName: 'Suresh Patel', clientId: 'KFPL-1004', amount: 1000000, date: '2025-04-12', status: 'pending', note: '', bankName: 'Kotak Mahindra Bank', accountNo: 'XXXX6789', ifsc: 'KKBK0003456' },
+    { id: 505, type: 'withdrawal', investorName: 'Meera Iyer', clientId: 'KFPL-1005', amount: 500000, date: '2025-04-11', status: 'pending', note: '', bankName: 'Axis Bank', accountNo: 'XXXX0123', ifsc: 'UTIB0007890' },
+    { id: 506, type: 'withdrawal', investorName: 'Anita Desai', clientId: 'KFPL-1003', amount: 2000000, date: '2025-04-08', status: 'rejected', reason: 'Insufficient notice period', rejectedAt: '2025-04-08', bankName: 'SBI', accountNo: 'XXXX2345', ifsc: 'SBIN0009012' },
   ],
 };
 
+export const approvals = makeAutoSaveProxy(defaultApprovals, 'kfpl_approvals');
+
 // ── Approval History ───────────────────────
-export const approvalHistory = [
+const defaultApprovalHistory = [
   { id: 601, type: 'deposit', investorName: 'Priya Sharma', clientId: 'KFPL-1002', amount: 3000000, date: '2025-04-09', status: 'approved', adminNote: 'Verified bank transfer', actionAt: '2025-04-09 14:30' },
   { id: 602, type: 'withdrawal', investorName: 'Anita Desai', clientId: 'KFPL-1003', amount: 2000000, date: '2025-04-08', status: 'rejected', adminNote: 'Insufficient notice period', actionAt: '2025-04-08 11:15' },
   { id: 603, type: 'deposit', investorName: 'Rajesh Kumar', clientId: 'KFPL-1001', amount: 10000000, date: '2025-03-25', status: 'approved', adminNote: 'Premium investor — priority processing', actionAt: '2025-03-25 16:00' },
   { id: 604, type: 'withdrawal', investorName: 'Amit Joshi', clientId: 'KFPL-1006', amount: 500000, date: '2025-03-20', status: 'approved', adminNote: '', actionAt: '2025-03-20 10:45' },
   { id: 605, type: 'deposit', investorName: 'Kavita Reddy', clientId: 'KFPL-1007', amount: 1500000, date: '2025-03-15', status: 'approved', adminNote: 'KYC pending — approved conditionally', actionAt: '2025-03-15 09:30' },
 ];
+
+export const approvalHistory = makeAutoSaveProxy(defaultApprovalHistory, 'kfpl_approval_history');
 
 // ── Perks ───────────────────────
 export const perks = [
@@ -489,9 +554,9 @@ export function formatNumber(num) {
 
 // ── Utility: Get Category from Amount ───────────────────────
 export function getCategoryFromAmount(amount) {
-  if (amount >= 10000000) return 'diamond';
-  if (amount >= 5000000) return 'platinum';
-  if (amount >= 2500000) return 'gold';
+  if (amount > 30000000) return 'platinum';
+  if (amount > 10000000) return 'diamond';
+  if (amount > 2500000) return 'gold';
   return 'silver';
 }
 

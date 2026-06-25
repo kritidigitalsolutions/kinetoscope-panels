@@ -3,6 +3,7 @@
    Description: Paginated table of all agents
    ============================================================ */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
@@ -10,6 +11,20 @@ import { agents, formatCurrency } from '../../data/mockData';
 
 export default function AgentList() {
   const navigate = useNavigate();
+  const [residencyFilter, setResidencyFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const filteredAgents = agents.filter(agt => {
+    if (residencyFilter !== 'all') {
+      const isInt = residencyFilter === 'international';
+      const actualInt = agt.citizenship === 'International';
+      if (isInt !== actualInt) return false;
+    }
+    if (statusFilter !== 'all') {
+      if (agt.status !== statusFilter) return false;
+    }
+    return true;
+  });
 
   const columns = [
     { header: 'Agent ID', accessor: 'agentId' },
@@ -80,6 +95,30 @@ export default function AgentList() {
           <p className="kfpl-page-subtitle">Agents invest and bring clients — manage profiles & commissions</p>
         </div>
         <div className="kfpl-page-header-actions">
+          {/* Residency Filter Dropdown */}
+          <select
+            className="kfpl-select"
+            value={residencyFilter}
+            onChange={(e) => setResidencyFilter(e.target.value)}
+            style={{ width: '150px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', marginRight: '8px' }}
+          >
+            <option value="all">All Residency</option>
+            <option value="national">National</option>
+            <option value="international">International</option>
+          </select>
+
+          {/* Status Filter Dropdown */}
+          <select
+            className="kfpl-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', marginRight: '8px' }}
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={() => navigate('/agents/add')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -91,7 +130,7 @@ export default function AgentList() {
 
       <DataTable
         columns={columns}
-        data={agents}
+        data={filteredAgents}
         onRowClick={(row) => navigate(`/agents/${row.id}`)}
         searchPlaceholder="Search agents by name, ID..."
       />

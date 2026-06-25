@@ -13,12 +13,12 @@ import { useToast } from '../../components/ui/Toast';
 
 // ── Default project data ────────────────────────
 const DEFAULT_PROJECTS = [
-  { id: 1, name: 'Project Astra', segment: 'Film Making', status: 'In Production', value: '₹2.5 Cr', milestone: 65, summary: 'Flagship feature slate moving through production with cast-led marketing upside.', risk: 'Medium', horizon: 'Q4 2025', roi: '15%', health: 'On Track', media: [] },
-  { id: 2, name: 'Rhythm Series', segment: 'Music', status: 'Recording', value: '₹1.8 Cr', milestone: 40, summary: 'Music catalogue and album pipeline with recurring streaming revenue potential.', risk: 'Low', horizon: 'Released catalogue', roi: '10%', health: 'On Track', media: [] },
-  { id: 3, name: 'Meridian Release', segment: 'Distribution', status: 'Active', value: '₹3.2 Cr', milestone: 80, summary: 'Distribution portfolio across domestic and digital channels.', risk: 'Medium', horizon: '18 month cycle', roi: '12%', health: 'Performing', media: [] },
-  { id: 4, name: 'Archive Digitization', segment: 'Content IP Bank', status: 'Ongoing', value: '₹1.4 Cr', milestone: 55, summary: 'Curated content IP vault focused on long-term licensing.', risk: 'Low', horizon: '24 month cycle', roi: '14%', health: 'Building', media: [] },
-  { id: 5, name: 'Content Deal Q2', segment: 'Trading & Syndication', status: 'Negotiation', value: '₹2.1 Cr', milestone: 30, summary: 'Trade and syndication desk for packaging content deal flow.', risk: 'Medium', horizon: '12 month cycle', roi: '13%', health: 'Active', media: [] },
-  { id: 6, name: 'Screen Network', segment: 'Film Exhibition', status: 'Planning', value: '₹4.0 Cr', milestone: 15, summary: 'Cinema exhibition rollout across priority micro-markets.', risk: 'Medium High', horizon: 'Planning phase', roi: '11%', health: 'Planned', media: [] },
+  { id: 1, name: 'Project Astra', segment: 'Film Making', status: 'In Production', value: '₹2.5 Cr', milestone: 65, summary: 'Flagship feature slate moving through production with cast-led marketing upside.', risk: 'Medium', horizon: 'Q4 2025', roi: '1.25%', health: 'On Track', media: [] },
+  { id: 2, name: 'Rhythm Series', segment: 'Music', status: 'Recording', value: '₹1.8 Cr', milestone: 40, summary: 'Music catalogue and album pipeline with recurring streaming revenue potential.', risk: 'Low', horizon: 'Released catalogue', roi: '0.83%', health: 'On Track', media: [] },
+  { id: 3, name: 'Meridian Release', segment: 'Distribution', status: 'Active', value: '₹3.2 Cr', milestone: 80, summary: 'Distribution portfolio across domestic and digital channels.', risk: 'Medium', horizon: '18 month cycle', roi: '1.0%', health: 'Performing', media: [] },
+  { id: 4, name: 'Archive Digitization', segment: 'Content IP Bank', status: 'Ongoing', value: '₹1.4 Cr', milestone: 55, summary: 'Curated content IP vault focused on long-term licensing.', risk: 'Low', horizon: '24 month cycle', roi: '1.17%', health: 'Building', media: [] },
+  { id: 5, name: 'Content Deal Q2', segment: 'Trading & Syndication', status: 'Negotiation', value: '₹2.1 Cr', milestone: 30, summary: 'Trade and syndication desk for packaging content deal flow.', risk: 'Medium', horizon: '12 month cycle', roi: '1.08%', health: 'Active', media: [] },
+  { id: 6, name: 'Screen Network', segment: 'Film Exhibition', status: 'Planning', value: '₹4.0 Cr', milestone: 15, summary: 'Cinema exhibition rollout across priority micro-markets.', risk: 'Medium High', horizon: 'Planning phase', roi: '0.92%', health: 'Planned', media: [] },
 ];
 
 const SEGMENT_ABBR = {
@@ -46,6 +46,16 @@ export default function PortfolioManagement() {
   const [drawerProject, setDrawerProject] = useState(null);
   const [uploadTarget, setUploadTarget] = useState(null);
 
+  // Segment & Statuses configurations state
+  const [segmentsConfig, setSegmentsConfig] = useState([]);
+  const [showSegmentsManagerModal, setShowSegmentsManagerModal] = useState(false);
+  const [editingSegmentIndex, setEditingSegmentIndex] = useState(null);
+  const [segmentFormName, setSegmentFormName] = useState('');
+  const [segmentFormStatuses, setSegmentFormStatuses] = useState([]);
+  const [newStatusText, setNewStatusText] = useState('');
+  const [deleteSegConfirmIdx, setDeleteSegConfirmIdx] = useState(null);
+  const [customSegmentText, setCustomSegmentText] = useState('');
+
   // Form state
   const [formData, setFormData] = useState({
     name: '', segment: '', status: '', value: '', milestone: 0,
@@ -56,11 +66,72 @@ export default function PortfolioManagement() {
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
     if (stored) {
-      setProjects(JSON.parse(stored));
+      try {
+        let parsed = JSON.parse(stored);
+        let migrated = false;
+        parsed = parsed.map(p => {
+          const rawRoi = p.roi || '';
+          const numRoi = parseFloat(rawRoi.replace(/[^0-9.]/g, ''));
+          // If the ROI value is stored as annual (typically > 3), migrate to monthly format
+          if (!isNaN(numRoi) && numRoi > 3) {
+            p.roi = `${(numRoi / 12).toFixed(2)}%`;
+            migrated = true;
+          }
+          return p;
+        });
+        if (migrated) {
+          localStorage.setItem(LS_KEY, JSON.stringify(parsed));
+        }
+        setProjects(parsed);
+      } catch (e) {
+        console.error('Error parsing projects:', e);
+        setProjects(DEFAULT_PROJECTS);
+      }
     } else {
       setProjects(DEFAULT_PROJECTS);
       localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT_PROJECTS));
     }
+
+    // Load segments and statuses configuration
+    const storedConfig = localStorage.getItem('kfpl_portfolio_segments_config');
+    let config = [];
+    if (storedConfig) {
+      config = JSON.parse(storedConfig);
+    } else {
+      config = [
+        { name: 'Film Making', statuses: ['Planning', 'In Production', 'Active', 'Ongoing', 'Completed'] },
+        { name: 'Distribution', statuses: ['Planning', 'Active', 'Ongoing', 'Negotiation', 'Completed'] },
+        { name: 'Music', statuses: ['Planning', 'Recording', 'Active', 'Ongoing', 'Completed', 'Released'] },
+        { name: 'Trading & Syndication', statuses: ['Planning', 'Negotiation', 'Active', 'Ongoing', 'Completed'] },
+        { name: 'Content IP Bank', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
+        { name: 'Film Exhibition', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
+      ];
+      localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(config));
+    }
+
+    // Migrate any legacy custom segments
+    const storedSegs = localStorage.getItem('kfpl_custom_segments');
+    if (storedSegs) {
+      try {
+        const parsedCustom = JSON.parse(storedSegs);
+        let migrated = false;
+        parsedCustom.forEach(segName => {
+          if (segName && !config.some(c => c.name.toLowerCase() === segName.toLowerCase())) {
+            config.push({
+              name: segName,
+              statuses: ['Planning', 'Active', 'Ongoing', 'Completed']
+            });
+            migrated = true;
+          }
+        });
+        if (migrated) {
+          localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(config));
+        }
+      } catch (e) {
+        console.error('Error migrating custom segments:', e);
+      }
+    }
+    setSegmentsConfig(config);
   }, []);
 
   const persist = (updated) => {
@@ -68,15 +139,16 @@ export default function PortfolioManagement() {
     localStorage.setItem(LS_KEY, JSON.stringify(updated));
   };
 
-  // ── Segment list (from mockData + any custom ones) ──
+  // ── Segment list (from config + projects fallback) ──
   const segmentNames = [...new Set([
-    ...INVESTMENT_SEGMENTS.map(s => s.name),
+    ...segmentsConfig.map(s => s.name),
     ...projects.map(p => p.segment)
-  ])];
+  ])].filter(Boolean);
 
   // ── CRUD handlers ─────────────────────────
   const resetForm = () => {
     setFormData({ name: '', segment: '', status: '', value: '', milestone: 0, summary: '', risk: 'Medium', horizon: '', roi: '', health: 'On Track', bannerImg: '' });
+    setCustomSegmentText('');
   };
 
   const openAddModal = () => {
@@ -104,22 +176,54 @@ export default function PortfolioManagement() {
   };
 
   const handleSaveProject = () => {
-    if (!formData.name.trim() || !formData.segment) {
+    let finalSegment = formData.segment;
+
+    if (formData.segment === '__NEW__') {
+      const segText = customSegmentText.trim();
+      if (!segText) {
+        addToast('Please enter a custom segment name', 'error', 'Validation Error');
+        return;
+      }
+      finalSegment = segText;
+      if (!segmentsConfig.some(s => s.name.toLowerCase() === segText.toLowerCase())) {
+        const defaultStatuses = ['Planning', 'Active', 'Ongoing', 'Completed'];
+        const updatedConfig = [
+          ...segmentsConfig,
+          { name: segText, statuses: defaultStatuses }
+        ];
+        setSegmentsConfig(updatedConfig);
+        localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
+
+        // Sync to legacy custom segments key for cross-page compatibility
+        const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
+        const customSegNames = updatedConfig
+          .map(c => c.name)
+          .filter(n => !defaultSegmentNames.includes(n));
+        localStorage.setItem('kfpl_custom_segments', JSON.stringify(customSegNames));
+      }
+    }
+
+    if (!formData.name.trim() || !finalSegment) {
       addToast('Please fill in project name and segment', 'error', 'Validation Error');
       return;
     }
 
+    const payload = {
+      ...formData,
+      segment: finalSegment
+    };
+
     if (editingProject) {
       // Update
       const updated = projects.map(p =>
-        p.id === editingProject.id ? { ...p, ...formData } : p
+        p.id === editingProject.id ? { ...p, ...payload } : p
       );
       persist(updated);
       addToast(`${formData.name} updated successfully`, 'success', 'Project Updated');
     } else {
       // Create
       const newProject = {
-        ...formData,
+        ...payload,
         id: Date.now(),
         milestone: parseInt(formData.milestone) || 0,
         media: [],
@@ -132,6 +236,132 @@ export default function PortfolioManagement() {
     setShowAddModal(false);
     setEditingProject(null);
     resetForm();
+  };
+
+  // ── Segment & Status Configuration Manager Handlers ──
+  const openSegmentsManager = () => {
+    setEditingSegmentIndex(null);
+    setSegmentFormName('');
+    setSegmentFormStatuses([]);
+    setNewStatusText('');
+    setDeleteSegConfirmIdx(null);
+    setShowSegmentsManagerModal(true);
+  };
+
+  const handleEditSegment = (index) => {
+    setEditingSegmentIndex(index);
+    setSegmentFormName(segmentsConfig[index].name);
+    setSegmentFormStatuses([...segmentsConfig[index].statuses]);
+    setNewStatusText('');
+    setDeleteSegConfirmIdx(null);
+  };
+
+  const handleAddStatusTag = () => {
+    const status = newStatusText.trim();
+    if (!status) return;
+    if (segmentFormStatuses.some(s => s.toLowerCase() === status.toLowerCase())) {
+      addToast('Status already exists in this segment', 'error', 'Duplicate');
+      return;
+    }
+    setSegmentFormStatuses([...segmentFormStatuses, status]);
+    setNewStatusText('');
+  };
+
+  const handleRemoveStatusTag = (statusToRemove) => {
+    setSegmentFormStatuses(segmentFormStatuses.filter(s => s !== statusToRemove));
+  };
+
+  const handleSaveSegmentConfig = () => {
+    const name = segmentFormName.trim();
+    if (!name) {
+      addToast('Please enter a segment name', 'error', 'Validation Error');
+      return;
+    }
+
+    if (segmentFormStatuses.length === 0) {
+      addToast('Please add at least one status option', 'error', 'Validation Error');
+      return;
+    }
+
+    let updatedConfig = [...segmentsConfig];
+
+    if (editingSegmentIndex !== null) {
+      const duplicate = segmentsConfig.some((s, idx) => idx !== editingSegmentIndex && s.name.toLowerCase() === name.toLowerCase());
+      if (duplicate) {
+        addToast('A segment with this name already exists', 'error', 'Duplicate Name');
+        return;
+      }
+
+      const oldName = segmentsConfig[editingSegmentIndex].name;
+      updatedConfig[editingSegmentIndex] = {
+        name,
+        statuses: segmentFormStatuses
+      };
+
+      // Rename segment in projects if renamed
+      if (oldName !== name) {
+        const updatedProjects = projects.map(p => 
+          p.segment === oldName ? { ...p, segment: name } : p
+        );
+        persist(updatedProjects);
+      }
+
+      addToast(`Segment "${name}" updated successfully`, 'success', 'Segment Updated');
+    } else {
+      const duplicate = segmentsConfig.some(s => s.name.toLowerCase() === name.toLowerCase());
+      if (duplicate) {
+        addToast('A segment with this name already exists', 'error', 'Duplicate Name');
+        return;
+      }
+
+      updatedConfig.push({
+        name,
+        statuses: segmentFormStatuses
+      });
+      addToast(`Segment "${name}" created successfully`, 'success', 'Segment Created');
+    }
+
+    setSegmentsConfig(updatedConfig);
+    localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
+
+    // Sync to legacy custom segments key
+    const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
+    const customSegNames = updatedConfig
+      .map(c => c.name)
+      .filter(n => !defaultSegmentNames.includes(n));
+    localStorage.setItem('kfpl_custom_segments', JSON.stringify(customSegNames));
+
+    // Reset form
+    setEditingSegmentIndex(null);
+    setSegmentFormName('');
+    setSegmentFormStatuses([]);
+    setNewStatusText('');
+  };
+
+  const confirmDeleteSegment = () => {
+    if (deleteSegConfirmIdx === null) return;
+    const segmentToDelete = segmentsConfig[deleteSegConfirmIdx].name;
+    const updatedConfig = segmentsConfig.filter((_, idx) => idx !== deleteSegConfirmIdx);
+
+    setSegmentsConfig(updatedConfig);
+    localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
+
+    // Sync to legacy custom segments key
+    const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
+    const customSegNames = updatedConfig
+      .map(c => c.name)
+      .filter(n => !defaultSegmentNames.includes(n));
+    localStorage.setItem('kfpl_custom_segments', JSON.stringify(customSegNames));
+
+    addToast(`Segment "${segmentToDelete}" deleted`, 'success', 'Segment Deleted');
+    
+    if (editingSegmentIndex === deleteSegConfirmIdx) {
+      setEditingSegmentIndex(null);
+      setSegmentFormName('');
+      setSegmentFormStatuses([]);
+      setNewStatusText('');
+    }
+    setDeleteSegConfirmIdx(null);
   };
 
   const handleDeleteProject = (id) => {
@@ -255,7 +485,7 @@ export default function PortfolioManagement() {
               <strong>{drawerProject.status}</strong>
             </div>
             <div>
-              <span>Target ROI</span>
+              <span>Monthly ROI</span>
               <strong>{drawerProject.roi || '—'}</strong>
             </div>
             <div>
@@ -364,7 +594,10 @@ export default function PortfolioManagement() {
           <h2 className="kfpl-page-title">Portfolio Management</h2>
           <p className="kfpl-page-subtitle">Manage projects, segments, and media across the KFPL portfolio</p>
         </div>
-        <div className="kfpl-page-header-actions">
+        <div className="kfpl-page-header-actions" style={{ display: 'flex', gap: '8px' }}>
+          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={openSegmentsManager}>
+            Manage Segments
+          </button>
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={openAddModal}>
             + Add Project
           </button>
@@ -440,7 +673,7 @@ export default function PortfolioManagement() {
                     <strong>{project.status}</strong>
                   </div>
                   <div>
-                    <span>Target ROI</span>
+                    <span>Monthly ROI</span>
                     <strong>{project.roi || '—'}</strong>
                   </div>
                   <div>
@@ -498,19 +731,50 @@ export default function PortfolioManagement() {
             </div>
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Segment <span className="required">*</span></label>
-              <select className="kfpl-select" value={formData.segment} onChange={e => setFormData({ ...formData, segment: e.target.value })}>
+              <select
+                className="kfpl-select"
+                value={formData.segment}
+                onChange={e => {
+                  const selectedSeg = e.target.value;
+                  const segConfig = segmentsConfig.find(s => s.name === selectedSeg);
+                  const defaultStatus = segConfig && segConfig.statuses.length > 0 ? segConfig.statuses[0] : '';
+                  setFormData({ ...formData, segment: selectedSeg, status: defaultStatus });
+                }}
+              >
                 <option value="">Select segment</option>
                 {segmentNames.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="__NEW__" style={{ fontStyle: 'italic', fontWeight: 'bold' }}>+ Add New Segment...</option>
               </select>
+              {formData.segment === '__NEW__' && (
+                <div className="animate-fade-slide-up" style={{ marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    className="kfpl-input"
+                    placeholder="Enter custom segment name"
+                    value={customSegmentText}
+                    onChange={e => setCustomSegmentText(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
           <div className="kfpl-form-row">
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Status</label>
-              <select className="kfpl-select" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+              <select
+                className="kfpl-select"
+                value={formData.status}
+                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                disabled={!formData.segment || formData.segment === '__NEW__'}
+              >
                 <option value="">Select status</option>
-                {['Planning', 'In Production', 'Recording', 'Active', 'Ongoing', 'Negotiation', 'Completed', 'Released'].map(s => <option key={s} value={s}>{s}</option>)}
+                {((segmentsConfig.find(s => s.name === formData.segment)?.statuses) || []).map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+                {formData.status && !((segmentsConfig.find(s => s.name === formData.segment)?.statuses) || []).includes(formData.status) && (
+                  <option value={formData.status}>{formData.status} (Current)</option>
+                )}
               </select>
             </div>
             <div className="kfpl-input-group">
@@ -521,8 +785,8 @@ export default function PortfolioManagement() {
 
           <div className="kfpl-form-row">
             <div className="kfpl-input-group">
-              <label className="kfpl-input-label">Target ROI</label>
-              <input type="text" className="kfpl-input" value={formData.roi} onChange={e => setFormData({ ...formData, roi: e.target.value })} placeholder="e.g. 15%" />
+              <label className="kfpl-input-label">Monthly ROI</label>
+              <input type="text" className="kfpl-input" value={formData.roi} onChange={e => setFormData({ ...formData, roi: e.target.value })} placeholder="e.g. 1.25%" />
             </div>
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Risk Level</label>
@@ -612,6 +876,222 @@ export default function PortfolioManagement() {
         <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
           Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This action cannot be undone.
         </p>
+      </Modal>
+
+      {/* ═══════ Manage Segments & Statuses Modal ═══════ */}
+      <Modal
+        isOpen={showSegmentsManagerModal}
+        onClose={() => setShowSegmentsManagerModal(false)}
+        title="Manage Segments & Statuses"
+        size="lg"
+        footer={
+          <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowSegmentsManagerModal(false)}>Close</button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Deletion confirmation panel */}
+          {deleteSegConfirmIdx !== null && (
+            <div style={{
+              padding: '16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--color-danger)',
+              borderRadius: '8px',
+              animation: 'fadeIn 0.2s'
+            }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: 'var(--color-danger)', fontWeight: 500 }}>
+                Are you sure you want to delete segment <strong>{segmentsConfig[deleteSegConfirmIdx]?.name}</strong>?
+                {projects.some(p => p.segment === segmentsConfig[deleteSegConfirmIdx]?.name) && (
+                  <span> <br/><strong>Warning:</strong> Existing projects under this segment will remain, but their segment mapping will be unmanaged.</span>
+                )}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="kfpl-btn kfpl-btn--sm"
+                  style={{ background: 'var(--color-danger)', borderColor: 'var(--color-danger)', color: '#fff' }}
+                  onClick={confirmDeleteSegment}
+                >
+                  Yes, Delete
+                </button>
+                <button
+                  className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                  onClick={() => setDeleteSegConfirmIdx(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            
+            {/* Left Column: Segments List */}
+            <div style={{ borderRight: '1px solid var(--color-border)', paddingRight: '20px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)', fontWeight: 700 }}>
+                Existing Segments
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px', overflowY: 'auto', paddingRight: '6px' }}>
+                {segmentsConfig.map((seg, idx) => (
+                  <div key={seg.name} style={{
+                    padding: '12px',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{seg.name}</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                          style={{ padding: '2px 8px', minWidth: 'auto' }}
+                          onClick={() => handleEditSegment(idx)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                          style={{ padding: '2px 8px', minWidth: 'auto', color: 'var(--color-danger)' }}
+                          onClick={() => setDeleteSegConfirmIdx(idx)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {seg.statuses.map(status => (
+                        <span key={status} style={{
+                          fontSize: '0.6875rem',
+                          padding: '2px 6px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--color-border-light)',
+                          borderRadius: '4px',
+                          color: 'var(--color-text-muted)'
+                        }}>
+                          {status}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column: Add / Edit Form */}
+            <div>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)', fontWeight: 700 }}>
+                {editingSegmentIndex !== null ? `Edit Segment: ${segmentsConfig[editingSegmentIndex].name}` : 'Add New Segment'}
+              </h4>
+              
+              <div className="kfpl-form" style={{ gap: '12px' }}>
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">Segment Name <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    className="kfpl-input"
+                    placeholder="e.g. Music, Film Making"
+                    value={segmentFormName}
+                    onChange={e => setSegmentFormName(e.target.value)}
+                  />
+                </div>
+
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">Statuses <span className="required">*</span></label>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      className="kfpl-input"
+                      placeholder="Add status (e.g. Planning)"
+                      value={newStatusText}
+                      onChange={e => setNewStatusText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddStatusTag();
+                        }
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <button type="button" className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={handleAddStatusTag}>
+                      Add
+                    </button>
+                  </div>
+                  
+                  {/* Status tags container */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                    minHeight: '80px',
+                    padding: '10px',
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    alignContent: 'flex-start'
+                  }}>
+                    {segmentFormStatuses.length === 0 ? (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                        No statuses added yet. Type above and click Add.
+                      </span>
+                    ) : (
+                      segmentFormStatuses.map(status => (
+                        <span key={status} style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 10px',
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          borderRadius: '16px',
+                          color: '#10B981',
+                          fontSize: '0.75rem',
+                          fontWeight: 600
+                        }}>
+                          {status}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStatusTag(status)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-danger)',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              padding: '0 2px',
+                              display: 'inline-flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                  <button type="button" className="kfpl-btn kfpl-btn--primary" onClick={handleSaveSegmentConfig}>
+                    {editingSegmentIndex !== null ? 'Save Changes' : 'Create Segment'}
+                  </button>
+                  {editingSegmentIndex !== null && (
+                    <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => {
+                      setEditingSegmentIndex(null);
+                      setSegmentFormName('');
+                      setSegmentFormStatuses([]);
+                      setNewStatusText('');
+                    }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </Modal>
 
       {drawer}

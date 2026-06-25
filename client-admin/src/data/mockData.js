@@ -3,8 +3,8 @@
    Description: Comprehensive mock data for all client portal modules
    ============================================================ */
 
-/* ── Client Profile ─────────────────────── */
-export const mockClient = {
+/* ── Client Profile Defaults ─────────────────────── */
+const defaultMockClient = {
   id: 1,
   clientId: 'KFPL-1042',
   name: 'Rajesh Sharma',
@@ -12,7 +12,7 @@ export const mockClient = {
   phone: '+91 98765 43210',
   dob: '1985-03-15',
   address: '42, Green Valley Apartments, Andheri West, Mumbai 400058',
-  category: 'Premium',
+  category: 'Gold',
   status: 'Active',
   memberSince: '2024-08-15',
   onboardingComplete: true,
@@ -44,8 +44,7 @@ export const mockClient = {
   },
 };
 
-/* ── Journey Progress ─────────────────────── */
-export const mockJourney = {
+const defaultMockJourney = {
   accountCreated: true,
   onboardingComplete: true,
   kycSubmitted: true,
@@ -55,18 +54,14 @@ export const mockJourney = {
   firstRoiReceived: false,
 };
 
-/* ── Investment Data ─────────────────────── */
-export const mockInvestments = [
-  { id: 1, segment: 'Film Making', amount: 2500000, date: '2024-09-01', contractPeriod: '24 months', status: 'Active', roiAllocated: 15, roiReceived: 12.5 },
-  { id: 2, segment: 'Distribution', amount: 1500000, date: '2024-10-15', contractPeriod: '18 months', status: 'Active', roiAllocated: 12, roiReceived: 10 },
-  { id: 3, segment: 'Music', amount: 800000, date: '2025-01-10', contractPeriod: '12 months', status: 'Active', roiAllocated: 10, roiReceived: 8 },
-  { id: 4, segment: 'Content IP Bank', amount: 1200000, date: '2025-03-20', contractPeriod: '24 months', status: 'Active', roiAllocated: 14, roiReceived: 0 },
+const defaultMockInvestments = [
+  { id: 1, segment: 'Film Making', amount: 2500000, date: '2024-09-01', contractPeriod: '24 months', status: 'Active', roiAllocated: 1.25, roiReceived: 1.04 },
+  { id: 2, segment: 'Distribution', amount: 1500000, date: '2024-10-15', contractPeriod: '18 months', status: 'Active', roiAllocated: 1.0, roiReceived: 0.83 },
+  { id: 3, segment: 'Music', amount: 800000, date: '2025-01-10', contractPeriod: '12 months', status: 'Active', roiAllocated: 0.83, roiReceived: 0.67 },
+  { id: 4, segment: 'Content IP Bank', amount: 1200000, date: '2025-03-20', contractPeriod: '24 months', status: 'Active', roiAllocated: 1.17, roiReceived: 0 },
 ];
 
-export const mockTotalInvested = 6000000;
-
-/* ── ROI History ─────────────────────── */
-export const mockROIHistory = [
+const defaultMockROIHistory = [
   { month: 'Jan 2025', expected: 75000, received: 75000, date: '2025-01-28', status: 'Paid' },
   { month: 'Feb 2025', expected: 75000, received: 75000, date: '2025-02-28', status: 'Paid' },
   { month: 'Mar 2025', expected: 75000, received: 75000, date: '2025-03-28', status: 'Paid' },
@@ -75,8 +70,7 @@ export const mockROIHistory = [
   { month: 'Jun 2025', expected: 82000, received: 0, date: '2025-06-28', status: 'Pending' },
 ];
 
-/* ── Dividend Bonus ─────────────────────── */
-export const mockDividendBonus = {
+const defaultMockDividendBonus = {
   amount: 150000,
   segment: 'Film Making',
   project: 'Project Vanguard',
@@ -84,25 +78,272 @@ export const mockDividendBonus = {
   adminNote: 'Annual performance bonus for exceptional project returns.',
 };
 
-/* ── Perks ─────────────────────── */
-export const mockPerks = {
+const defaultMockPerks = {
   currentTier: 'Gold',
-  nextTierAmount: 900000,
+  nextTierAmount: 10000000,
   history: [
     { date: '2024-08-15', event: 'Joined KFPL — Silver tier assigned', type: 'tier' },
-    { date: '2024-11-01', event: 'Upgraded to Gold tier — ₹5L+ invested', type: 'tier' },
+    { date: '2024-11-01', event: 'Upgraded to Gold tier — ₹25L+ invested', type: 'tier' },
     { date: '2025-01-15', event: 'Priority support activated', type: 'perk' },
     { date: '2025-03-01', event: 'Quarterly review call completed', type: 'perk' },
     { date: '2025-04-15', event: 'Early access to Project Horizon granted', type: 'perk' },
   ],
 };
 
-/* ── Service Requests ─────────────────────── */
-export const mockServiceRequests = [
+const defaultMockServiceRequests = [
   { id: 'SR-001', category: 'Investment Query', subject: 'ROI calculation clarification for Q1', date: '2025-05-10', status: 'Resolved' },
   { id: 'SR-002', category: 'Document Request', subject: 'Updated agreement copy needed', date: '2025-05-25', status: 'In Progress' },
   { id: 'SR-003', category: 'Payment Issue', subject: 'May ROI not credited yet', date: '2025-06-05', status: 'Open' },
 ];
+
+const defaultMockPaymentRequests = [
+  { id: 1, type: 'Deposit', amount: 500000, date: '2025-04-10', status: 'Approved', mode: 'Bank Transfer', note: 'Additional investment' },
+  { id: 2, type: 'Withdrawal', amount: 200000, date: '2025-05-20', status: 'Pending', mode: 'Bank Transfer', note: 'Personal requirement' },
+  { id: 3, type: 'Deposit', amount: 1000000, date: '2025-03-01', status: 'Approved', mode: 'NEFT', note: 'New project investment' },
+];
+
+const defaultMockStats = {
+  totalInvested: 6000000,
+  monthlyROI: 82000,
+  roiRate: 13.5,
+  perkTier: 'Gold',
+  nextROIDate: '2025-06-28',
+};
+
+/* ── Dynamic Evaluation based on Logged-in User Session ── */
+let currentClient = { ...defaultMockClient };
+let currentJourney = { ...defaultMockJourney };
+let currentInvestments = [...defaultMockInvestments];
+let currentROIHistory = [...defaultMockROIHistory];
+let currentDividendBonus = { ...defaultMockDividendBonus };
+let currentPerks = { ...defaultMockPerks };
+let currentServiceRequests = [...defaultMockServiceRequests];
+let currentPaymentRequests = [...defaultMockPaymentRequests];
+let currentStats = { ...defaultMockStats };
+
+if (typeof window !== 'undefined') {
+  const auth = localStorage.getItem('kfpl_client_auth');
+  if (auth) {
+    try {
+      const parsed = JSON.parse(auth);
+      if (parsed && parsed.client) {
+        const loginEmail = parsed.client.email || '';
+        const isRajesh = loginEmail.toLowerCase() === 'rajesh.sharma@email.com';
+        
+        if (isRajesh) {
+          currentClient = { ...defaultMockClient, ...parsed.client };
+          // If the profile was updated in this session, ensure onboardingComplete is kept
+          currentClient.onboardingComplete = true;
+          currentJourney = {
+            accountCreated: true,
+            onboardingComplete: true,
+            kycSubmitted: true,
+            agreementSigned: true,
+            firstInvestment: true,
+            roiConfigured: true,
+            firstRoiReceived: false,
+          };
+        } else {
+          // It's a newly registered / dynamic mock client!
+          currentClient = {
+            id: parsed.client.id || 999,
+            clientId: parsed.client.clientId || 'KFPL-9999',
+            name: parsed.client.name || 'Investor',
+            email: loginEmail,
+            phone: parsed.client.phone || '+91 99999 88888',
+            dob: parsed.client.dob || '1990-01-01',
+            address: parsed.client.address || '',
+            category: parsed.client.category || 'Silver',
+            status: parsed.client.status || 'Active',
+            memberSince: parsed.client.memberSince || new Date().toISOString().split('T')[0],
+            onboardingComplete: parsed.client.onboardingComplete || false,
+            agentName: parsed.client.agentName || 'Vikram Patel',
+            agentId: parsed.client.agentId || 'AGT-001',
+            emergencyContact: parsed.client.emergencyContact || '',
+            nominee: parsed.client.nominee || { name: '', relation: '', contact: '', email: '' },
+            riskProfile: parsed.client.riskProfile || '',
+            riskProfileLocked: parsed.client.riskProfileLocked || false,
+            agentCommission: parsed.client.agentCommission || {
+              oneTimePercent: 2,
+              monthlyPercent: 0.75,
+              specialPercent: 0,
+              totalPaid: 0,
+              history: []
+            },
+            ...parsed.client
+          };
+
+          // Onboarding evaluation
+          const hasNomineeName = !!currentClient.nominee?.name;
+          const hasRiskProfile = !!currentClient.riskProfile;
+          const finishedOnboard = currentClient.onboardingComplete || (hasNomineeName && hasRiskProfile);
+
+          currentJourney = {
+            accountCreated: true,
+            onboardingComplete: finishedOnboard,
+            kycSubmitted: finishedOnboard,
+            agreementSigned: finishedOnboard,
+            firstInvestment: false,
+            roiConfigured: false,
+            firstRoiReceived: false,
+          };
+
+          // Load client specific lists from sandbox localStorage
+          const clientDataKey = `kfpl_client_data_${currentClient.clientId}`;
+          const storedClientData = localStorage.getItem(clientDataKey);
+          let clientData = {
+            investments: [],
+            roiHistory: [],
+            paymentRequests: [],
+            serviceRequests: [],
+            stats: {
+              totalInvested: 0,
+              monthlyROI: 0,
+              roiRate: 0,
+              perkTier: 'Silver',
+              nextROIDate: '—',
+            }
+          };
+
+          if (storedClientData) {
+            try {
+              clientData = JSON.parse(storedClientData);
+            } catch (e) {
+              console.error(e);
+            }
+          } else {
+            localStorage.setItem(clientDataKey, JSON.stringify(clientData));
+          }
+
+          currentInvestments = clientData.investments;
+          currentROIHistory = clientData.roiHistory;
+          currentPaymentRequests = clientData.paymentRequests;
+          currentServiceRequests = clientData.serviceRequests;
+          currentStats = clientData.stats;
+          
+          currentDividendBonus = null; // Fresh clients don't have historical dividend payouts
+          
+          currentPerks = {
+            currentTier: currentClient.category || 'Silver',
+            nextTierAmount: 500000,
+            history: [
+              { date: currentClient.memberSince, event: `Joined KFPL — ${currentClient.category || 'Silver'} tier assigned`, type: 'tier' }
+            ]
+          };
+        }
+
+        // ── Load and Sync from Shared LocalStorage ──
+        const storedInvestors = localStorage.getItem('kfpl_investors');
+        const storedApprovals = localStorage.getItem('kfpl_approvals');
+        
+        let matchingInvestor = null;
+        if (storedInvestors) {
+          try {
+            const investorsList = JSON.parse(storedInvestors);
+            matchingInvestor = investorsList.find(
+              inv => (inv.email && inv.email.toLowerCase() === loginEmail.toLowerCase()) || 
+                     (inv.clientId && inv.clientId.toUpperCase() === (parsed.client.clientId || '').toUpperCase())
+            );
+          } catch (e) {
+            console.error('Error parsing stored investors:', e);
+          }
+        }
+
+        if (matchingInvestor) {
+          // Sync profile fields
+          currentClient.name = matchingInvestor.name || currentClient.name;
+          currentClient.clientId = matchingInvestor.clientId || currentClient.clientId;
+          currentClient.phone = matchingInvestor.phone || currentClient.phone;
+          currentClient.address = matchingInvestor.address || currentClient.address;
+          currentClient.category = matchingInvestor.category 
+            ? (matchingInvestor.category.charAt(0).toUpperCase() + matchingInvestor.category.slice(1)) 
+            : currentClient.category;
+          currentClient.status = matchingInvestor.status
+            ? (matchingInvestor.status.charAt(0).toUpperCase() + matchingInvestor.status.slice(1))
+            : currentClient.status;
+          
+          // Sync investments
+          if (matchingInvestor.investments) {
+            currentInvestments = matchingInvestor.investments.map(inv => ({
+              id: inv.id,
+              segment: inv.segment,
+              amount: inv.amount,
+              date: inv.date,
+              contractPeriod: '24 months',
+              status: inv.status === 'active' ? 'Active' : 'Closed',
+              roiAllocated: inv.roi || 1.2,
+              roiReceived: inv.roiReceived || (inv.roi ? inv.roi * 0.8 : 0.96)
+            }));
+          }
+          
+          // Sync stats
+          currentStats.totalInvested = matchingInvestor.totalInvestment;
+          currentStats.perkTier = currentClient.category;
+          
+          // Sync perks history
+          currentPerks.currentTier = currentClient.category;
+          currentPerks.history = [
+            { date: currentClient.memberSince || '2024-08-15', event: `Joined KFPL — ${currentClient.category} tier assigned`, type: 'tier' }
+          ];
+        }
+
+        // Sync payment requests (Deposits and Withdrawals) from global approvals list
+        if (storedApprovals) {
+          try {
+            const approvalsObj = JSON.parse(storedApprovals);
+            const myDeposits = (approvalsObj.deposits || [])
+              .filter(d => d.clientId === currentClient.clientId)
+              .map(d => ({
+                id: d.id,
+                type: 'Deposit',
+                amount: d.amount,
+                date: d.date,
+                status: d.status.charAt(0).toUpperCase() + d.status.slice(1),
+                mode: d.mode || 'Bank Transfer',
+                note: d.note || '',
+                reference: d.referenceId || '',
+                proofFile: d.proofFile || '',
+              }));
+              
+            const myWithdrawals = (approvalsObj.withdrawals || [])
+              .filter(w => w.clientId === currentClient.clientId)
+              .map(w => ({
+                id: w.id,
+                type: 'Withdrawal',
+                amount: w.amount,
+                date: w.date,
+                status: w.status.charAt(0).toUpperCase() + w.status.slice(1),
+                mode: w.mode || 'Bank Transfer',
+                note: w.note || '',
+                reason: w.reason || '',
+              }));
+              
+            currentPaymentRequests = [...myDeposits, ...myWithdrawals].sort((a, b) => b.id - a.id);
+          } catch (e) {
+            console.error('Error parsing stored approvals:', e);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing dynamic user session:', err);
+    }
+  }
+}
+
+export const mockClient = currentClient;
+export const mockJourney = currentJourney;
+export const mockInvestments = currentInvestments;
+export const mockTotalInvested = currentInvestments.reduce((sum, inv) => sum + inv.amount, 0);
+export const mockROIHistory = currentROIHistory;
+export const mockDividendBonus = currentDividendBonus;
+export const mockPerks = currentPerks;
+export const mockServiceRequests = currentServiceRequests;
+export const mockPaymentRequests = currentPaymentRequests;
+export const mockStats = {
+  ...currentStats,
+  totalInvested: mockTotalInvested,
+  perkTier: currentClient.category || 'Silver',
+};
 
 export const mockServiceRequestDetail = {
   id: 'SR-003',
@@ -136,13 +377,6 @@ export const mockOpportunities = [
   { id: 4, name: 'IP Vault Beta', segment: 'Content IP Bank', minInvestment: 300000, slotsAvailable: 12, totalSlots: 25, riskReward: 'Low / 11% ROI', status: 'Open' },
 ];
 
-/* ── Payment Requests ─────────────────────── */
-export const mockPaymentRequests = [
-  { id: 1, type: 'Deposit', amount: 500000, date: '2025-04-10', status: 'Approved', mode: 'Bank Transfer', note: 'Additional investment' },
-  { id: 2, type: 'Withdrawal', amount: 200000, date: '2025-05-20', status: 'Pending', mode: 'Bank Transfer', note: 'Personal requirement' },
-  { id: 3, type: 'Deposit', amount: 1000000, date: '2025-03-01', status: 'Approved', mode: 'NEFT', note: 'New project investment' },
-];
-
 /* ── Media / Blog ─────────────────────── */
 export const mockMedia = [
   { id: 1, title: 'KFPL Announces Record Q1 Returns for Investors', category: 'Company News', date: '2025-06-01', excerpt: 'Kross Film Productions Ltd. has announced record quarterly returns for its investor portfolio, with an average ROI of 14.2% across all segments.' },
@@ -153,21 +387,12 @@ export const mockMedia = [
   { id: 6, title: 'Music Label Alpha: First Quarter Revenue Report', category: 'Project Updates', date: '2025-04-20', excerpt: 'Our music vertical reports strong first quarter performance with 5 album releases generating significant streaming revenue.' },
 ];
 
-/* ── Client Stats (Dashboard KPIs) ─────────────────────── */
-export const mockStats = {
-  totalInvested: 6000000,
-  monthlyROI: 82000,
-  roiRate: 13.5,
-  perkTier: 'Gold',
-  nextROIDate: '2025-06-28',
-};
-
 /* ── FAQ Data ─────────────────────── */
 export const mockFAQs = [
   { q: 'How is my ROI calculated?', a: 'Your ROI is calculated based on the allocated percentage for each investment segment. The rate is applied to your principal amount and credited monthly.' },
   { q: 'Can I withdraw my investment before the contract period?', a: 'Early withdrawal is subject to admin approval and may incur a processing fee. Please raise a Service Request or contact support for assistance.' },
   { q: 'How do I change my risk profile?', a: 'Risk profile can only be changed once after initial selection. Submit a Service Request under "Risk Profile Change" category and our team will review it.' },
-  { q: 'What are the perk tier thresholds?', a: 'Silver: ₹0-5L, Gold: ₹5L-15L, Platinum: ₹15L-50L, Diamond: ₹50L+. Tiers are automatically updated based on your total investment.' },
+  { q: 'What are the perk tier thresholds?', a: 'Silver: upto ₹25L, Gold: ₹25L-1Cr, Diamond: ₹1Cr-3Cr, Platinum: ₹3Cr+. Tiers are automatically updated based on your total investment.' },
   { q: 'How do I update my nominee details?', a: 'Go to Profile → Nominee Details card and click Edit. You can update nominee information at any time.' },
 ];
 

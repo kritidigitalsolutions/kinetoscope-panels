@@ -3,7 +3,7 @@
    Description: Form to assign investment to a client
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import { investors, INVESTMENT_SEGMENTS } from '../../data/mockData';
@@ -21,12 +21,76 @@ export default function AssignInvestment() {
     dateOfJoining: new Date().toISOString().split('T')[0]
   });
 
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedSegments, setSelectedSegments] = useState([]);
   const [allocations, setAllocations] = useState({});
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const storedProjects = localStorage.getItem('kfpl_portfolio_projects');
+    if (storedProjects) {
+      try {
+        let parsed = JSON.parse(storedProjects);
+        let migrated = false;
+        parsed = parsed.map(p => {
+          const rawRoi = p.roi || '';
+          const numRoi = parseFloat(rawRoi.replace(/[^0-9.]/g, ''));
+          // Migrate annual to monthly in local storage
+          if (!isNaN(numRoi) && numRoi > 3) {
+            p.roi = `${(numRoi / 12).toFixed(2)}%`;
+            migrated = true;
+          }
+          return p;
+        });
+        if (migrated) {
+          localStorage.setItem('kfpl_portfolio_projects', JSON.stringify(parsed));
+        }
+        setProjects(parsed);
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      // Seed default projects fallback if not exists
+      const defaultProjects = [
+        { id: 1, name: 'Project Astra', segment: 'Film Making', roi: '1.25%' },
+        { id: 2, name: 'Rhythm Series', segment: 'Music', roi: '0.83%' },
+        { id: 3, name: 'Meridian Release', segment: 'Distribution', roi: '1.0%' },
+        { id: 4, name: 'Archive Digitization', segment: 'Content IP Bank', roi: '1.17%' },
+        { id: 5, name: 'Content Deal Q2', segment: 'Trading & Syndication', roi: '1.08%' },
+        { id: 6, name: 'Screen Network', segment: 'Film Exhibition', roi: '0.92%' },
+      ];
+      setProjects(defaultProjects);
+    }
+  }, []);
+
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleProjectChange = (e) => {
+    const pId = e.target.value;
+    setSelectedProjectId(pId);
+    if (!pId) return;
+
+    const project = projects.find(p => String(p.id) === String(pId));
+    if (project) {
+      // 1. Load Monthly ROI directly (no division needed since project ROI is now monthly)
+      const rawRoi = project.roi || '';
+      const numRoi = parseFloat(rawRoi.replace(/[^0-9.]/g, ''));
+      if (!isNaN(numRoi)) {
+        const monthly = numRoi.toFixed(2);
+        setForm(prev => ({ ...prev, roi: monthly }));
+        addToast(`Monthly ROI of ${rawRoi} auto-filled from project`, 'info', 'Auto-Filled ROI');
+      }
+
+      // 2. Auto-select segment and set allocation to 100%
+      const matchingSeg = INVESTMENT_SEGMENTS.find(s => s.name.toLowerCase() === project.segment.toLowerCase());
+      const segId = matchingSeg ? matchingSeg.id : project.segment;
+
+      setSelectedSegments([segId]);
+      setAllocations({ [segId]: '100' });
+    }
   };
 
   const handleSegmentToggle = (segId) => {
@@ -169,6 +233,22 @@ export default function AssignInvestment() {
         <div className="kfpl-form">
           <div className="kfpl-form-row">
             <div className="kfpl-input-group">
+              <label className="kfpl-input-label">Select Project (Optional — Auto-fills Segment & ROI)</label>
+              <select
+                className="kfpl-select"
+                name="selectedProjectId"
+                value={selectedProjectId}
+                onChange={handleProjectChange}
+              >
+                <option value="">Choose project to link</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.segment} — Monthly ROI: {p.roi})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="kfpl-input-group">
               <label className="kfpl-input-label">Select Investor <span className="required">*</span></label>
               <select className="kfpl-select" name="investorId" value={form.investorId} onChange={handleChange} required>
                 <option value="">Choose investor</option>
@@ -177,6 +257,9 @@ export default function AssignInvestment() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="kfpl-form-row">
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Date of Joining / Contract Start <span className="required">*</span></label>
               <input
@@ -197,7 +280,7 @@ export default function AssignInvestment() {
               <input className="kfpl-input" name="amount" type="number" value={form.amount} onChange={handleChange} placeholder="Enter amount" required />
             </div>
             <div className="kfpl-input-group">
-              <label className="kfpl-input-label">ROI % <span className="required">*</span></label>
+              <label className="kfpl-input-label">Monthly ROI % <span className="required">*</span></label>
               <input className="kfpl-input" name="roi" type="number" step="0.1" value={form.roi} onChange={handleChange} placeholder="e.g. 15" required />
             </div>
             <div className="kfpl-input-group">

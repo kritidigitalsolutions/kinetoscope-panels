@@ -11,14 +11,29 @@ import { agents } from '../../data/mockData';
 export default function AgentPortalMock() {
   const addToast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const [residencyFilter, setResidencyFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const filteredAgents = agents.filter(agt => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.trim().toLowerCase();
-    const email = (agt.portalEmail || agt.email || '').toLowerCase();
-    const name = (agt.name || '').toLowerCase();
-    const id = (agt.agentId || '').toLowerCase();
-    return email.includes(q) || name.includes(q) || id.includes(q);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const email = (agt.portalEmail || agt.email || '').toLowerCase();
+      const name = (agt.name || '').toLowerCase();
+      const id = (agt.agentId || '').toLowerCase();
+      if (!email.includes(q) && !name.includes(q) && !id.includes(q)) return false;
+    }
+
+    if (residencyFilter !== 'all') {
+      const isInt = residencyFilter === 'international';
+      const actualInt = agt.citizenship === 'International';
+      if (isInt !== actualInt) return false;
+    }
+
+    if (statusFilter !== 'all') {
+      if (agt.status !== statusFilter) return false;
+    }
+
+    return true;
   });
 
   const copyPassword = (email, password) => {
@@ -72,17 +87,42 @@ export default function AgentPortalMock() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="kfpl-search" style={{ marginBottom: '20px', maxWidth: '400px' }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="kfpl-search-icon">
-          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search by agent ID, name, or email ID..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      {/* Search and Filters */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <div className="kfpl-search" style={{ maxWidth: '400px', flex: 1, marginBottom: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="kfpl-search-icon">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by agent ID, name, or email ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <select
+          value={residencyFilter}
+          onChange={e => setResidencyFilter(e.target.value)}
+          className="kfpl-select"
+          style={{ width: '160px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+        >
+          <option value="all">All Residency</option>
+          <option value="national">National</option>
+          <option value="international">International</option>
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="kfpl-select"
+          style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+        >
+          <option value="all">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Suspended">Suspended</option>
+        </select>
       </div>
 
       {/* Credentials Table */}
@@ -90,7 +130,7 @@ export default function AgentPortalMock() {
         <div className="kfpl-table-toolbar">
           <div className="kfpl-table-toolbar-left">
             <span className="kfpl-table-count">
-              {searchQuery.trim() ? (
+              {searchQuery.trim() || residencyFilter !== 'all' || statusFilter !== 'all' ? (
                 <>Showing <strong>{filteredAgents.length}</strong> of <strong>{agents.length}</strong> agents</>
               ) : (
                 <>Showing Portal Login Credentials for <strong>{agents.length}</strong> agents</>

@@ -59,6 +59,8 @@ function downloadStatementCSV(com, agentName) {
     ['Total Amount', com.amount],
     ['Status', com.status],
     [''],
+    ['Type', com.type === 'one-time' ? 'One Time' : com.type === 'special' ? 'Special' : 'Monthly'],
+    [''],
     ['Client Name', 'Client ID', 'Investment', 'Rate %', 'Commission'],
   ];
   if (com.breakdown) {
@@ -95,6 +97,9 @@ function downloadStatementPDF(com, agentName) {
         <td style="border: 1px solid #CFDDD5; padding: 10px; font-weight: 500;">${b.clientName}</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; font-family: monospace;">${b.clientId}</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${invDateStr}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">
+          <span style="display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; ${com.type === 'one-time' ? 'background: #DBEAFE; color: #1E40AF;' : com.type === 'special' ? 'background: #FEF3C7; color: #92400E;' : 'background: #D1FAE5; color: #065F46;'}">${com.type === 'one-time' ? 'One Time' : com.type === 'special' ? 'Special' : 'Monthly'}</span>
+        </td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: 600;">${formatCurrency(b.investment)}</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right;">${b.rate}%</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: bold; color: #059669;">${formatCurrency(b.amount)}</td>
@@ -178,6 +183,7 @@ function downloadStatementPDF(com, agentName) {
             <th>Client Name</th>
             <th>Client ID</th>
             <th style="text-align: center;">Investment Date</th>
+            <th style="text-align: center;">Type</th>
             <th style="text-align: right;">Investment</th>
             <th style="text-align: right;">Rate %</th>
             <th style="text-align: right;">Commission</th>
@@ -186,7 +192,7 @@ function downloadStatementPDF(com, agentName) {
         <tbody>
           ${rowsHtml}
           <tr class="total-row">
-            <td colspan="5" style="text-align: right; font-weight: 800; font-size: 14px; padding: 12px;">Total Payout</td>
+            <td colspan="6" style="text-align: right; font-weight: 800; font-size: 14px; padding: 12px;">Total Payout</td>
             <td style="text-align: right; font-weight: 800; color: #059669; font-size: 14px; padding: 12px;">${formatCurrency(filteredTotal)}</td>
           </tr>
         </tbody>
@@ -451,11 +457,11 @@ export default function AgentDetail() {
           <div className="kfpl-table-scroll">
             <table className="kfpl-table">
               <thead>
-                <tr><th>Period</th><th>Date</th><th>Amount</th><th>Status</th><th style={{ textAlign: 'center' }}>Download Statement</th></tr>
+                <tr><th>Period</th><th>Date</th><th>Type</th><th>Amount</th><th>Status</th><th style={{ textAlign: 'center' }}>Download Statement</th></tr>
               </thead>
               <tbody>
                 {filteredCommission.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No commission records found</td></tr>
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No commission records found</td></tr>
                 ) : filteredCommission.map(com => (
                   <tr key={com.id}>
                     <td>
@@ -473,6 +479,11 @@ export default function AgentDetail() {
                       </button>
                     </td>
                     <td>{formatDateDMY(com.date || com.paidAt)}</td>
+                    <td>
+                      <Badge status={com.type === 'one-time' ? 'info' : com.type === 'special' ? 'gold' : 'active'}>
+                        {com.type === 'one-time' ? 'One Time' : com.type === 'special' ? 'Special' : 'Monthly'}
+                      </Badge>
+                    </td>
                     <td className="font-semibold">{formatCurrency(com.amount)}</td>
                     <td><Badge status={com.status}>{com.status}</Badge></td>
                     <td style={{ textAlign: 'center' }}>
@@ -552,7 +563,7 @@ export default function AgentDetail() {
 
                 {/* Summary Cards */}
                 <div style={{
-                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px',
+                  display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px',
                   marginBottom: '20px',
                 }}>
                   <div style={{
@@ -561,6 +572,17 @@ export default function AgentDetail() {
                   }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '6px' }}>Total Amount</div>
                     <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gold-dark)' }}>{formatCurrency(filteredTotal)}</div>
+                  </div>
+                  <div style={{
+                    background: 'var(--color-surface-alt, #f8fafc)', borderRadius: '12px',
+                    padding: '16px', textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '6px' }}>Type</div>
+                    <div>
+                      <Badge status={selectedCommission.type === 'one-time' ? 'info' : selectedCommission.type === 'special' ? 'gold' : 'active'}>
+                        {selectedCommission.type === 'one-time' ? 'One Time' : selectedCommission.type === 'special' ? 'Special' : 'Monthly'}
+                      </Badge>
+                    </div>
                   </div>
                   <div style={{
                     background: 'var(--color-surface-alt, #f8fafc)', borderRadius: '12px',
@@ -591,6 +613,7 @@ export default function AgentDetail() {
                             <th>Client</th>
                             <th>Client ID</th>
                             <th style={{ textAlign: 'center' }}>Investment Date</th>
+                            <th style={{ textAlign: 'center' }}>Type</th>
                             <th style={{ textAlign: 'right' }}>Investment</th>
                             <th style={{ textAlign: 'right' }}>Rate</th>
                             <th style={{ textAlign: 'right' }}>Commission</th>
@@ -605,6 +628,11 @@ export default function AgentDetail() {
                                 <td className="kfpl-table-cell-primary">{b.clientName}</td>
                                 <td>{b.clientId}</td>
                                 <td style={{ textAlign: 'center' }}>{invDateStr}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Badge status={selectedCommission.type === 'one-time' ? 'info' : selectedCommission.type === 'special' ? 'gold' : 'active'}>
+                                    {selectedCommission.type === 'one-time' ? 'One Time' : selectedCommission.type === 'special' ? 'Special' : 'Monthly'}
+                                  </Badge>
+                                </td>
                                 <td style={{ textAlign: 'right' }}>{formatCurrency(b.investment)}</td>
                                 <td style={{ textAlign: 'right' }}>{b.rate}%</td>
                                 <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-success)' }}>{formatCurrency(b.amount)}</td>
@@ -612,7 +640,7 @@ export default function AgentDetail() {
                             );
                           })}
                           <tr style={{ background: 'var(--color-surface-alt, #f8fafc)', fontWeight: 700 }}>
-                            <td colSpan={5} style={{ textAlign: 'right' }}>Total</td>
+                            <td colSpan={6} style={{ textAlign: 'right' }}>Total</td>
                             <td style={{ textAlign: 'right', color: 'var(--color-gold-dark)' }}>{formatCurrency(filteredTotal)}</td>
                           </tr>
                         </tbody>
