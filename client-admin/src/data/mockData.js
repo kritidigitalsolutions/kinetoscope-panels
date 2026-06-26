@@ -420,12 +420,62 @@ export const mockOpportunities = [
 
 /* ── Media / Blog ─────────────────────── */
 export const mockMedia = [
-  { id: 1, title: 'KFPL Announces Record Q1 Returns for Investors', category: 'Company News', date: '2025-06-01', excerpt: 'Kross Film Productions Ltd. has announced record quarterly returns for its investor portfolio, with an average ROI of 14.2% across all segments.' },
-  { id: 2, title: 'Project Vanguard Enters Post-Production Phase', category: 'Project Updates', date: '2025-05-25', excerpt: 'The flagship film making project has completed principal photography and entered the post-production phase, on track for a Q4 release.' },
-  { id: 3, title: 'Understanding Film Investment Risk Profiles', category: 'Industry News', date: '2025-05-15', excerpt: 'A comprehensive guide to understanding different risk profiles in entertainment industry investments and how they affect your portfolio.' },
-  { id: 4, title: 'New Distribution Partnership with StreamGlobal', category: 'Press Release', date: '2025-05-10', excerpt: 'KFPL has signed a strategic distribution partnership with StreamGlobal, opening new revenue streams for content distribution investors.' },
-  { id: 5, title: 'Perk Tier Updates: Diamond Benefits Expanded', category: 'Company News', date: '2025-04-28', excerpt: 'Diamond tier investors now enjoy expanded benefits including VIP concierge service and exclusive film premiere invitations.' },
-  { id: 6, title: 'Music Label Alpha: First Quarter Revenue Report', category: 'Project Updates', date: '2025-04-20', excerpt: 'Our music vertical reports strong first quarter performance with 5 album releases generating significant streaming revenue.' },
+  {
+    id: 1,
+    title: 'KFPL Announces Record Q1 Returns for Investors',
+    category: 'Company News',
+    date: '2025-06-01',
+    author: 'KFPL Communications',
+    excerpt: 'Kross Film Productions Ltd. has announced record quarterly returns for its investor portfolio, with an average ROI of 14.2% across all segments.',
+    content: `Kross Film Productions Ltd. has announced record quarterly returns for its investor portfolio, with an average ROI of 14.2% across all segments. This marks a significant milestone for the company as it continues to deliver consistent value to its stakeholders.\n\nThe impressive performance was driven by strong revenue from theatrical releases, OTT licensing deals, and music streaming royalties. The Film Production segment led the charge with a 16.8% ROI, followed by the Music Label segment at 13.5%.\n\n"We are thrilled to share these results with our investors," said the CEO. "Our diversified approach to entertainment investments continues to pay dividends, and we remain committed to delivering superior returns while managing risk effectively."\n\nKey highlights from Q1:\n• Film Production segment: 16.8% ROI\n• Music Label segment: 13.5% ROI\n• OTT Content segment: 12.1% ROI\n• Distribution segment: 11.8% ROI\n\nInvestors across all tiers benefited from the strong performance, with Diamond and Platinum tier members receiving additional bonus distributions as part of the company's loyalty program.`,
+    quote: 'We are thrilled to share these results with our investors. Our diversified approach to entertainment investments continues to pay dividends, and we remain committed to delivering superior returns while managing risk effectively.',
+    quoteAuthor: 'Chief Executive Officer, KFPL Group',
+  },
+  {
+    id: 2,
+    title: 'Project Vanguard Enters Post-Production Phase',
+    category: 'Project Updates',
+    date: '2025-05-25',
+    author: 'Production Desk',
+    excerpt: 'The flagship film making project has completed principal photography and entered the post-production phase, on track for a Q4 release.',
+    content: `The flagship film Project Vanguard has completed principal photography and officially entered the post-production phase. The project remains on track for its anticipated Q4 2025 theatrical release.\n\nPrincipal photography wrapped after an intensive 65-day shoot across multiple locations. The film features an ensemble cast and has already generated significant buzz within the industry.\n\nPost-production work includes visual effects, sound design, and color grading, all being handled by top-tier studios. The VFX team alone is working on over 400 shots, making it one of the most ambitious productions in the company's portfolio.\n\nInvestors allocated to the Film Production segment can expect regular progress updates as the project moves toward its release window. Early industry screenings have received overwhelmingly positive feedback.`
+  },
+  {
+    id: 3,
+    title: 'Understanding Film Investment Risk Profiles',
+    category: 'Industry News',
+    date: '2025-05-15',
+    author: 'Research Team',
+    excerpt: 'A comprehensive guide to understanding different risk profiles in entertainment industry investments and how they affect your portfolio.',
+    content: `Investing in the entertainment industry requires a nuanced understanding of risk profiles and how they interact with potential returns. This guide breaks down the key concepts every investor should know.\n\nRisk profiles in film investment are categorized into three tiers:\n\n1. Conservative: Focuses on distribution rights and established franchises. Lower potential returns (8-12%) but significantly reduced risk exposure. Ideal for investors seeking stable, predictable income.\n\n2. Balanced: A mix of established and emerging projects across film, music, and OTT content. Moderate returns (12-16%) with managed risk through diversification.\n\n3. Aggressive: Emphasis on original content production and emerging talent. Higher potential returns (16-22%) with corresponding higher risk. Best suited for investors with longer time horizons.\n\nAt KFPL, we help investors align their portfolio allocation with their personal risk tolerance, ensuring a comfortable balance between growth potential and capital preservation.`
+  },
+  {
+    id: 4,
+    title: 'New Distribution Partnership with StreamGlobal',
+    category: 'Press Release',
+    date: '2025-05-10',
+    author: 'Corporate Affairs',
+    excerpt: 'KFPL has signed a strategic distribution partnership with StreamGlobal, opening new revenue streams for content distribution investors.',
+    content: `KFPL has signed a landmark strategic distribution partnership with StreamGlobal, one of the world's fastest-growing OTT platforms. This partnership opens significant new revenue streams for investors in the content distribution segment.\n\nUnder the agreement, KFPL will supply a minimum of 12 original titles per year to StreamGlobal's platform, spanning feature films, limited series, and documentary content. The deal includes guaranteed minimum licensing fees plus performance-based bonuses.\n\n"This partnership represents a paradigm shift in how we monetize our content library," noted the Head of Distribution. "StreamGlobal's reach across 45 countries gives our content unprecedented global exposure."\n\nThe financial impact is expected to be felt starting Q3 2025, with projected additional revenue of ₹15-20 Cr annually from licensing fees alone.`
+  },
+  {
+    id: 5,
+    title: 'Perk Tier Updates: Diamond Benefits Expanded',
+    category: 'Company News',
+    date: '2025-04-28',
+    author: 'Investor Relations',
+    excerpt: 'Diamond tier investors now enjoy expanded benefits including VIP concierge service and exclusive film premiere invitations.',
+    content: `We are pleased to announce an expansion of benefits for our Diamond tier investors, reinforcing our commitment to rewarding long-term partners.\n\nNew Diamond tier benefits include:\n\n• VIP Concierge Service: A dedicated relationship manager available 24/7 for investment queries, portfolio adjustments, and priority support.\n\n• Exclusive Film Premiere Invitations: Red carpet access to all KFPL film premieres, including plus-one privileges and VIP lounge access.\n\n• Priority Investment Access: First-look opportunities at new project launches with a 48-hour exclusive investment window before general availability.\n\n• Quarterly Review Meetings: Personal portfolio review sessions with senior investment advisors.\n\n• Enhanced ROI Bonus: An additional 0.5% bonus on quarterly returns.\n\nThese benefits are automatically activated for all existing Diamond tier investors. For investors approaching the Diamond threshold (₹1 Cr total investment), contact your relationship manager to learn more about upgrading.`
+  },
+  {
+    id: 6,
+    title: 'Music Label Alpha: First Quarter Revenue Report',
+    category: 'Project Updates',
+    date: '2025-04-20',
+    author: 'Music Division',
+    excerpt: 'Our music vertical reports strong first quarter performance with 5 album releases generating significant streaming revenue.',
+    content: `The Music Label Alpha division has delivered strong first quarter performance, with 5 album releases generating significant streaming revenue and exceeding initial projections by 23%.\n\nQ1 Performance Highlights:\n\n• Total streams across platforms: 45M+\n• Revenue from streaming royalties: ₹2.8 Cr\n• Revenue from licensing & sync: ₹1.2 Cr\n• Number of tracks in top 100 charts: 8\n\nThe standout performer was the debut album "Echoes," which crossed 15M streams within its first month of release. Sync licensing deals with major advertising agencies contributed an additional ₹1.2 Cr in revenue.\n\nLooking ahead, Q2 has an even more ambitious slate with 7 planned releases, including collaborations with internationally recognized artists. The division continues to demonstrate the viability of music as a high-return investment vertical within the KFPL portfolio.`
+  },
 ];
 
 /* ── FAQ Data ─────────────────────── */

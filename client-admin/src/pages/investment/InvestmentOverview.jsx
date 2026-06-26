@@ -316,6 +316,8 @@ export default function InvestmentOverview() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [clientDividends, setClientDividends] = useState([]);
+  const [hoveredSegment, setHoveredSegment] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -419,6 +421,7 @@ export default function InvestmentOverview() {
     return {
       ...investment,
       percent,
+      start,
       dashArray: `${percent * 2.51327} ${251.327 - percent * 2.51327}`,
       dashOffset: -(start * 2.51327),
       color: CHART_COLORS[index % CHART_COLORS.length],
@@ -487,7 +490,7 @@ export default function InvestmentOverview() {
       borderColor: 'var(--color-success)'
     },
     {
-      label: 'Average ROI',
+      label: 'Average Monthly ROI',
       value: `${weightedROI.toFixed(1)}%`,
       trend: 'Allocated across portfolio',
       trendDirection: 'up',
@@ -599,32 +602,49 @@ export default function InvestmentOverview() {
           <div className="kfpl-donut-container">
             <div className="kfpl-donut-chart">
               <svg viewBox="0 0 100 100" role="img" aria-label="Investment segment allocation chart">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-surface-alt)" strokeWidth="16" />
+                <circle cx="50" cy="50" r="25" fill="none" stroke="var(--color-surface-alt)" strokeWidth="50" />
                 {segments.map((segment, index) => (
                   <circle
                     key={index}
                     cx="50"
                     cy="50"
-                    r="40"
+                    r="25"
                     fill="none"
                     stroke={segment.color}
-                    strokeWidth="16"
-                    strokeDasharray={segment.dashArray}
-                    strokeDashoffset={segment.dashOffset}
+                    strokeWidth={hoveredSegment && hoveredSegment.id === segment.id ? 53 : 50}
+                    strokeDasharray={`${segment.percent * 1.57079} ${157.079 - segment.percent * 1.57079}`}
+                    strokeDashoffset={-(segment.start * 1.57079)}
                     className="kfpl-investment-donut-segment"
+                    style={{
+                      transform: hoveredSegment && hoveredSegment.id === segment.id ? 'scale(1.02)' : 'scale(1)',
+                      transformOrigin: '50px 50px',
+                      transition: 'stroke-width 0.3s ease, transform 0.3s ease, filter 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={() => setHoveredSegment(segment)}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                    onMouseMove={(e) => {
+                      setTooltipPos({ x: e.clientX, y: e.clientY });
+                    }}
                   />
                 ))}
               </svg>
-
-              <div className="kfpl-donut-center">
-                <div className="kfpl-donut-center-value">{mockInvestments.length}</div>
-                <div className="kfpl-donut-center-label">Segments</div>
-              </div>
             </div>
 
             <div className="kfpl-investment-legend">
               {segments.map((segment, index) => (
-                <div key={index} className="kfpl-investment-legend-item">
+                <div
+                  key={index}
+                  className="kfpl-investment-legend-item"
+                  style={{
+                    borderColor: hoveredSegment && hoveredSegment.id === segment.id ? segment.color : 'rgba(226, 236, 231, 0.9)',
+                    boxShadow: hoveredSegment && hoveredSegment.id === segment.id ? `0 4px 12px ${segment.color}15` : 'none',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={() => setHoveredSegment(segment)}
+                  onMouseLeave={() => setHoveredSegment(null)}
+                >
                   <div className="kfpl-chart-legend-dot" style={{ background: segment.color }}></div>
                   <div className="kfpl-investment-legend-copy">
                     <span className="kfpl-chart-legend-label">{segment.segment}</span>
@@ -635,6 +655,47 @@ export default function InvestmentOverview() {
               ))}
             </div>
           </div>
+
+          {hoveredSegment && (
+            <div
+              className="kfpl-chart-tooltip"
+              style={{
+                position: 'fixed',
+                left: tooltipPos.x + 15,
+                top: tooltipPos.y + 15,
+                background: 'rgba(10, 25, 18, 0.96)',
+                border: '1px solid rgba(201, 168, 76, 0.3)',
+                color: '#ffffff',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '0.8rem',
+                zIndex: 99999,
+                pointerEvents: 'none',
+                boxShadow: '0 8px 24px rgba(6, 29, 19, 0.3)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <div style={{ fontWeight: 700, color: 'var(--color-gold)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: hoveredSegment.color }}></span>
+                {hoveredSegment.projectName || (
+                  hoveredSegment.segment === 'Film Making' ? 'Project Vanguard' :
+                  hoveredSegment.segment === 'Distribution' ? 'CineDistro Global' :
+                  hoveredSegment.segment === 'Music' ? 'Rhythm Nation' :
+                  hoveredSegment.segment === 'Content IP Bank' ? 'IP Vault Alpha' :
+                  hoveredSegment.segment === 'Trading & Syndication' ? 'TradeSync' : 'ScreenX Cinemas'
+                )}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', marginBottom: '2px' }}>
+                Segment: <strong>{hoveredSegment.segment}</strong>
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', marginBottom: '4px' }}>
+                Share: <strong>{hoveredSegment.percent.toFixed(1)}%</strong>
+              </div>
+              <div style={{ fontWeight: 800, color: '#10B981', fontSize: '0.85rem' }}>
+                {formatAmount(hoveredSegment.amount)}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="kfpl-calculator kfpl-investment-card">
@@ -677,60 +738,76 @@ export default function InvestmentOverview() {
       </div>
 
       <div className="kfpl-table-wrapper kfpl-investment-table">
-        <div className="kfpl-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="kfpl-table-header">
           <div>
-            <h3 className="kfpl-table-title">Investment by Segment</h3>
-            <p className="kfpl-investment-card-subtitle">Contract status, allocation, and received ROI by category</p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <select
-              value={segmentFilter}
-              onChange={e => setSegmentFilter(e.target.value)}
-              className="kfpl-select"
-              style={{ width: '160px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
-            >
-              <option value="all">All Segments</option>
-              {uniqueSegments.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="kfpl-select"
-              style={{ width: '140px', padding: '8px 12px', fontSize: '0.875rem', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
-            >
-              <option value="all">All Statuses</option>
-              {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <h3 className="kfpl-table-title">Investment Allocation</h3>
+            <p className="kfpl-investment-card-subtitle">Portfolio split and allocated percentage by category</p>
           </div>
         </div>
 
-        <div className="kfpl-table-container">
-          <table className="kfpl-table">
-            <thead>
-              <tr>
-                <th>Segment</th>
-                <th>Amount</th>
-                <th>Date</th>
-                <th>Contract</th>
-                <th>ROI Allocated</th>
-                <th>ROI Received</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvestments.map(investment => (
-                <tr key={investment.id}>
-                  <td className="kfpl-table-cell-primary">{investment.segment}</td>
-                  <td className="kfpl-table-cell-mono">{formatAmount(investment.amount)}</td>
-                  <td>{formatDate(investment.date)}</td>
-                  <td>{investment.contractPeriod}</td>
-                  <td><strong>{investment.roiAllocated}%</strong></td>
-                  <td className="kfpl-investment-positive">{investment.roiReceived}%</td>
-                  <td><span className="kfpl-badge kfpl-badge--active">{investment.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="kfpl-segment-allocation-grid">
+          {segments.map((segment, index) => {
+            const projName = segment.projectName || (
+              segment.segment === 'Film Making' ? 'Project Vanguard' :
+              segment.segment === 'Distribution' ? 'CineDistro Global' :
+              segment.segment === 'Music' ? 'Rhythm Nation' :
+              segment.segment === 'Content IP Bank' ? 'IP Vault Alpha' :
+              segment.segment === 'Trading & Syndication' ? 'TradeSync' : 'ScreenX Cinemas'
+            );
+
+            return (
+              <div
+                key={index}
+                className="kfpl-segment-allocation-item-card"
+                style={{
+                  borderColor: hoveredSegment && hoveredSegment.id === segment.id ? segment.color : 'rgba(226, 236, 231, 0.9)',
+                  boxShadow: hoveredSegment && hoveredSegment.id === segment.id ? `0 12px 28px rgba(6, 29, 19, 0.08)` : '0 4px 20px rgba(6, 29, 19, 0.02)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                onMouseEnter={() => setHoveredSegment(segment)}
+                onMouseLeave={() => setHoveredSegment(null)}
+              >
+                <div className="kfpl-segment-card-header">
+                  <div className="kfpl-segment-card-title-wrap">
+                    <span className="kfpl-segment-card-dot" style={{ background: segment.color }}></span>
+                    <span className="kfpl-segment-card-title">{segment.segment}</span>
+                  </div>
+                  <span className="kfpl-segment-card-status-badge">{segment.status}</span>
+                </div>
+
+                <div className="kfpl-segment-card-project-row">
+                  <span className="kfpl-segment-card-project-label">Project:</span>
+                  <span className="kfpl-segment-card-project-value" style={{ color: segment.color }}>{projName}</span>
+                </div>
+
+                <div className="kfpl-segment-card-amount-block">
+                  <div>
+                    <div className="kfpl-segment-card-amount-label">Capital Invested</div>
+                    <div className="kfpl-segment-card-amount-value">{formatAmount(segment.amount)}</div>
+                  </div>
+                  <div className="kfpl-segment-card-share-badge" style={{ background: `${segment.color}12`, color: segment.color, borderColor: `${segment.color}30` }}>
+                    {segment.percent.toFixed(1)}% Share
+                  </div>
+                </div>
+
+                <div className="kfpl-segment-card-progress-bg">
+                  <div
+                    className="kfpl-segment-card-progress-bar"
+                    style={{
+                      width: `${segment.percent}%`,
+                      background: segment.color,
+                      boxShadow: `0 0 8px ${segment.color}40`
+                    }}
+                  ></div>
+                </div>
+
+                <div className="kfpl-segment-card-details-row">
+                  <span className="kfpl-segment-detail-label">Monthly ROI</span>
+                  <span className="kfpl-segment-detail-value" style={{ fontWeight: 700, color: segment.color }}>{segment.roiAllocated}%</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -394,7 +394,7 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* ═══════════════ 5 KPI CARDS GRID ═══════════════ */}
+      {/* ═══════════════ 6 KPI CARDS (2x3) GRID ═══════════════ */}
       <div className="kfpl-dashboard-kpis">
         <KpiCard
           title="Total Invested"
@@ -452,6 +452,17 @@ export default function DashboardHome() {
           iconColor="navy"
           className="kfpl-kpi-card--date"
           delay={320}
+        />
+
+        <KpiCard
+          title="Active Projects"
+          value={mockInvestments.length}
+          trend="Diversified portfolio segments"
+          trendDirection="up"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
+          iconColor="info"
+          className="kfpl-kpi-card--projects"
+          delay={400}
         />
       </div>
 

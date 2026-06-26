@@ -61,6 +61,10 @@ import AgentPortalMock from './pages/portals/AgentPortalMock';
 // ── Service Requests ───────────────────────
 import ServiceRequestsPage from './pages/service-requests/ServiceRequestsPage';
 
+// ── News & Media ───────────────────────
+import NewsMediaList from './pages/news-media/NewsMediaList';
+import NewsMediaForm from './pages/news-media/NewsMediaForm';
+
 // ── 404 ───────────────────────
 import NotFound from './pages/NotFound';
 
@@ -131,6 +135,11 @@ export default function App() {
 
             {/* Service Requests */}
             <Route path="service-requests" element={<ServiceRequestsPage />} />
+
+            {/* News & Media */}
+            <Route path="news-media" element={<NewsMediaList />} />
+            <Route path="news-media/add" element={<NewsMediaForm />} />
+            <Route path="news-media/:id/edit" element={<NewsMediaForm />} />
 
             {/* Settings */}
             <Route path="settings" element={<Settings />} />

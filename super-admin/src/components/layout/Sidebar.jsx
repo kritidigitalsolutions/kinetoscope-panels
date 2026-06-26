@@ -72,6 +72,11 @@ const icons = {
       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
     </svg>
   ),
+  newsMedia: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+  ),
   chevronLeft: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="15 18 9 12 15 6"/>
@@ -122,6 +127,7 @@ const navSections = [
       { path: '/approvals', icon: 'approvals', label: 'Deposit & Withdrawal', badge: 7 },
       { path: '/email-notifications', icon: 'email', label: 'Email Notifications' },
       { path: '/service-requests', icon: 'support', label: 'Service Requests' },
+      { path: '/news-media', icon: 'newsMedia', label: 'News & Media' },
       { path: '/settings/commission-slabs', icon: 'roi', label: 'Commission Slabs' },
       { path: '/settings/rewards', icon: 'perks', label: 'Rewards Config' },
       { path: '/settings', icon: 'settings', label: 'Settings' },

@@ -4,12 +4,30 @@
    ============================================================ */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { mockMedia } from '../../data/mockData';
+import { getArticleCover } from './MediaDetail';
 
 export default function MediaFeed() {
+  const [articles] = useState(() => {
+    try {
+      const stored = localStorage.getItem('kfpl_news_media');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Failed to load news media from localStorage', e);
+    }
+    return mockMedia;
+  });
+
   const [activeCategory, setActiveCategory] = useState('All');
-  const categories = ['All', ...new Set(mockMedia.map(m => m.category))];
-  const filtered = activeCategory === 'All' ? mockMedia : mockMedia.filter(m => m.category === activeCategory);
+
+  // Only display published articles
+  const publishedArticles = articles.filter(a => a.status === 'Published' || !a.status);
+
+  const categories = ['All', ...new Set(publishedArticles.map(m => m.category))];
+  const filtered = activeCategory === 'All' ? publishedArticles : publishedArticles.filter(m => m.category === activeCategory);
 
   return (
     <div className="kfpl-page">
@@ -30,9 +48,9 @@ export default function MediaFeed() {
       {/* Media Grid */}
       <div className="kfpl-media-grid">
         {filtered.map(article => (
-          <div key={article.id} className="kfpl-media-card">
+          <Link key={article.id} to={`/media/${article.id}`} className="kfpl-media-card" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="kfpl-media-card-img">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <img src={getArticleCover(article)} alt={article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div className="kfpl-media-card-body">
               <div className="kfpl-media-card-tag">{article.category}</div>
@@ -40,7 +58,7 @@ export default function MediaFeed() {
               <p className="kfpl-media-card-excerpt">{article.excerpt}</p>
               <p className="kfpl-media-card-date">{new Date(article.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
