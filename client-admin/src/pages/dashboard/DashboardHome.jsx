@@ -20,6 +20,8 @@ import {
 import DonutChart from '../../components/charts/DonutChart';
 import LineChart from '../../components/charts/LineChart';
 import Modal from '../../components/ui/Modal';
+import KpiCard from '../../components/ui/KpiCard';
+
 
 export default function DashboardHome() {
   const navigate = useNavigate();
@@ -394,67 +396,63 @@ export default function DashboardHome() {
 
       {/* ═══════════════ 5 KPI CARDS GRID ═══════════════ */}
       <div className="kfpl-dashboard-kpis">
-        <div className="kfpl-card kfpl-kpi-card kfpl-kpi-card--total kfpl-kpi-card--highlight">
-          <div className="kfpl-kpi-header">
-            <span className="kfpl-kpi-label">Total Invested</span>
-            <div className="kfpl-kpi-icon gold">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            </div>
-          </div>
-          <span className="kfpl-kpi-value">{formatCurrency(mockStats.totalInvested)}</span>
-          <span className="kfpl-kpi-meta">Active capital across selected projects</span>
-        </div>
+        <KpiCard
+          title="Total Invested"
+          value={formatCurrency(mockStats.totalInvested)}
+          trend="Active capital across selected projects"
+          trendDirection="up"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
+          iconColor="gold"
+          className="kfpl-kpi-card--total"
+          variant="gold"
+          delay={0}
+        />
 
-        <div className="kfpl-card kfpl-kpi-card kfpl-kpi-card--roi">
-          <div className="kfpl-kpi-header">
-            <span className="kfpl-kpi-label">Monthly ROI</span>
-            <div className="kfpl-kpi-icon success">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            </div>
-          </div>
-          <span className="kfpl-kpi-value">{formatCurrency(mockStats.monthlyROI)}</span>
-          <span className="kfpl-kpi-meta">Expected monthly payout</span>
-        </div>
+        <KpiCard
+          title="Monthly ROI"
+          value={formatCurrency(mockStats.monthlyROI)}
+          trend="Expected monthly payout"
+          trendDirection="up"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+          iconColor="success"
+          className="kfpl-kpi-card--roi"
+          delay={80}
+        />
 
-        <div className="kfpl-card kfpl-kpi-card kfpl-kpi-card--rate">
-          <div className="kfpl-kpi-header">
-            <span className="kfpl-kpi-label">ROI Rate</span>
-            <div className="kfpl-kpi-icon info">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-          </div>
-          <span className="kfpl-kpi-value">{mockStats.roiRate}%</span>
-          <span className="kfpl-kpi-trend up" style={{ marginTop: '6px' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
-            Annual
-          </span>
-        </div>
+        <KpiCard
+          title="ROI Rate"
+          value={`${mockStats.roiRate}%`}
+          trend="Annual"
+          trendDirection="up"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+          iconColor="info"
+          className="kfpl-kpi-card--rate"
+          delay={160}
+        />
 
-        <div className="kfpl-card kfpl-kpi-card kfpl-kpi-card--perk" style={{ cursor: 'pointer' }} onClick={() => navigate('/perks')}>
-          <div className="kfpl-kpi-header">
-            <span className="kfpl-kpi-label">Perk Tier</span>
-            <div className="kfpl-kpi-icon warning">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-            </div>
-          </div>
-          <span className="kfpl-kpi-value" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {PERK_TIERS[mockStats.perkTier]?.icon} {mockStats.perkTier}
-          </span>
-          <span className="kfpl-kpi-meta">Recognition benefits enabled</span>
-        </div>
+        <KpiCard
+          title="Perk Tier"
+          value={`${PERK_TIERS[mockStats.perkTier]?.icon || '🏅'} ${mockStats.perkTier}`}
+          trend="Recognition benefits enabled"
+          trendDirection="up"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>}
+          iconColor="warning"
+          className="kfpl-kpi-card--perk"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/perks')}
+          delay={240}
+        />
 
-        <div className="kfpl-card kfpl-kpi-card kfpl-kpi-card--date">
-          <div className="kfpl-kpi-header">
-            <span className="kfpl-kpi-label">Next ROI Date</span>
-            <div className="kfpl-kpi-icon navy">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-          </div>
-          <span className="kfpl-kpi-value">
-            {mockStats.nextROIDate && mockStats.nextROIDate !== '—' ? new Date(mockStats.nextROIDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-          </span>
-          <span className="kfpl-kpi-meta">Upcoming payout schedule</span>
-        </div>
+        <KpiCard
+          title="Next ROI Date"
+          value={mockStats.nextROIDate && mockStats.nextROIDate !== '—' ? new Date(mockStats.nextROIDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+          trend="Upcoming payout schedule"
+          trendDirection="up"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
+          iconColor="navy"
+          className="kfpl-kpi-card--date"
+          delay={320}
+        />
       </div>
 
       {/* ═══════════════ CHARTS 2-COLUMN GRID ═══════════════ */}

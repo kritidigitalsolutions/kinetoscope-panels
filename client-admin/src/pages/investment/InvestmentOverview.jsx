@@ -5,6 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { mockInvestments, mockROIHistory, mockTotalInvested, mockDividendBonus, mockClient } from '../../data/mockData';
+import KpiCard from '../../components/ui/KpiCard';
+
 
 const CHART_COLORS = ['#10B981', '#0F766E', '#2563EB', '#F59E0B', '#7C3AED', '#0891B2'];
 
@@ -431,11 +433,114 @@ export default function InvestmentOverview() {
     }
     return true;
   });
+  // Accrued days calculation
+  const today = new Date();
+  const joinDateStr = mockClient.joinDate || mockClient.memberSince || '2024-08-15';
+  const joinDate = new Date(joinDateStr);
+  
+  let daysPassed = today.getDate();
+  if (joinDate.getMonth() === today.getMonth() && joinDate.getFullYear() === today.getFullYear()) {
+    const msDiff = today.getTime() - joinDate.getTime();
+    daysPassed = Math.max(1, Math.floor(msDiff / (1000 * 60 * 60 * 24)));
+  }
+  const dailyRoiRate = weightedROI / 30;
+  const accruedRoiDays = dailyRoiRate * daysPassed;
+
+  // Months passed since joining
+  const monthsDiff = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth());
+  
+  let roiTillDateVal = '—';
+  if (monthsDiff >= 1) {
+    const totalMonthlyRoiPct = paidMonths * weightedROI;
+    const calculated = totalMonthlyRoiPct / monthsDiff;
+    roiTillDateVal = `${calculated.toFixed(2)}%`;
+  }
+
   const summaryCards = [
-    { label: 'Total Invested', value: formatAmount(mockTotalInvested), meta: `${mockInvestments.length} active segments` },
-    { label: 'Monthly ROI', value: formatAmount(monthlyReturn), meta: `${calcRate}% annual projection` },
-    { label: 'Weighted ROI', value: `${weightedROI.toFixed(1)}%`, meta: 'Allocated across portfolio' },
-    { label: 'ROI Received', value: formatAmount(receivedROI), meta: `${paidMonths} payouts completed` },
+    {
+      label: 'Total Invested',
+      value: formatAmount(mockTotalInvested),
+      trend: `${mockInvestments.length} active segments`,
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+      ),
+      iconColor: 'navy',
+      borderColor: 'var(--color-navy)',
+      variant: 'gold'
+    },
+    {
+      label: 'Monthly ROI',
+      value: formatAmount(monthlyReturn),
+      trend: `${calcRate}% annual projection`,
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+          <polyline points="17 6 23 6 23 12"/>
+        </svg>
+      ),
+      iconColor: 'success',
+      borderColor: 'var(--color-success)'
+    },
+    {
+      label: 'Average ROI',
+      value: `${weightedROI.toFixed(1)}%`,
+      trend: 'Allocated across portfolio',
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      ),
+      iconColor: 'navy',
+      borderColor: 'var(--color-navy)'
+    },
+    {
+      label: 'Accrued ROI (Days)',
+      value: `${accruedRoiDays.toFixed(2)}%`,
+      trend: `Accrued for ${daysPassed} days this month`,
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      ),
+      iconColor: 'gold',
+      borderColor: 'var(--color-gold)'
+    },
+    {
+      label: 'ROI Received',
+      value: formatAmount(receivedROI),
+      trend: `${paidMonths} payouts completed`,
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 11 12 14 22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+      ),
+      iconColor: 'info',
+      borderColor: 'var(--color-info)'
+    },
+    {
+      label: 'ROI Till Date',
+      value: roiTillDateVal,
+      trend: monthsDiff >= 1 ? `Avg across ${monthsDiff} months` : '1st month calculation',
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="8" r="7"/>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+        </svg>
+      ),
+      iconColor: 'danger',
+      borderColor: 'var(--color-danger)'
+    }
   ];
 
   const handleDownloadAllCSV = () => {
@@ -464,12 +569,20 @@ export default function InvestmentOverview() {
       </div>
 
       <section className="kfpl-investment-summary" aria-label="Investment summary">
-        {summaryCards.map(card => (
-          <div key={card.label} className="kfpl-investment-summary-card">
-            <span className="kfpl-investment-summary-label">{card.label}</span>
-            <strong className="kfpl-investment-summary-value">{card.value}</strong>
-            <span className="kfpl-investment-summary-meta">{card.meta}</span>
-          </div>
+        {summaryCards.map((card, idx) => (
+          <KpiCard
+            key={card.label}
+            title={card.label}
+            value={card.value}
+            trend={card.trend}
+            trendDirection={card.trendDirection}
+            meta={card.meta}
+            icon={card.icon}
+            iconColor={card.iconColor}
+            variant={card.variant}
+            style={{ '--card-border-color': card.borderColor }}
+            delay={idx * 60}
+          />
         ))}
       </section>
 

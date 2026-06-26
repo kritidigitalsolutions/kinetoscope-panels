@@ -103,7 +103,7 @@ const OdometerValue = ({ numericStr, visible }) => {
   );
 };
 
-export default function KpiCard({ title, value, suffix, trend, trendDirection, icon, iconColor, variant, pulse, delay = 0 }) {
+export default function KpiCard({ title, value, suffix, trend, trendDirection, meta, icon, iconColor, variant, pulse, className = '', style = {}, delay = 0, ...props }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -117,12 +117,14 @@ export default function KpiCard({ title, value, suffix, trend, trendDirection, i
 
   return (
     <div
-      className={`kfpl-card kfpl-kpi-card ${visible ? 'visible' : ''} ${variant === 'gold' ? 'kfpl-card--gold' : ''} ${pulse ? 'kfpl-kpi-pulse' : ''}`}
+      className={`kfpl-card kfpl-kpi-card ${visible ? 'visible' : ''} ${variant === 'gold' ? 'kfpl-card--gold' : ''} ${pulse ? 'kfpl-kpi-pulse' : ''} ${className}`}
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(16px)',
         transition: `opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)`,
+        ...style
       }}
+      {...props}
     >
       {/* Subtle sparkline background decoration */}
       <div className="kfpl-kpi-sparkline-bg" aria-hidden="true">
@@ -151,14 +153,18 @@ export default function KpiCard({ title, value, suffix, trend, trendDirection, i
           {displaySuffix && <span className="kfpl-kpi-suffix">{displaySuffix}</span>}
         </span>
         {trend && (
-          <span className={`kfpl-kpi-trend ${trendDirection}`}>
-            {trendDirection === 'up' ? (
+          <span className={`kfpl-kpi-trend ${trendDirection || ''}`}>
+            {trendDirection === 'up' && (
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>
-            ) : (
+            )}
+            {trendDirection === 'down' && (
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             )}
             {trend}
           </span>
+        )}
+        {meta && (
+          <span className="kfpl-kpi-meta">{meta}</span>
         )}
       </div>
       <div className={`kfpl-kpi-icon ${iconColor || 'navy'}`}>
