@@ -591,21 +591,26 @@ export default function InvestorDetail() {
     }
   };
 
-  // ── API 9: Delete Client ─────────────────────
+  // ── API 9: Delete Client (DISABLED — uncomment apiRequest to enable) ──
   const handleDeleteClient = async () => {
-    if (!window.confirm(`Are you sure you want to completely delete client profile "${clientName}"?`)) return;
-    setActionLoading(true);
-    try {
-      await apiRequest(`/api/super-admin/clients/${id}`, {
-        method: 'DELETE',
-      });
-      addToast('Client profile deleted successfully!', 'success', 'Client Deleted');
-      navigate('/investors');
-    } catch (err) {
-      addToast(err.message || 'Failed to delete client', 'error', 'Delete Failed');
-    } finally {
-      setActionLoading(false);
-    }
+    if (!window.confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY delete client "${clientName}"?\n\nThis action will remove the profile, credentials, and all files from the database. This CANNOT be undone.`)) return;
+    if (!window.confirm(`🔴 FINAL CONFIRMATION: Type OK to permanently delete "${clientName}" from the database.`)) return;
+
+    addToast('Delete is disabled to prevent accidental data loss. Contact developer to enable.', 'error', 'Delete Disabled');
+
+    // ⚠️ UNCOMMENT BELOW TO ENABLE REAL DELETE:
+    // setActionLoading(true);
+    // try {
+    //   await apiRequest(`/api/super-admin/clients/${id}`, {
+    //     method: 'DELETE',
+    //   });
+    //   addToast('Client profile deleted successfully!', 'success', 'Client Deleted');
+    //   navigate('/investors');
+    // } catch (err) {
+    //   addToast(err.message || 'Failed to delete client', 'error', 'Delete Failed');
+    // } finally {
+    //   setActionLoading(false);
+    // }
   };
 
   // ── Format date helper ───────────────────────
