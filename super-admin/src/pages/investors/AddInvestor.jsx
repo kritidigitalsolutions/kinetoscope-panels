@@ -4,7 +4,7 @@
                 the /api/super-admin/clients backend API endpoint.
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import FileDropzone from '../../components/ui/FileDropzone';
@@ -26,6 +26,37 @@ export default function AddInvestor() {
     nomineeCitizenship: 'National',
     roiPercentage: '1.2',
   });
+
+  const [dbAgents, setDbAgents] = useState([]);
+
+  useEffect(() => {
+    const fetchDbAgents = async () => {
+      try {
+        const authData = localStorage.getItem('kfpl_auth');
+        let jwtToken = '';
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          jwtToken = parsed.token || '';
+        }
+        const response = await fetch(getApiUrl('/api/super-admin/agents'), {
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`
+          }
+        });
+        const resData = await response.json();
+        if (response.ok) {
+          // support different response formats from real API
+          const fetchedAgents = resData.data || resData.agents || [];
+          if (Array.isArray(fetchedAgents)) {
+            setDbAgents(fetchedAgents);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load agents from API:', err);
+      }
+    };
+    fetchDbAgents();
+  }, []);
 
   // Uploaded Files State
   const [panDocument, setPanDocument] = useState(null);
@@ -131,7 +162,11 @@ export default function AddInvestor() {
         formData.append('nomineeResidency', form.nomineeCitizenship === 'International' ? 'International' : 'National (Domestic)');
       }
 
-      formData.append('assignedAgent', selectedAgentId || 'Direct Client (No Agent)');
+      // Only append assignedAgent if it is a valid MongoDB ObjectID string
+      const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(selectedAgentId);
+      if (selectedAgentId && isValidMongoId) {
+        formData.append('assignedAgent', selectedAgentId);
+      }
       formData.append('tier', 'SILVER');
       if (portalPassword) formData.append('portalPassword', portalPassword);
 
@@ -278,9 +313,17 @@ export default function AddInvestor() {
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
                 >
                   <option value="">Direct Client (No Agent)</option>
-                  {agents.map(a => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.agentId})</option>
-                  ))}
+                  {dbAgents.length > 0 ? (
+                    dbAgents.map(a => (
+                      <option key={a._id || a.id} value={a._id || a.id}>
+                        {a.name} ({a.agentId || a.code || 'Agent'})
+                      </option>
+                    ))
+                  ) : (
+                    agents.map(a => (
+                      <option key={a.id} value={a.id}>{a.name} ({a.agentId})</option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
