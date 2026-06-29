@@ -49,9 +49,11 @@ export default function MediaFeed() {
       <div className="kfpl-media-grid">
         {filtered.map(article => (
           <Link key={article.id} to={`/media/${article.id}`} className="kfpl-media-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="kfpl-media-card-img">
-              <img src={getArticleCover(article)} alt={article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
+            {getArticleCover(article) && (
+              <div className="kfpl-media-card-img">
+                <img src={getArticleCover(article)} alt={article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            )}
             <div className="kfpl-media-card-body">
               <div className="kfpl-media-card-tag">{article.category}</div>
               <h4 className="kfpl-media-card-title">{article.title}</h4>

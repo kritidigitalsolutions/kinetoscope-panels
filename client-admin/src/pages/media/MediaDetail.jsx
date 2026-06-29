@@ -4,16 +4,10 @@ import { mockMedia } from '../../data/mockData';
 
 // Category-based fallback Unsplash images for premium visual layout
 export const getArticleCover = (article) => {
-  if (article.imageUrl && article.imageUrl.trim() !== '') {
+  if (article && article.imageUrl && article.imageUrl.trim() !== '') {
     return article.imageUrl;
   }
-  const fallbacks = {
-    'Company News': 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=1200&auto=format&fit=crop',
-    'Project Updates': 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=1200&auto=format&fit=crop',
-    'Industry News': 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?q=80&w=1200&auto=format&fit=crop',
-    'Press Release': 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200&auto=format&fit=crop',
-  };
-  return fallbacks[article.category] || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=1200&auto=format&fit=crop';
+  return null;
 };
 
 export default function MediaDetail() {
@@ -275,10 +269,12 @@ export default function MediaDetail() {
           </div>
 
           {/* Cinematic Hero Cover Image */}
-          <div className="kfpl-pub-premium-banner">
-            <img src={coverUrl} alt={article.title} className="kfpl-pub-premium-img" />
-            <div className="kfpl-pub-premium-overlay"></div>
-          </div>
+          {coverUrl && (
+            <div className="kfpl-pub-premium-banner">
+              <img src={coverUrl} alt={article.title} className="kfpl-pub-premium-img" />
+              <div className="kfpl-pub-premium-overlay"></div>
+            </div>
+          )}
 
           {/* Article Body */}
           <div className="kfpl-pub-article-container">
@@ -399,9 +395,11 @@ export default function MediaDetail() {
             <div className="kfpl-widget-articles-list">
               {latestArticles.map(rel => (
                 <Link key={rel.id} to={`/media/${rel.id}`} className="kfpl-widget-article-item">
-                  <div className="kfpl-widget-article-img-wrap">
-                    <img src={getArticleCover(rel)} alt={rel.title} />
-                  </div>
+                  {getArticleCover(rel) && (
+                    <div className="kfpl-widget-article-img-wrap">
+                      <img src={getArticleCover(rel)} alt={rel.title} />
+                    </div>
+                  )}
                   <div className="kfpl-widget-article-info">
                     <span className="kfpl-widget-article-tag">{rel.category}</span>
                     <span className="kfpl-widget-article-name">{rel.title}</span>
@@ -452,10 +450,12 @@ export default function MediaDetail() {
 
               return (
                 <Link key={rel.id} to={`/media/${rel.id}`} className="kfpl-pub-related-card-premium">
-                  <div className="kfpl-pub-related-img-wrapper-premium">
-                    <img src={getArticleCover(rel)} alt={rel.title} className="kfpl-pub-related-img-premium" />
-                    <div className="kfpl-pub-related-tag-badge">{rel.category}</div>
-                  </div>
+                  {getArticleCover(rel) && (
+                    <div className="kfpl-pub-related-img-wrapper-premium">
+                      <img src={getArticleCover(rel)} alt={rel.title} className="kfpl-pub-related-img-premium" />
+                      <div className="kfpl-pub-related-tag-badge">{rel.category}</div>
+                    </div>
+                  )}
                   <div className="kfpl-pub-related-card-body-premium">
                     <div className="kfpl-pub-related-card-meta">
                       <span>{relDate}</span>

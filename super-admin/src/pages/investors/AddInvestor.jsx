@@ -1,6 +1,7 @@
 /* ============================================================
    Page: AddInvestor.jsx
-   Description: Form to create a new investor profile
+   Description: Form to create a new investor profile by calling 
+                the /api/super-admin/clients backend API endpoint.
    ============================================================ */
 
 import { useState } from 'react';
@@ -8,11 +9,13 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import FileDropzone from '../../components/ui/FileDropzone';
 import { investors, agents } from '../../data/mockData';
+import { getApiUrl } from '../../config/apiUrl';
 
 export default function AddInvestor() {
   const navigate = useNavigate();
   const addToast = useToast();
   const [selectedAgentId, setSelectedAgentId] = useState('');
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', dob: '', address: '',
     pan: '', bankName: '', accountNo: '', ifsc: '',
@@ -22,6 +25,13 @@ export default function AddInvestor() {
     nomineeCitizenship: 'National',
     roiPercentage: '1.2',
   });
+
+  // Uploaded Files State
+  const [panDocument, setPanDocument] = useState(null);
+  const [aadhaarDocument, setAadhaarDocument] = useState(null);
+  const [bankProofDocument, setBankProofDocument] = useState(null);
+  const [nomineeProofDocument, setNomineeProofDocument] = useState(null);
+  const [agreementDocument, setAgreementDocument] = useState(null);
 
   const [portalEmail, setPortalEmail] = useState('');
   const [portalPassword, setPortalPassword] = useState('');
@@ -79,65 +89,117 @@ export default function AddInvestor() {
     document.body.removeChild(textarea);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
       alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
       return;
     }
-    
-    // Generate new client ID & record
-    const newId = investors.length > 0 ? Math.max(...investors.map(i => i.id)) + 1 : 1;
-    const clientId = `KFPL-${1000 + newId}`;
-    
-    const newClient = {
-      id: newId,
-      name: form.fullName,
-      clientId: clientId,
-      email: form.email,
-      phone: form.phone,
-      dob: form.dob,
-      address: form.address,
-      category: 'silver', // Default tier
-      status: 'active',
-      totalInvestment: 0,
-      roiPercentage: parseFloat(form.roiPercentage) || 10, // Customizable ROI %
-      joinDate: new Date().toISOString().split('T')[0], // Today's date
-      kyc: 'Verified',
-      pan: form.pan,
-      bankName: form.bankName,
-      accountNo: form.accountNo,
-      ifsc: form.ifsc,
-      riskProfile: form.riskProfile,
-      citizenship: form.citizenship,
-      investments: [],
-      roiHistory: [],
-      perks: [],
-      nominee: {
-        name: form.nomineeName,
-        relation: form.nomineeRelation,
-        contact: form.nomineeContact,
-        email: form.nomineeEmail,
-        citizenship: form.nomineeCitizenship,
-      }
-    };
-    
-    // PUSH to global investors array in mockData
-    investors.push(newClient);
-    
-    // Assign to agent if selected
-    if (selectedAgentId) {
-      const agent = agents.find(a => a.id === Number(selectedAgentId));
-      if (agent) {
-        if (!agent.clients.includes(newId)) {
-          agent.clients.push(newId);
-          agent.totalClients = agent.clients.length;
-        }
-      }
-    }
 
-    addToast(`Client "${form.fullName}" registered successfully!`, 'success', 'Client Added');
-    setTimeout(() => navigate('/investors'), 500);
+    setLoading(true);
+
+    try {
+      const authData = localStorage.getItem('kfpl_auth');
+      let jwtToken = '';
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        jwtToken = parsed.token || '';
+      }
+
+      // Construct FormData for multipart upload
+      const formData = new FormData();
+      formData.append('fullName', form.fullName);
+      formData.append('email', form.email);
+      formData.append('phone', form.phone);
+      if (form.dob) formData.append('dob', form.dob);
+      if (form.address) formData.append('address', form.address);
+      formData.append('riskProfile', form.riskProfile);
+      formData.append('residencyStatus', form.citizenship === 'International' ? 'International' : 'National (Domestic)');
+      formData.append('monthlyRoi', form.roiPercentage || '1.2');
+      if (form.bankName) formData.append('bankName', form.bankName);
+      if (form.accountNo) formData.append('accountNumber', form.accountNo);
+      if (form.ifsc) formData.append('ifscCode', form.ifsc);
+      if (form.pan) formData.append('panNumber', form.pan);
+      formData.append('aadhaarNumber', ''); // Not entered in UI, default empty
+
+      if (form.nomineeName) {
+        formData.append('nomineeName', form.nomineeName);
+        formData.append('nomineeRelation', form.nomineeRelation);
+        formData.append('nomineePhone', form.nomineeContact);
+        formData.append('nomineeEmail', form.nomineeEmail);
+        formData.append('nomineeResidency', form.nomineeCitizenship === 'International' ? 'International' : 'National (Domestic)');
+      }
+
+      formData.append('assignedAgent', selectedAgentId || 'Direct Client (No Agent)');
+      formData.append('tier', 'SILVER');
+      if (portalPassword) formData.append('portalPassword', portalPassword);
+
+      // Append files if selected
+      if (panDocument) formData.append('panDocument', panDocument);
+      if (aadhaarDocument) formData.append('aadhaarDocument', aadhaarDocument);
+      if (bankProofDocument) formData.append('bankProofDocument', bankProofDocument);
+      if (nomineeProofDocument) formData.append('nomineeProofDocument', nomineeProofDocument);
+      if (agreementDocument) formData.append('agreementDocument', agreementDocument);
+
+      const response = await fetch(getApiUrl('/api/super-admin/clients'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`
+        },
+        body: formData
+      });
+
+      const resData = await response.json();
+
+      if (response.ok) {
+        addToast(`Client "${form.fullName}" registered successfully!`, 'success', 'Client Added');
+        
+        // Also push to local mock data array so UI is instantly updated
+        const newId = investors.length > 0 ? Math.max(...investors.map(i => i.id)) + 1 : 1;
+        const clientId = resData.data?.header?.clientCode || `KFPL-${1000 + newId}`;
+        const newClient = {
+          id: newId,
+          name: form.fullName,
+          clientId: clientId,
+          email: form.email,
+          phone: form.phone,
+          dob: form.dob,
+          address: form.address,
+          category: 'silver',
+          status: 'active',
+          totalInvestment: 0,
+          roiPercentage: parseFloat(form.roiPercentage) || 1.2,
+          joinDate: new Date().toISOString().split('T')[0],
+          kyc: 'Verified',
+          pan: form.pan,
+          bankName: form.bankName,
+          accountNo: form.accountNo,
+          ifsc: form.ifsc,
+          riskProfile: form.riskProfile,
+          citizenship: form.citizenship,
+          investments: [],
+          roiHistory: [],
+          perks: [],
+          nominee: {
+            name: form.nomineeName,
+            relation: form.nomineeRelation,
+            contact: form.nomineeContact,
+            email: form.nomineeEmail,
+            citizenship: form.nomineeCitizenship,
+          }
+        };
+        investors.push(newClient);
+
+        setTimeout(() => navigate('/investors'), 500);
+      } else {
+        addToast(resData.message || resData.error || 'Failed to onboard client.', 'danger', 'Submission Error');
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Network error or server unavailable.', 'danger', 'Submission Error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -266,9 +328,21 @@ export default function AddInvestor() {
           </div>
 
           {/* KYC Document Uploads */}
-          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} />
-          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'Aadhaar Card Upload'} />
-          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
+          <FileDropzone 
+            label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} 
+            multiple={false} 
+            onFilesChange={(files) => setPanDocument(files[0] || null)} 
+          />
+          <FileDropzone 
+            label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'Aadhaar Card Upload'} 
+            multiple={false} 
+            onFilesChange={(files) => setAadhaarDocument(files[0] || null)} 
+          />
+          <FileDropzone 
+            label="Bank Details Document (Cancelled Cheque / Bank Statement)" 
+            multiple={false} 
+            onFilesChange={(files) => setBankProofDocument(files[0] || null)} 
+          />
 
           {/* Nominee Details */}
           <div className="kfpl-form-section">
@@ -310,10 +384,18 @@ export default function AddInvestor() {
           </div>
 
           {/* Nominee ID Proof Upload */}
-          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} />
+          <FileDropzone 
+            label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} 
+            multiple={false} 
+            onFilesChange={(files) => setNomineeProofDocument(files[0] || null)} 
+          />
 
           {/* Agreement Upload */}
-          <FileDropzone label="Agreement Document" />
+          <FileDropzone 
+            label="Agreement Document" 
+            multiple={false} 
+            onFilesChange={(files) => setAgreementDocument(files[0] || null)} 
+          />
 
           {/* Client Portal Credentials Generation */}
           <div className="kfpl-form-section">
@@ -336,13 +418,13 @@ export default function AddInvestor() {
 
           {/* Actions */}
           <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/investors')}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary">Create Investor</button>
+            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/investors')} disabled={loading}>Cancel</button>
+            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Investor'}
+            </button>
           </div>
         </div>
       </form>
     </div>
   );
 }
-
-/* ============ END: AddInvestor.jsx ============ */
