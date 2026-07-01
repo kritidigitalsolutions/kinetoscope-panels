@@ -3,12 +3,13 @@
    Description: Agent profile with client list and commission tabs
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import Badge from '../../components/ui/Badge';
 import { agents, investors, formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
+import { apiRequest } from '../../config/apiHelper';
 
 /* ── helpers ─────────────────────── */
 function formatDateDMY(dateStr) {
@@ -217,6 +218,7 @@ function downloadStatementPDF(com, agentName) {
   printWindow.document.close();
 }
 
+
 export default function AgentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -227,9 +229,58 @@ export default function AgentDetail() {
   const [commissionSearch, setCommissionSearch] = useState('');
   const [viewingDoc, setViewingDoc] = useState(null);
 
-  const agent = agents.find(a => a.id === Number(id));
+  const [agent, setAgent] = useState(null);
+  const [agentClients, setAgentClients] = useState([]);
+  const [commissionHistory, setCommissionHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [localStatus, setLocalStatus] = useState('active');
 
-  const [localStatus, setLocalStatus] = useState(agent ? agent.status : 'active');
+  useEffect(() => {
+    const fetchAgentDetails = async () => {
+      setLoading(true);
+      try {
+        const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
+        const ag = agentData.agent || agentData;
+        setAgent(ag);
+        setLocalStatus(ag.status || 'active');
+
+        // Fetch agent clients
+        try {
+          const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
+          setAgentClients(Array.isArray(clientsData) ? clientsData : (clientsData.clients || []));
+        } catch (cErr) {
+          console.error('Failed to load agent clients:', cErr);
+        }
+
+        // Fetch commission history
+        try {
+          const commissionsData = await apiRequest(`/api/super-admin/agents/${id}/commissions`);
+          setCommissionHistory(Array.isArray(commissionsData) ? commissionsData : (commissionsData.commissions || []));
+        } catch (comErr) {
+          console.error('Failed to load agent commissions:', comErr);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch agent details:', err);
+        addToast(err.message || 'Failed to load agent details', 'error', 'Error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAgentDetails();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="kfpl-page">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid var(--color-border)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading agent details...</span>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   if (!agent) {
     return (
@@ -242,32 +293,50 @@ export default function AgentDetail() {
     );
   }
 
-  const handleBlockAgent = () => {
+  const handleBlockAgent = async () => {
     const newStatus = localStatus === 'suspended' ? 'active' : 'suspended';
-    agent.status = newStatus;
-    setLocalStatus(newStatus);
-    addToast(`Agent status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
-  };
-
-  const handleHoldAgent = () => {
-    const newStatus = localStatus === 'inactive' ? 'active' : 'inactive';
-    agent.status = newStatus;
-    setLocalStatus(newStatus);
-    addToast(`Agent status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
-  };
-
-  const handleDeleteAgent = () => {
-    if (window.confirm(`Are you sure you want to completely delete agent profile "${agent.name}"?`)) {
-      const idx = agents.findIndex(a => a.id === agent.id);
-      if (idx !== -1) {
-        agents.splice(idx, 1);
-      }
-      addToast('Agent profile deleted successfully!', 'success', 'Agent Deleted');
-      navigate('/agents');
+    try {
+      await apiRequest(`/api/super-admin/agents/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setLocalStatus(newStatus);
+      addToast(`Agent status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+    } catch (err) {
+      console.error('Failed to block agent:', err);
+      addToast(err.message || 'Failed to change agent status', 'error', 'Error');
     }
   };
 
-  const agentClients = investors.filter(inv => agent.clients.includes(inv.id));
+  const handleHoldAgent = async () => {
+    const newStatus = localStatus === 'inactive' ? 'active' : 'inactive';
+    try {
+      await apiRequest(`/api/super-admin/agents/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setLocalStatus(newStatus);
+      addToast(`Agent status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+    } catch (err) {
+      console.error('Failed to hold agent:', err);
+      addToast(err.message || 'Failed to change agent status', 'error', 'Error');
+    }
+  };
+
+  const handleDeleteAgent = async () => {
+    if (window.confirm(`Are you sure you want to completely delete agent profile "${agent.name || agent.fullName}"?`)) {
+      try {
+        await apiRequest(`/api/super-admin/agents/${id}`, {
+          method: 'DELETE',
+        });
+        addToast('Agent profile deleted successfully!', 'success', 'Agent Deleted');
+        navigate('/agents');
+      } catch (err) {
+        console.error('Failed to delete agent:', err);
+        addToast(err.message || 'Failed to delete agent', 'error', 'Error');
+      }
+    }
+  };
 
   /* ── filtered clients ─── */
   const filteredClients = agentClients.filter(client => {
@@ -299,9 +368,9 @@ export default function AgentDetail() {
     <div className="kfpl-page">
       <div className="kfpl-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div className="kfpl-detail-profile">
-          <div className="kfpl-detail-avatar">{agent.name.split(' ').map(n => n[0]).join('')}</div>
+          <div className="kfpl-detail-avatar">{(agent.name || agent.fullName || '').split(' ').map(n => n[0]).join('')}</div>
           <div>
-            <h2 className="kfpl-detail-name">{agent.name}</h2>
+            <h2 className="kfpl-detail-name">{agent.name || agent.fullName}</h2>
             <div className="kfpl-detail-id">{agent.agentId}</div>
             <div className="kfpl-detail-meta">
               <Badge status={localStatus}>{localStatus}</Badge>
@@ -340,7 +409,7 @@ export default function AgentDetail() {
         <div className="kfpl-detail-grid">
           <div className="kfpl-detail-info-card">
             <div className="kfpl-detail-info-title">Agent Information</div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Full Name</span><span className="kfpl-detail-info-value">{agent.name}</span></div>
+            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Full Name</span><span className="kfpl-detail-info-value">{agent.name || agent.fullName}</span></div>
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Email</span><span className="kfpl-detail-info-value">{agent.email}</span></div>
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Phone</span><span className="kfpl-detail-info-value">{agent.phone}</span></div>
             <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">PAN</span><span className="kfpl-detail-info-value">{agent.pan}</span></div>
@@ -436,7 +505,7 @@ export default function AgentDetail() {
               <button
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => {
-                  agent.commissionHistory.forEach(com => downloadStatementCSV(com, agent.name));
+                  commissionHistory.forEach(com => downloadStatementCSV(com, agent.name || agent.fullName));
                   addToast('All CSV statements downloaded', 'success', 'Download Complete');
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -449,7 +518,7 @@ export default function AgentDetail() {
               <button
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => {
-                  agent.commissionHistory.forEach(com => downloadStatementPDF(com, agent.name));
+                  commissionHistory.forEach(com => downloadStatementPDF(com, agent.name || agent.fullName));
                   addToast('All PDF statements generated', 'success', 'Download Complete');
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -498,7 +567,7 @@ export default function AgentDetail() {
                         <button
                           className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                           onClick={() => {
-                            downloadStatementCSV(com, agent.name);
+                            downloadStatementCSV(com, agent.name || agent.fullName);
                             addToast(`Statement CSV downloaded for ${com.month}`, 'success', 'Downloaded');
                           }}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '4px 8px' }}
@@ -512,7 +581,7 @@ export default function AgentDetail() {
                         <button
                           className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                           onClick={() => {
-                            downloadStatementPDF(com, agent.name);
+                            downloadStatementPDF(com, agent.name || agent.fullName);
                             addToast(`Statement PDF generated for ${com.month}`, 'success', 'Downloaded');
                           }}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '4px 8px' }}
@@ -667,7 +736,7 @@ export default function AgentDetail() {
                   <button
                     className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                     onClick={() => {
-                      downloadStatementCSV(selectedCommission, agent.name);
+                      downloadStatementCSV(selectedCommission, agent.name || agent.fullName);
                       addToast('Statement CSV downloaded', 'success', 'Downloaded');
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -680,7 +749,7 @@ export default function AgentDetail() {
                   <button
                     className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                     onClick={() => {
-                      downloadStatementPDF(selectedCommission, agent.name);
+                      downloadStatementPDF(selectedCommission, agent.name || agent.fullName);
                       addToast('Statement PDF generated', 'success', 'Downloaded');
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}

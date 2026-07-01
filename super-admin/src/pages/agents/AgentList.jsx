@@ -3,21 +3,50 @@
    Description: Paginated table of all agents
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
-import { agents, formatCurrency } from '../../data/mockData';
+import { formatCurrency } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function AgentList() {
   const navigate = useNavigate();
   const [residencyFilter, setResidencyFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [agentsList, setAgentsList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredAgents = agents.filter(agt => {
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const data = await apiRequest('/api/super-admin/agents');
+        const raw = Array.isArray(data) ? data : (data.data || data.agents || []);
+        // Normalize field names from backend to what the table columns expect
+        const normalized = raw.map(a => ({
+          ...a,
+          id: a._id || a.id,
+          name: a.name || a.fullName || '',
+          agentId: a.agentId || a.code || '—',
+          joinDate: a.joinDate || (a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN') : '—'),
+          totalClients: a.totalClients ?? a.clientCount ?? 0,
+          totalInvestment: a.totalInvestment ?? 0,
+          status: a.status || 'active',
+        }));
+        setAgentsList(normalized);
+      } catch (err) {
+        console.error('Failed to fetch agents:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  const filteredAgents = agentsList.filter(agt => {
     if (residencyFilter !== 'all') {
       const isInt = residencyFilter === 'international';
-      const actualInt = agt.citizenship === 'International';
+      const actualInt = (agt.citizenship || agt.residencyStatus) === 'International';
       if (isInt !== actualInt) return false;
     }
     if (statusFilter !== 'all') {
@@ -128,12 +157,20 @@ export default function AgentList() {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filteredAgents}
-        onRowClick={(row) => navigate(`/agents/${row.id}`)}
-        searchPlaceholder="Search agents by name, ID..."
-      />
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid var(--color-border)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading agents...</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filteredAgents}
+          onRowClick={(row) => navigate(`/agents/${row.id}`)}
+          searchPlaceholder="Search agents by name, ID..."
+        />
+      )}
     </div>
   );
 }

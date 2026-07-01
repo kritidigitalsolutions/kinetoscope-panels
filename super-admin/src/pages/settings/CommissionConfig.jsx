@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
-import { agents } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 // Default mock values if not already in localStorage
 const DEFAULT_ONETIME_SLABS = [
@@ -37,6 +37,7 @@ export default function CommissionConfig() {
   const [monthlySlabs, setMonthlySlabs] = useState([]);
   const [overrides, setOverrides] = useState([]);
   const [calcAmount, setCalcAmount] = useState('');
+  const [agentsList, setAgentsList] = useState([]);
 
   // Modal State
   const [showSlabModal, setShowSlabModal] = useState(false);
@@ -70,6 +71,17 @@ export default function CommissionConfig() {
       setOverrides(DEFAULT_OVERRIDES);
       localStorage.setItem('kfpl_commission_overrides', JSON.stringify(DEFAULT_OVERRIDES));
     }
+
+    const fetchAgents = async () => {
+      try {
+        const res = await apiRequest('/api/super-admin/agents');
+        const list = Array.isArray(res) ? res : (res.agents || []);
+        setAgentsList(list);
+      } catch (err) {
+        console.error('Failed to load agents in config:', err);
+      }
+    };
+    fetchAgents();
   }, []);
 
   // Sync to localStorage helpers
@@ -218,8 +230,8 @@ export default function CommissionConfig() {
       return;
     }
 
-    const matchedAgent = agents.find(a => a.agentId === overrideForm.agentId || a.id === parseInt(overrideForm.agentId));
-    const agentName = matchedAgent ? matchedAgent.name : overrideForm.agentId;
+    const matchedAgent = agentsList.find(a => a.agentId === overrideForm.agentId || a.id === parseInt(overrideForm.agentId) || a._id === overrideForm.agentId);
+    const agentName = matchedAgent ? (matchedAgent.name || matchedAgent.fullName) : overrideForm.agentId;
 
     let updated;
     if (overrideModalType === 'add') {
@@ -632,8 +644,8 @@ export default function CommissionConfig() {
               disabled={overrideModalType === 'edit'}
             >
               <option value="">Choose Agent</option>
-              {agents.map(a => (
-                <option key={a.id} value={a.agentId}>{a.name} ({a.agentId})</option>
+              {agentsList.map(a => (
+                <option key={a.id || a._id} value={a.agentId}>{a.name || a.fullName} ({a.agentId})</option>
               ))}
             </select>
           </div>

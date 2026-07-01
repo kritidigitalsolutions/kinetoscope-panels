@@ -73,9 +73,8 @@ export default function AddInvestor() {
     setForm(prev => {
       let nextValue = value;
       if (name === 'aadhaarNumber' && prev.citizenship === 'National') {
-        const digits = value.replace(/\D/g, '');
-        const match = digits.substring(0, 12).match(/(\d{1,4})/g);
-        nextValue = match ? match.join('-') : '';
+        const digits = value.replace(/\D/g, '').slice(0, 12);
+        nextValue = digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
       }
       const nextForm = { ...prev, [name]: nextValue };
       if (name === 'email') {
@@ -162,7 +161,7 @@ export default function AddInvestor() {
       if (form.accountNo) formData.append('accountNumber', form.accountNo);
       if (form.ifsc) formData.append('ifscCode', form.ifsc);
       if (form.pan) formData.append('panNumber', form.pan);
-      if (form.aadhaarNumber) formData.append('aadhaarNumber', form.aadhaarNumber);
+      if (form.aadhaarNumber) formData.append('aadhaarNumber', form.aadhaarNumber.replace(/\s/g, ''));
 
       if (form.nomineeName) {
         formData.append('nomineeName', form.nomineeName);
@@ -279,13 +278,13 @@ export default function AddInvestor() {
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Email Address <span className="required">*</span></label>
-                <input className="kfpl-input" name="email" type="email" value={form.email} onChange={handleChange} placeholder="investor@email.com" required />
+                <input className="kfpl-input" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Enter your email address" required />
               </div>
             </div>
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Phone Number <span className="required">*</span></label>
-                <input className="kfpl-input" name="phone" value={form.phone} onChange={handleChange} placeholder="+91 98765 43210" required />
+                <input className="kfpl-input" name="phone" value={form.phone} onChange={handleChange} placeholder="Enter your phone number" required />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Date of Birth</label>
@@ -295,7 +294,7 @@ export default function AddInvestor() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group" style={{ flex: 2 }}>
                 <label className="kfpl-input-label">Address</label>
-                <textarea className="kfpl-textarea" name="address" value={form.address} onChange={handleChange} placeholder="Full address" rows="2" />
+                <textarea className="kfpl-textarea" name="address" value={form.address} onChange={handleChange} placeholder="Enter your full address" rows="2" />
               </div>
               <div className="kfpl-input-group" style={{ flex: 1 }}>
                 <label className="kfpl-input-label">Risk Profile</label>
@@ -368,7 +367,7 @@ export default function AddInvestor() {
                   name="pan" 
                   value={form.pan} 
                   onChange={handleChange} 
-                  placeholder={form.citizenship === 'International' ? 'Tax ID or SSN' : 'ABCPK1234L'} 
+                  placeholder={form.citizenship === 'International' ? 'Enter your tax ID or SSN' : 'Enter your PAN number'} 
                   required 
                 />
               </div>
@@ -381,7 +380,8 @@ export default function AddInvestor() {
                   name="aadhaarNumber" 
                   value={form.aadhaarNumber} 
                   onChange={handleChange} 
-                  placeholder={form.citizenship === 'International' ? 'Passport or ID number' : '12-digit Aadhaar number'} 
+                  placeholder={form.citizenship === 'International' ? 'Enter your passport or ID number' : 'Enter your Aadhaar number'} 
+                  style={form.citizenship === 'National' ? { letterSpacing: '1.5px' } : {}}
                   required 
                 />
               </div>
@@ -389,7 +389,7 @@ export default function AddInvestor() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Bank Name <span className="required">*</span></label>
-                <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Bank name" required />
+                <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Enter your bank name" required />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">
@@ -400,7 +400,7 @@ export default function AddInvestor() {
                   name="ifsc" 
                   value={form.ifsc} 
                   onChange={handleChange} 
-                  placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0001234'} 
+                  placeholder={form.citizenship === 'International' ? 'Enter your SWIFT or IFSC code' : 'Enter your IFSC code'} 
                   required 
                 />
               </div>
@@ -408,11 +408,11 @@ export default function AddInvestor() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Account Number <span className="required">*</span></label>
-                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" required />
+                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Enter your account number" required />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Confirm Account Number <span className="required">*</span></label>
-                <input className="kfpl-input" name="confirmAccountNo" value={form.confirmAccountNo} onChange={handleChange} placeholder="Confirm account number" required />
+                <input className="kfpl-input" name="confirmAccountNo" value={form.confirmAccountNo} onChange={handleChange} placeholder="Enter your account number again" required />
               </div>
             </div>
           </div>
@@ -440,7 +440,7 @@ export default function AddInvestor() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Name {(form.nomineeRelation || form.nomineeContact) && <span className="required">*</span>}</label>
-                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
+                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter your nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Relation</label>
@@ -457,11 +457,11 @@ export default function AddInvestor() {
             <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Contact Number</label>
-                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
+                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter your nominee's contact number" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Email Address</label>
-                <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
+                <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="Enter your nominee's email address" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Residency / Citizenship</label>
@@ -493,12 +493,12 @@ export default function AddInvestor() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Email Address / Login ID</label>
-                <input className="kfpl-input" name="portalEmail" value={portalEmail} onChange={(e) => setPortalEmail(e.target.value)} placeholder="investor@email.com" />
+                <input className="kfpl-input" name="portalEmail" value={portalEmail} onChange={(e) => setPortalEmail(e.target.value)} placeholder="Enter your client login email" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Portal Password</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input className="kfpl-input" type="text" value={portalPassword} onChange={(e) => setPortalPassword(e.target.value)} placeholder="Click Generate or enter secure password" style={{ flex: 1 }} />
+                  <input className="kfpl-input" type="text" value={portalPassword} onChange={(e) => setPortalPassword(e.target.value)} placeholder="Enter your secure password" style={{ flex: 1 }} />
                   <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={generatePassword} style={{ whiteSpace: 'nowrap' }}>Generate</button>
                   <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={copyCredentials} disabled={!portalEmail || !portalPassword} style={{ whiteSpace: 'nowrap' }}>Copy</button>
                 </div>

@@ -537,7 +537,7 @@ export default function InvestorDetail() {
       return;
     }
     try {
-      await apiRequest(`/api/super-admin/clients/${id}`, {
+      await apiRequest(`/api/super-admin/clients/${id}/roi-rate`, {
         method: 'PATCH',
         body: JSON.stringify({ monthlyRoi: newRoi })
       });

@@ -6,14 +6,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
-import { COMMISSION_SLABS, agents } from '../../data/mockData';
+import { COMMISSION_SLABS } from '../../data/mockData';
 import FileDropzone from '../../components/ui/FileDropzone';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function AddAgent() {
   const navigate = useNavigate();
   const addToast = useToast();
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', pan: '',
+    name: '', email: '', phone: '', pan: '', aadhaar: '', passport: '',
     bankName: '', accountNo: '', confirmAccountNo: '', ifsc: '',
     commissionOneTime: '', commissionMonthly: '', commissionSpecial: '',
     nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
@@ -23,6 +24,13 @@ export default function AddAgent() {
 
   const [portalEmail, setPortalEmail] = useState('');
   const [portalPassword, setPortalPassword] = useState('');
+  const [submitLoading, setSubmitLoading] = useState(false);
+
+  // File Upload states
+  const [panDocFile, setPanDocFile] = useState(null);
+  const [idProofDocFile, setIdProofDocFile] = useState(null);
+  const [bankProofDocFile, setBankProofDocFile] = useState(null);
+  const [nomineeProofDocFile, setNomineeProofDocFile] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,6 +41,13 @@ export default function AddAgent() {
       }
       return nextForm;
     });
+  };
+
+  // Aadhaar auto-format: 1234 5678 9012
+  const handleAadhaarChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 12);
+    const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    setForm(prev => ({ ...prev, aadhaar: formatted }));
   };
 
   const generatePassword = () => {
@@ -77,7 +92,7 @@ export default function AddAgent() {
     document.body.removeChild(textarea);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.accountNo !== form.confirmAccountNo) {
       addToast('Account Number and Confirm Account Number do not match!', 'danger', 'Validation Error');
@@ -88,46 +103,50 @@ export default function AddAgent() {
       return;
     }
 
-    // Generate new agent ID & record
-    const newId = agents.length > 0 ? Math.max(...agents.map(a => a.id)) + 1 : 1;
-    const agentId = `AGT-${String(newId).padStart(3, '0')}`;
-    
-    const newAgent = {
-      id: newId,
-      name: form.name,
-      agentId: agentId,
-      email: form.email,
-      phone: form.phone,
-      pan: form.pan,
-      status: 'active',
-      totalClients: 0,
-      totalInvestment: 0,
-      commissionOneTime: Number(form.commissionOneTime) || 0,
-      commissionMonthly: Number(form.commissionMonthly) || 0,
-      commissionSpecial: Number(form.commissionSpecial) || 0,
-      bankName: form.bankName,
-      accountNo: form.accountNo,
-      ifsc: form.ifsc,
-      joinDate: new Date().toISOString().split('T')[0],
-      citizenship: form.citizenship,
-      clients: [],
-      investments: [],
-      commissionHistory: [],
-      portalEmail: portalEmail || form.email,
-      portalPassword: portalPassword || 'kfpl@123',
-      nominee: {
-        name: form.nomineeName,
-        relation: form.nomineeRelation,
-        contact: form.nomineeContact,
-        email: form.nomineeEmail,
-        citizenship: form.nomineeCitizenship,
-      }
-    };
-    
-    agents.push(newAgent);
+    setSubmitLoading(true);
 
-    addToast(`Agent "${form.name}" registered successfully!`, 'success', 'Agent Added');
-    setTimeout(() => navigate('/agents'), 500);
+    try {
+      const formData = new FormData();
+      formData.append('fullName', form.name);
+      formData.append('phone', form.phone);
+      formData.append('email', form.email);
+      formData.append('residencyStatus', form.citizenship === 'International' ? 'International' : 'National (Domestic)');
+      formData.append('panNumber', form.pan);
+      if (form.aadhaar) formData.append('aadhaarNumber', form.aadhaar.replace(/\s/g, ''));
+      if (form.passport) formData.append('passportNumber', form.passport);
+      formData.append('bankName', form.bankName);
+      formData.append('accountNumber', form.accountNo);
+      formData.append('ifscCode', form.ifsc);
+      formData.append('oneTimeCommission', form.commissionOneTime || '0');
+      formData.append('monthlySlab', form.commissionMonthly || '0');
+      formData.append('specialCommission', form.commissionSpecial || '0');
+      formData.append('nomineeName', form.nomineeName || '');
+      formData.append('nomineeRelation', form.nomineeRelation || '');
+      formData.append('nomineePhone', form.nomineeContact || '');
+      formData.append('nomineeEmail', form.nomineeEmail || '');
+      formData.append('nomineeResidency', form.nomineeCitizenship === 'International' ? 'International' : 'National (Domestic)');
+      if (portalPassword) {
+        formData.append('password', portalPassword);
+      }
+
+      if (panDocFile) formData.append('panDocument', panDocFile);
+      if (idProofDocFile) formData.append('idProofDocument', idProofDocFile);
+      if (bankProofDocFile) formData.append('bankProofDocument', bankProofDocFile);
+      if (nomineeProofDocFile) formData.append('nomineeProofDocument', nomineeProofDocFile);
+
+      await apiRequest('/api/super-admin/agents', {
+        method: 'POST',
+        body: formData,
+      });
+
+      addToast(`Agent "${form.name}" registered successfully!`, 'success', 'Agent Added');
+      setTimeout(() => navigate('/agents'), 500);
+    } catch (err) {
+      console.error('Failed to register agent:', err);
+      addToast(err.message || 'Failed to register agent', 'error', 'Error');
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   return (
@@ -160,13 +179,13 @@ export default function AddAgent() {
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Email Address <span className="required">*</span></label>
-                <input className="kfpl-input" name="email" type="email" value={form.email} onChange={handleChange} placeholder="agent@email.com" required />
+                <input className="kfpl-input" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Enter your email address" required />
               </div>
             </div>
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Phone Number <span className="required">*</span></label>
-                <input className="kfpl-input" name="phone" value={form.phone} onChange={handleChange} placeholder="+91 99887 76650" required />
+                <input className="kfpl-input" name="phone" value={form.phone} onChange={handleChange} placeholder="Enter your phone number" required />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Residency / Citizenship</label>
@@ -179,9 +198,19 @@ export default function AddAgent() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">{form.citizenship === 'International' ? 'Tax ID / SSN Number' : 'PAN Number'}</label>
-                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'Tax ID or SSN' : 'ABCVP1234T'} />
+                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'Enter your tax ID or SSN' : 'Enter your PAN number'} />
               </div>
-              <div></div>
+              {form.citizenship === 'National' ? (
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">Aadhaar Number</label>
+                  <input className="kfpl-input" name="aadhaar" value={form.aadhaar} onChange={handleAadhaarChange} placeholder="Enter your Aadhaar number" maxLength="14" style={{ letterSpacing: '1.5px' }} />
+                </div>
+              ) : (
+                <div className="kfpl-input-group">
+                  <label className="kfpl-input-label">Passport / National ID Number <span className="required">*</span></label>
+                  <input className="kfpl-input" name="passport" value={form.passport} onChange={handleChange} placeholder="Enter your passport / national ID" required />
+                </div>
+              )}
             </div>
           </div>
 
@@ -190,36 +219,36 @@ export default function AddAgent() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Bank Name</label>
-                <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Bank name" />
+                <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Enter your bank name" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">{form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}</label>
-                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0004321'} />
+                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'Enter your SWIFT or IFSC code' : 'Enter your IFSC code'} />
               </div>
             </div>
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Account Number</label>
-                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" />
+                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Enter your account number" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Confirm Account Number</label>
-                <input className="kfpl-input" name="confirmAccountNo" value={form.confirmAccountNo} onChange={handleChange} placeholder="Confirm account number" />
+                <input className="kfpl-input" name="confirmAccountNo" value={form.confirmAccountNo} onChange={handleChange} placeholder="Enter your account number again" />
               </div>
             </div>
           </div>
 
           {/* KYC Document Uploads */}
-          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} />
-          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'ID Proof Upload (Aadhaar / Driving License / Passport)'} />
-          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
+          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} multiple={false} onFilesChange={(files) => setPanDocFile(files[0] || null)} />
+          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'ID Proof Upload (Aadhaar / Driving License / Passport)'} multiple={false} onFilesChange={(files) => setIdProofDocFile(files[0] || null)} />
+          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" multiple={false} onFilesChange={(files) => setBankProofDocFile(files[0] || null)} />
 
           <div className="kfpl-form-section">
             <div className="kfpl-form-section-title">Commission Configuration</div>
             <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">One-Time Commission %</label>
-                <input className="kfpl-input" name="commissionOneTime" type="number" step="0.1" value={form.commissionOneTime} onChange={handleChange} placeholder="e.g. 2" />
+                <input className="kfpl-input" name="commissionOneTime" type="number" step="0.1" value={form.commissionOneTime} onChange={handleChange} placeholder="Enter your one-time commission %" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Monthly Slab %</label>
@@ -232,7 +261,7 @@ export default function AddAgent() {
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Special Commission %</label>
-                <input className="kfpl-input" name="commissionSpecial" type="number" step="0.1" value={form.commissionSpecial} onChange={handleChange} placeholder="e.g. 0.5" />
+                <input className="kfpl-input" name="commissionSpecial" type="number" step="0.1" value={form.commissionSpecial} onChange={handleChange} placeholder="Enter your special commission %" />
               </div>
             </div>
           </div>
@@ -243,7 +272,7 @@ export default function AddAgent() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Name {(form.nomineeRelation || form.nomineeContact) && <span className="required">*</span>}</label>
-                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
+                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter your nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Relation</label>
@@ -260,11 +289,11 @@ export default function AddAgent() {
             <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Contact Number</label>
-                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
+                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter your nominee's contact number" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Email Address</label>
-                <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
+                <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="Enter your nominee's email address" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Residency / Citizenship</label>
@@ -277,7 +306,7 @@ export default function AddAgent() {
           </div>
 
           {/* Nominee ID Proof Upload */}
-          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} />
+          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} multiple={false} onFilesChange={(files) => setNomineeProofDocFile(files[0] || null)} />
 
           {/* Agent Portal Credentials Generation */}
           <div className="kfpl-form-section">
@@ -285,12 +314,12 @@ export default function AddAgent() {
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Email Address / Login ID</label>
-                <input className="kfpl-input" name="portalEmail" value={portalEmail} onChange={(e) => setPortalEmail(e.target.value)} placeholder="agent@email.com" />
+                <input className="kfpl-input" name="portalEmail" value={portalEmail} onChange={(e) => setPortalEmail(e.target.value)} placeholder="Enter your agent login email" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Portal Password</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input className="kfpl-input" type="text" value={portalPassword} onChange={(e) => setPortalPassword(e.target.value)} placeholder="Click Generate or enter secure password" style={{ flex: 1 }} />
+                  <input className="kfpl-input" type="text" value={portalPassword} onChange={(e) => setPortalPassword(e.target.value)} placeholder="Enter your secure password" style={{ flex: 1 }} />
                   <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={generatePassword} style={{ whiteSpace: 'nowrap' }}>Generate</button>
                   <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={copyCredentials} disabled={!portalEmail || !portalPassword} style={{ whiteSpace: 'nowrap' }}>Copy</button>
                 </div>
@@ -299,8 +328,10 @@ export default function AddAgent() {
           </div>
 
           <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/agents')}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary">Create Agent</button>
+            <button type="button" className="kfpl-btn kfpl-btn--ghost" disabled={submitLoading} onClick={() => navigate('/agents')}>Cancel</button>
+            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={submitLoading}>
+              {submitLoading ? 'Registering...' : 'Create Agent'}
+            </button>
           </div>
         </div>
       </form>

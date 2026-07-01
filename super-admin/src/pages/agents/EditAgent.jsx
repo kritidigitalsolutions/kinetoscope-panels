@@ -7,15 +7,18 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import Badge from '../../components/ui/Badge';
-import { agents, COMMISSION_SLABS } from '../../data/mockData';
+import { COMMISSION_SLABS } from '../../data/mockData';
 import FileDropzone from '../../components/ui/FileDropzone';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function EditAgent() {
   const { id } = useParams();
   const navigate = useNavigate();
   const addToast = useToast();
 
-  const agent = agents.find(a => a.id === Number(id));
+  const [agent, setAgent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', pan: '',
@@ -27,29 +30,58 @@ export default function EditAgent() {
     nomineeCitizenship: 'National',
   });
 
+  // File Upload states
+  const [panDocFile, setPanDocFile] = useState(null);
+  const [idProofDocFile, setIdProofDocFile] = useState(null);
+  const [bankProofDocFile, setBankProofDocFile] = useState(null);
+  const [nomineeProofDocFile, setNomineeProofDocFile] = useState(null);
+
   useEffect(() => {
-    if (agent) {
-      setForm({
-        name: agent.name || '',
-        email: agent.email || '',
-        phone: agent.phone || '',
-        pan: agent.pan || '',
-        bankName: agent.bankName || '',
-        accountNo: agent.accountNo || '',
-        ifsc: agent.ifsc || '',
-        commissionOneTime: agent.commissionOneTime ?? '',
-        commissionMonthly: agent.commissionMonthly ?? '',
-        commissionSpecial: agent.commissionSpecial ?? '',
-        status: agent.status || '',
-        nomineeName: agent.nominee?.name || '',
-        nomineeRelation: agent.nominee?.relation || '',
-        nomineeContact: agent.nominee?.contact || '',
-        nomineeEmail: agent.nominee?.email || '',
-        citizenship: agent.citizenship || 'National',
-        nomineeCitizenship: agent.nominee?.citizenship || 'National',
-      });
-    }
-  }, [agent]);
+    const fetchAgent = async () => {
+      try {
+        const data = await apiRequest(`/api/super-admin/agents/${id}`);
+        const ag = data.agent || data;
+        setAgent(ag);
+        setForm({
+          name: ag.name || ag.fullName || '',
+          email: ag.email || '',
+          phone: ag.phone || '',
+          pan: ag.pan || ag.panNumber || '',
+          bankName: ag.bankName || '',
+          accountNo: ag.accountNo || ag.accountNumber || '',
+          ifsc: ag.ifsc || ag.ifscCode || '',
+          commissionOneTime: ag.commissionOneTime ?? '',
+          commissionMonthly: ag.commissionMonthly ?? '',
+          commissionSpecial: ag.commissionSpecial ?? '',
+          status: ag.status || '',
+          nomineeName: ag.nominee?.name || ag.nomineeName || '',
+          nomineeRelation: ag.nominee?.relation || ag.nomineeRelation || '',
+          nomineeContact: ag.nominee?.contact || ag.nomineePhone || '',
+          nomineeEmail: ag.nominee?.email || ag.nomineeEmail || '',
+          citizenship: ag.citizenship || ag.residencyStatus || 'National',
+          nomineeCitizenship: ag.nominee?.citizenship || ag.nomineeResidency || 'National',
+        });
+      } catch (err) {
+        console.error('Failed to load agent profile:', err);
+        addToast(err.message || 'Failed to load agent profile', 'error', 'Error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAgent();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="kfpl-page">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid var(--color-border)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading agent profile...</span>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   if (!agent) {
     return (
@@ -66,40 +98,53 @@ export default function EditAgent() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
       alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
       return;
     }
-    // Update mock data in-memory so changes reflect immediately
-    const idx = agents.findIndex(a => a.id === Number(id));
-    if (idx !== -1) {
-      agents[idx] = {
-        ...agents[idx],
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        pan: form.pan,
-        bankName: form.bankName,
-        accountNo: form.accountNo,
-        ifsc: form.ifsc,
-        commissionOneTime: parseFloat(form.commissionOneTime) || 0,
-        commissionMonthly: parseFloat(form.commissionMonthly) || 0,
-        commissionSpecial: parseFloat(form.commissionSpecial) || 0,
-        status: form.status,
-        citizenship: form.citizenship,
-        nominee: {
-          name: form.nomineeName,
-          relation: form.nomineeRelation,
-          contact: form.nomineeContact,
-          email: form.nomineeEmail,
-          citizenship: form.nomineeCitizenship,
-        }
-      };
+
+    setSubmitLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('fullName', form.name);
+      formData.append('phone', form.phone);
+      formData.append('email', form.email);
+      formData.append('residencyStatus', form.citizenship === 'International' ? 'International' : 'National (Domestic)');
+      formData.append('panNumber', form.pan);
+      formData.append('bankName', form.bankName);
+      formData.append('accountNumber', form.accountNo);
+      formData.append('ifscCode', form.ifsc);
+      formData.append('oneTimeCommission', form.commissionOneTime || '0');
+      formData.append('monthlySlab', form.commissionMonthly || '0');
+      formData.append('specialCommission', form.commissionSpecial || '0');
+      formData.append('status', form.status);
+      formData.append('nomineeName', form.nomineeName || '');
+      formData.append('nomineeRelation', form.nomineeRelation || '');
+      formData.append('nomineePhone', form.nomineeContact || '');
+      formData.append('nomineeEmail', form.nomineeEmail || '');
+      formData.append('nomineeResidency', form.nomineeCitizenship === 'International' ? 'International' : 'National (Domestic)');
+
+      if (panDocFile) formData.append('panDocument', panDocFile);
+      if (idProofDocFile) formData.append('idProofDocument', idProofDocFile);
+      if (bankProofDocFile) formData.append('bankProofDocument', bankProofDocFile);
+      if (nomineeProofDocFile) formData.append('nomineeProofDocument', nomineeProofDocFile);
+
+      await apiRequest(`/api/super-admin/agents/${id}`, {
+        method: 'PATCH',
+        body: formData,
+      });
+
+      addToast(`Agent "${form.name}" updated successfully!`, 'success', 'Agent Updated');
+      setTimeout(() => navigate(`/agents/${id}`), 500);
+    } catch (err) {
+      console.error('Failed to update agent:', err);
+      addToast(err.message || 'Failed to update agent profile', 'error', 'Error');
+    } finally {
+      setSubmitLoading(false);
     }
-    addToast(`Agent "${form.name}" updated successfully!`, 'success', 'Agent Updated');
-    setTimeout(() => navigate(`/agents/${id}`), 500);
   };
 
   return (
@@ -218,9 +263,9 @@ export default function EditAgent() {
           </div>
 
           {/* KYC Document Uploads */}
-          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} />
-          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'ID Proof Upload (Aadhaar / Driving License / Passport)'} />
-          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
+          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} multiple={false} onFilesChange={(files) => setPanDocFile(files[0] || null)} />
+          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'ID Proof Upload (Aadhaar / Driving License / Passport)'} multiple={false} onFilesChange={(files) => setIdProofDocFile(files[0] || null)} />
+          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" multiple={false} onFilesChange={(files) => setBankProofDocFile(files[0] || null)} />
 
           {/* Nominee Details */}
           <div className="kfpl-form-section">
@@ -262,16 +307,16 @@ export default function EditAgent() {
           </div>
 
           {/* Nominee ID Proof Upload */}
-          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} />
+          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} multiple={false} onFilesChange={(files) => setNomineeProofDocFile(files[0] || null)} />
 
           {/* Actions */}
           <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate(`/agents/${id}`)}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary">
+            <button type="button" className="kfpl-btn kfpl-btn--ghost" disabled={submitLoading} onClick={() => navigate(`/agents/${id}`)}>Cancel</button>
+            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={submitLoading}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16" style={{ marginRight: '6px' }}>
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2 2h11l5 5v11z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
               </svg>
-              Save Changes
+              {submitLoading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>

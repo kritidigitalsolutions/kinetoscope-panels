@@ -3,23 +3,40 @@
    Description: Lists clients pre-filtered by specific agent
    ============================================================ */
 
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
-import { investors, agents, formatCurrency, getCategoryFromAmount } from '../../data/mockData';
+import { formatCurrency, getCategoryFromAmount } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function AgentClientsView() {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
 
-  // Find agent in database/mock to get the latest info
-  const agent = agents.find(a => String(a.id) === String(id));
-  const agentName = agent?.name || location.state?.agentName || 'Agent';
-  const clientIds = agent?.clients || [];
+  const [agent, setAgent] = useState(null);
+  const [clientsList, setClientsList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter global investors list — only this agent's clients
-  const agentClients = investors.filter(inv => clientIds.includes(inv.id));
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
+        setAgent(agentData.agent || agentData);
+
+        const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
+        setClientsList(Array.isArray(clientsData) ? clientsData : (clientsData.clients || []));
+      } catch (err) {
+        console.error('Failed to load agent clients view:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClients();
+  }, [id]);
+
+  const agentName = agent?.name || agent?.fullName || location.state?.agentName || 'Agent';
 
   const getPerkTier = (amount) => {
     return getCategoryFromAmount(amount);
@@ -123,12 +140,20 @@ export default function AgentClientsView() {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={agentClients}
-        onRowClick={(row) => navigate(`/investors/${row.id}`)}
-        searchPlaceholder="Search clients by name, email, ID..."
-      />
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid var(--color-border)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading agent clients...</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={clientsList}
+          onRowClick={(row) => navigate(`/investors/${row.id}`)}
+          searchPlaceholder="Search clients by name, email, ID..."
+        />
+      )}
     </div>
   );
 }
