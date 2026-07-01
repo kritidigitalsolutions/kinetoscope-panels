@@ -40,7 +40,16 @@ export default function EditAgent() {
     const fetchAgent = async () => {
       try {
         const data = await apiRequest(`/api/super-admin/agents/${id}`);
-        const ag = data.agent || data;
+        const extractAgentDetail = (res) => {
+          if (!res) return null;
+          if (res.agent) return res.agent;
+          if (res.data) {
+            if (res.data.agent) return res.data.agent;
+            return res.data;
+          }
+          return res;
+        };
+        const ag = extractAgentDetail(data);
         setAgent(ag);
         setForm({
           name: ag.name || ag.fullName || '',

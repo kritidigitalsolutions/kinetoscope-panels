@@ -75,7 +75,17 @@ export default function CommissionConfig() {
     const fetchAgents = async () => {
       try {
         const res = await apiRequest('/api/super-admin/agents');
-        const list = Array.isArray(res) ? res : (res.agents || []);
+        const extractAgents = (r) => {
+          if (!r) return [];
+          if (Array.isArray(r)) return r;
+          if (r.data) {
+            if (Array.isArray(r.data)) return r.data;
+            if (r.data.agents && Array.isArray(r.data.agents)) return r.data.agents;
+          }
+          if (r.agents && Array.isArray(r.agents)) return r.agents;
+          return [];
+        };
+        const list = extractAgents(res);
         setAgentsList(list);
       } catch (err) {
         console.error('Failed to load agents in config:', err);

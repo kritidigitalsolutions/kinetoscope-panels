@@ -43,13 +43,21 @@ export default function AddInvestor() {
             'Authorization': `Bearer ${jwtToken}`
           }
         });
-        const resData = await response.json();
         if (response.ok) {
+          const resData = await response.json();
           // support different response formats from real API
-          const fetchedAgents = resData.data || resData.agents || [];
-          if (Array.isArray(fetchedAgents)) {
-            setDbAgents(fetchedAgents);
-          }
+          const extractAgents = (res) => {
+            if (!res) return [];
+            if (Array.isArray(res)) return res;
+            if (res.data) {
+              if (Array.isArray(res.data)) return res.data;
+              if (res.data.agents && Array.isArray(res.data.agents)) return res.data.agents;
+            }
+            if (res.agents && Array.isArray(res.agents)) return res.agents;
+            return [];
+          };
+          const fetchedAgents = extractAgents(resData);
+          setDbAgents(fetchedAgents);
         }
       } catch (err) {
         console.error('Failed to load agents from API:', err);

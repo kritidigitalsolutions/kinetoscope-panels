@@ -52,10 +52,18 @@ export default function EditInvestor() {
         let agentsList = [];
         try {
           const agentsRes = await apiRequest('/api/super-admin/agents');
-          agentsList = agentsRes.data || agentsRes.agents || [];
-          if (Array.isArray(agentsList)) {
-            setDbAgents(agentsList);
-          }
+          const extractAgents = (res) => {
+            if (!res) return [];
+            if (Array.isArray(res)) return res;
+            if (res.data) {
+              if (Array.isArray(res.data)) return res.data;
+              if (res.data.agents && Array.isArray(res.data.agents)) return res.data.agents;
+            }
+            if (res.agents && Array.isArray(res.agents)) return res.agents;
+            return [];
+          };
+          agentsList = extractAgents(agentsRes);
+          setDbAgents(agentsList);
         } catch (e) {
           console.error('Failed to load agents in edit page:', e);
         }

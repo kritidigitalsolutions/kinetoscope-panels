@@ -219,6 +219,69 @@ function downloadStatementPDF(com, agentName) {
 }
 
 
+const tabIcons = {
+  profile: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  clients: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  commission: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  documents: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  )
+};
+
+const infoIcons = {
+  user: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  mail: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
+    </svg>
+  ),
+  phone: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  shield: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  fileText: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  ),
+  landmark: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <line x1="3" y1="22" x2="21" y2="22" /><line x1="6" y1="18" x2="6" y2="11" /><line x1="10" y1="18" x2="10" y2="11" /><line x1="14" y1="18" x2="14" y2="11" /><line x1="18" y1="18" x2="18" y2="11" /><polygon points="12 2 20 7 4 7" />
+    </svg>
+  )
+};
+
+
 export default function AgentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -232,39 +295,128 @@ export default function AgentDetail() {
   const [agent, setAgent] = useState(null);
   const [agentClients, setAgentClients] = useState([]);
   const [commissionHistory, setCommissionHistory] = useState([]);
+  const [documentsList, setDocumentsList] = useState([]);
+  const [verifiedDocs, setVerifiedDocs] = useState({});
   const [loading, setLoading] = useState(true);
   const [localStatus, setLocalStatus] = useState('active');
+
 
   useEffect(() => {
     const fetchAgentDetails = async () => {
       setLoading(true);
+      let ag = null;
       try {
         const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
-        const ag = agentData.agent || agentData;
-        setAgent(ag);
-        setLocalStatus(ag.status || 'active');
+        
+        const extractAgentDetail = (res) => {
+          if (!res) return null;
+          if (res.agent) return res.agent;
+          if (res.data) {
+            if (res.data.agent) return res.data.agent;
+            return res.data;
+          }
+          return res;
+        };
+        ag = extractAgentDetail(agentData);
+        
+        if (ag) {
+          const user = ag.user || {};
+          const profile = ag.profile || {};
+          
+          const docs = ag.documents || [];
+          setDocumentsList(docs);
+          
+          const verifiedMap = {};
+          docs.forEach(doc => {
+            const label = doc.name || doc.label;
+            if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified) {
+              verifiedMap[label] = true;
+            }
+          });
+          setVerifiedDocs(verifiedMap);
 
-        // Fetch agent clients
-        try {
-          const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
-          setAgentClients(Array.isArray(clientsData) ? clientsData : (clientsData.clients || []));
-        } catch (cErr) {
-          console.error('Failed to load agent clients:', cErr);
+          const normalizedAg = {
+            ...ag,
+            id: user._id || profile.userId || ag._id || ag.id,
+            name: profile.fullName || user.name || '—',
+            email: profile.email || user.email || '—',
+            phone: profile.phone || '—',
+            pan: profile.panNumber || '—',
+            agentId: ag.header?.agentCode || user.clientCode || profile.agentId || '—',
+            joinDate: profile.joinDate || (user.createdAt 
+              ? new Date(user.createdAt).toLocaleDateString('en-IN') 
+              : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—')),
+            totalClients: ag.summaryCards?.clientsCount ?? ag.clientsCount ?? ag.totalClients ?? 0,
+            totalInvestment: ag.summaryCards?.totalInvestment ?? ag.totalInvestment ?? 0,
+            status: ag.header?.status?.toLowerCase() || profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
+            kyc: (ag.header?.kycStatus || ag.summaryCards?.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
+            nomineeName: profile.nomineeName || '—',
+            nomineeRelation: profile.nomineeRelation || '—',
+            nomineePhone: profile.nomineePhone || '—',
+            nomineeEmail: profile.nomineeEmail || '—',
+            bankName: profile.bankName || '—',
+            accountNo: profile.accountNumber || '—',
+            ifsc: profile.ifscCode || '—',
+            commissionOneTime: profile.oneTimeCommission || 0,
+            commissionMonthly: profile.monthlySlab || '—',
+            commissionSpecial: profile.specialCommission || 0,
+            panDocument: profile.panDocument,
+            idProofDocument: profile.idProofDocument,
+            bankProofDocument: profile.bankProofDocument,
+            nomineeProofDocument: profile.nomineeProofDocument,
+            commissionHistory: ag.commissionHistory || []
+          };
+          setAgent(normalizedAg);
+          setLocalStatus(normalizedAg.status);
         }
-
-        // Fetch commission history
-        try {
-          const commissionsData = await apiRequest(`/api/super-admin/agents/${id}/commissions`);
-          setCommissionHistory(Array.isArray(commissionsData) ? commissionsData : (commissionsData.commissions || []));
-        } catch (comErr) {
-          console.error('Failed to load agent commissions:', comErr);
-        }
-
       } catch (err) {
         console.error('Failed to fetch agent details:', err);
         addToast(err.message || 'Failed to load agent details', 'error', 'Error');
       } finally {
         setLoading(false);
+      }
+
+      // Fetch clients and commissions in background without blocking main agent details
+      if (ag) {
+        // Fetch clients
+        (async () => {
+          try {
+            const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
+            const extractClients = (res) => {
+              if (!res) return [];
+              if (Array.isArray(res)) return res;
+              if (res.data) {
+                if (Array.isArray(res.data)) return res.data;
+                if (res.data.clients && Array.isArray(res.data.clients)) return res.data.clients;
+              }
+              if (res.clients && Array.isArray(res.clients)) return res.clients;
+              return [];
+            };
+            setAgentClients(extractClients(clientsData));
+          } catch (cErr) {
+            console.error('Failed to load agent clients:', cErr);
+          }
+        })();
+
+        // Fetch commissions
+        (async () => {
+          try {
+            const commissionsData = await apiRequest(`/api/super-admin/agents/${id}/commissions`);
+            const extractCommissions = (res) => {
+              if (!res) return [];
+              if (Array.isArray(res)) return res;
+              if (res.data) {
+                if (Array.isArray(res.data)) return res.data;
+                if (res.data.commissions && Array.isArray(res.data.commissions)) return res.data.commissions;
+              }
+              if (res.commissions && Array.isArray(res.commissions)) return res.commissions;
+              return [];
+            };
+            setCommissionHistory(extractCommissions(commissionsData));
+          } catch (comErr) {
+            console.error('Failed to load agent commissions:', comErr);
+          }
+        })();
       }
     };
     fetchAgentDetails();
@@ -338,6 +490,35 @@ export default function AgentDetail() {
     }
   };
 
+  const handleVerifyDocument = (docLabel) => {
+    setVerifiedDocs(prev => ({ ...prev, [docLabel]: true }));
+    setDocumentsList(prev => prev.map(d => {
+      if ((d.name || d.label) === docLabel) {
+        return { ...d, status: 'Verified' };
+      }
+      return d;
+    }));
+    addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
+  };
+
+  const handleKycStatusChange = async (newKycStatus) => {
+    try {
+      const formData = new FormData();
+      formData.append('kycStatus', newKycStatus);
+      formData.append('kyc', newKycStatus);
+      
+      await apiRequest(`/api/super-admin/agents/${id}`, {
+        method: 'PATCH',
+        body: formData
+      });
+      setAgent(prev => prev ? { ...prev, kyc: newKycStatus } : null);
+      addToast(`Agent KYC status updated to ${newKycStatus}`, 'success', 'KYC Updated');
+    } catch (err) {
+      console.error('Failed to update KYC status:', err);
+      addToast(err.message || 'Failed to update KYC status', 'error', 'Update Failed');
+    }
+  };
+
   /* ── filtered clients ─── */
   const filteredClients = agentClients.filter(client => {
     if (!clientSearch.trim()) return true;
@@ -351,7 +532,7 @@ export default function AgentDetail() {
   });
 
   /* ── filtered commission ─── */
-  const filteredCommission = agent.commissionHistory.filter(com => {
+  const filteredCommission = commissionHistory.filter(com => {
     if (!commissionSearch.trim()) return true;
     const term = commissionSearch.toLowerCase();
     return (
@@ -364,72 +545,245 @@ export default function AgentDetail() {
 
   const tabs = ['profile', 'clients', 'commission', 'documents'];
 
+  const allDocsVerified = documentsList.length > 0 && documentsList.every(doc => !!verifiedDocs[doc.name || doc.label]);
+
+  const totalCommission = commissionHistory.reduce((sum, com) => sum + (com.amount || 0), 0);
+
   return (
     <div className="kfpl-page">
-      <div className="kfpl-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      {/* Premium Gradient Header Card */}
+      <div className="kfpl-detail-card-header">
         <div className="kfpl-detail-profile">
-          <div className="kfpl-detail-avatar">{(agent.name || agent.fullName || '').split(' ').map(n => n[0]).join('')}</div>
+          <div className="kfpl-detail-avatar">
+            {(agent.name || '').split(' ').map(n => n[0]).join('')}
+          </div>
           <div>
-            <h2 className="kfpl-detail-name">{agent.name || agent.fullName}</h2>
-            <div className="kfpl-detail-id">{agent.agentId}</div>
-            <div className="kfpl-detail-meta">
+            <h2 className="kfpl-detail-name" style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>{agent.name}</h2>
+            <div className="kfpl-detail-id" style={{ marginTop: '2px' }}>ID: {agent.agentId}</div>
+            <div className="kfpl-detail-meta" style={{ marginTop: '8px' }}>
               <Badge status={localStatus}>{localStatus}</Badge>
+              <Badge status={agent.kyc === 'VERIFIED' ? 'active' : 'pending'}>KYC: {agent.kyc}</Badge>
             </div>
           </div>
         </div>
         <div className="kfpl-detail-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => navigate('/agents')}>← Back</button>
-          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ borderColor: 'var(--color-border)', background: localStatus === 'suspended' ? '#EF4444' : 'var(--color-surface)', color: localStatus === 'suspended' ? 'var(--color-white)' : 'var(--color-text-primary)' }} onClick={handleBlockAgent}>
+          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: 'rgba(255, 255, 255, 0.05)' }} onClick={() => navigate('/agents')}>
+            ← Back
+          </button>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'suspended' ? '#EF4444' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleBlockAgent}>
             {localStatus === 'suspended' ? 'Unblock Agent' : 'Block Agent'}
           </button>
-          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ borderColor: 'var(--color-border)', background: localStatus === 'inactive' ? '#F59E0B' : 'var(--color-surface)', color: localStatus === 'inactive' ? 'var(--color-white)' : 'var(--color-text-primary)' }} onClick={handleHoldAgent}>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'inactive' ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleHoldAgent}>
             {localStatus === 'inactive' ? 'Resume Agent' : 'Hold Agent'}
           </button>
           <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={handleDeleteAgent}>
             Delete Agent
           </button>
-          <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" onClick={() => navigate(`/agents/${id}/edit`)}>
+          <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" style={{ background: '#10B981', color: 'var(--color-white)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }} onClick={() => navigate(`/agents/${id}/edit`)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
-            Edit
+            Edit Profile
           </button>
         </div>
       </div>
 
+      {/* KPI summaries dashboard */}
+      <div className="kfpl-detail-kpis-summary">
+        <div className="kfpl-detail-kpi-summary-card">
+          <span className="kfpl-detail-kpi-summary-label">Total Commission</span>
+          <span className="kfpl-detail-kpi-summary-value" style={{ color: 'var(--color-gold-dark)' }}>{formatCurrency(totalCommission)}</span>
+        </div>
+        <div className="kfpl-detail-kpi-summary-card">
+          <span className="kfpl-detail-kpi-summary-label">Total Clients</span>
+          <span className="kfpl-detail-kpi-summary-value">{agent.totalClients} Clients</span>
+        </div>
+        <div className="kfpl-detail-kpi-summary-card">
+          <span className="kfpl-detail-kpi-summary-label">Monthly Slab %</span>
+          <span className="kfpl-detail-kpi-summary-value" style={{ color: '#F59E0B' }}>{agent.commissionMonthly}% Monthly</span>
+        </div>
+        <div className="kfpl-detail-kpi-summary-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <span className="kfpl-detail-kpi-summary-label">KYC Verification</span>
+          <div style={{ marginTop: '4px' }}>
+            {allDocsVerified ? (
+              <select
+                className="kfpl-select"
+                value={agent.kyc || 'PENDING'}
+                onChange={(e) => handleKycStatusChange(e.target.value)}
+                style={{ 
+                  width: '100%',
+                  padding: '4px 8px', 
+                  fontSize: '0.85rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #10B981', 
+                  background: agent.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
+                  color: agent.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="PENDING">Pending</option>
+                <option value="VERIFIED">Verified</option>
+              </select>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <Badge status={agent.kyc === 'VERIFIED' ? 'active' : 'pending'}>{agent.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}</Badge>
+                <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
+                  ⚠️ Verify all docs first
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Segmented Pill Tab Bar */}
       <div className="kfpl-tabs">
         {tabs.map(tab => (
-          <div key={tab} className={`kfpl-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          <div
+            key={tab}
+            className={`kfpl-tab ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tabIcons[tab]}
+            {tab.toUpperCase()}
           </div>
         ))}
       </div>
 
+      {/* Tab Content */}
       {activeTab === 'profile' && (
         <div className="kfpl-detail-grid">
           <div className="kfpl-detail-info-card">
-            <div className="kfpl-detail-info-title">Agent Information</div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Full Name</span><span className="kfpl-detail-info-value">{agent.name || agent.fullName}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Email</span><span className="kfpl-detail-info-value">{agent.email}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Phone</span><span className="kfpl-detail-info-value">{agent.phone}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">PAN</span><span className="kfpl-detail-info-value">{agent.pan}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Join Date</span><span className="kfpl-detail-info-value">{agent.joinDate}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Total Clients</span><span className="kfpl-detail-info-value">{agent.totalClients}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Total Investment</span><span className="kfpl-detail-info-value" style={{ color: 'var(--color-gold-dark)', fontWeight: 700 }}>{formatCurrency(agent.totalInvestment)}</span></div>
+            <div className="kfpl-detail-info-title">Personal Information</div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.user}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Full Name</span>
+                <span className="kfpl-detail-info-item-value">{agent.name}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.mail}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Email Address</span>
+                <span className="kfpl-detail-info-item-value">{agent.email}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.phone}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Phone Number</span>
+                <span className="kfpl-detail-info-item-value">{agent.phone}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.fileText}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">PAN Number</span>
+                <span className="kfpl-detail-info-item-value">{agent.pan}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.calendar}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Join Date</span>
+                <span className="kfpl-detail-info-item-value">{agent.joinDate}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.user}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Total Clients</span>
+                <span className="kfpl-detail-info-item-value">{agent.totalClients} Clients</span>
+              </div>
+            </div>
           </div>
+
           <div className="kfpl-detail-info-card">
-            <div className="kfpl-detail-info-title">Bank & Commission</div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Bank</span><span className="kfpl-detail-info-value">{agent.bankName}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Account No.</span><span className="kfpl-detail-info-value">{agent.accountNo}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">IFSC</span><span className="kfpl-detail-info-value">{agent.ifsc}</span></div>
-            <div className="kfpl-detail-info-row"><span className="kfpl-detail-info-label">Monthly Slab %</span><span className="kfpl-detail-info-value">{agent.commissionMonthly}%</span></div>
+            <div className="kfpl-detail-info-title">KYC, Bank & Nominee Information</div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.shield}</div>
+              <div className="kfpl-detail-info-item-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <div>
+                  <span className="kfpl-detail-info-item-label">KYC Status</span>
+                  <span className="kfpl-detail-info-item-value" style={{ display: 'block', marginTop: '2px' }}>
+                    {!allDocsVerified && (
+                      <Badge status={agent.kyc === 'VERIFIED' ? 'active' : 'pending'}>
+                        {agent.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}
+                      </Badge>
+                    )}
+                  </span>
+                </div>
+                {allDocsVerified ? (
+                  <select
+                    className="kfpl-select"
+                    value={agent.kyc || 'PENDING'}
+                    onChange={(e) => handleKycStatusChange(e.target.value)}
+                    style={{ 
+                      padding: '4px 8px', 
+                      fontSize: '0.8rem', 
+                      borderRadius: '6px', 
+                      border: '1px solid #10B981', 
+                      background: agent.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
+                      color: agent.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="PENDING">Pending</option>
+                    <option value="VERIFIED">Verified</option>
+                  </select>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: '#EF4444', fontWeight: 500 }}>
+                    ⚠️ Verify all docs first
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.landmark}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Bank Name</span>
+                <span className="kfpl-detail-info-item-value">{agent.bankName}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.fileText}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Account No.</span>
+                <span className="kfpl-detail-info-item-value">{agent.accountNo}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.shield}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">IFSC Code</span>
+                <span className="kfpl-detail-info-item-value">{agent.ifsc}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.user}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Nominee Name</span>
+                <span className="kfpl-detail-info-item-value">{agent.nomineeName} ({agent.nomineeRelation})</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.phone}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Nominee Phone</span>
+                <span className="kfpl-detail-info-item-value">{agent.nomineePhone}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {activeTab === 'clients' && (
         <div className="kfpl-table-container">
-          {/* Search bar for clients */}
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
             <div className="kfpl-search" style={{ maxWidth: '360px' }}>
               <svg className="kfpl-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -490,7 +844,6 @@ export default function AgentDetail() {
               <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Click on any period to view detailed breakdown</p>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {/* Search bar */}
               <div className="kfpl-search" style={{ maxWidth: '260px' }}>
                 <svg className="kfpl-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -602,7 +955,7 @@ export default function AgentDetail() {
         </div>
       )}
 
-      {/* ── Commission Detail Modal (light blur like perks) ─── */}
+      {/* ── Commission Detail Modal ─── */}
       {(() => {
         if (!selectedCommission) return null;
         const filteredBreakdown = selectedCommission.breakdown
@@ -623,7 +976,6 @@ export default function AgentDetail() {
               style={{ maxWidth: '640px' }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Modal Header */}
               <div className="kfpl-modal-header">
                 <h3 className="kfpl-modal-title">Commission Statement</h3>
                 <button className="kfpl-modal-close" onClick={() => setSelectedCommission(null)} aria-label="Close modal">
@@ -631,13 +983,11 @@ export default function AgentDetail() {
                 </button>
               </div>
 
-              {/* Modal Body */}
               <div className="kfpl-modal-body">
                 <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
                   {selectedCommission.month} — {agent.name} ({agent.agentId})
                 </p>
 
-                {/* Summary Cards */}
                 <div style={{
                   display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px',
                   marginBottom: '20px',
@@ -676,7 +1026,6 @@ export default function AgentDetail() {
                   </div>
                 </div>
 
-                {/* Client Breakdown */}
                 {filteredBreakdown.length > 0 && (
                   <div>
                     <h4 style={{ fontSize: '0.9rem', fontWeight: 600, margin: '0 0 12px', color: 'var(--color-text-primary)' }}>
@@ -726,7 +1075,6 @@ export default function AgentDetail() {
                 )}
               </div>
 
-              {/* Modal Footer */}
               <div className="kfpl-modal-footer">
                 <button
                   className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
@@ -777,65 +1125,65 @@ export default function AgentDetail() {
           </div>
 
           <div className="kfpl-detail-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-            {[
-              { id: 'pan', label: 'PAN Card Upload', desc: 'Proof of PAN Card Identification', filename: `${agent.name.replace(/\s/g, '_')}_PAN.pdf`, size: '1.1 MB' },
-              { id: 'idproof', label: 'ID Proof Upload', desc: 'Proof of Identity (Aadhaar / Passport / DL)', filename: `${agent.name.replace(/\s/g, '_')}_IDProof.pdf`, size: '2.2 MB' },
-              { id: 'bank', label: 'Bank Details Document', desc: 'Cancelled Cheque or Bank Statement', filename: `${agent.name.replace(/\s/g, '_')}_BankProof.pdf`, size: '1.7 MB' },
-              {
-                id: 'nominee',
-                label: 'Nominee ID Proof',
-                desc: `ID Proof for Nominee (${agent.nominee?.name || 'Assigned Nominee'})`,
-                filename: `${(agent.nominee?.name || 'Nominee').replace(/\s/g, '_')}_ID.pdf`,
-                size: '1.4 MB'
-              }
-            ].map((doc, idx) => (
-              <div key={idx} className="kfpl-detail-info-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', minHeight: '160px', position: 'relative' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                    <div style={{ background: 'var(--color-gold-glow, #fef3c7)', color: 'var(--color-gold-dark, #b38600)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="20" height="20">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                      </svg>
+            {documentsList.map((doc, idx) => {
+              const docName = doc.name || doc.label;
+              const isVerified = !!verifiedDocs[docName];
+              return (
+                <div key={idx} className="kfpl-detail-info-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', minHeight: '160px', position: 'relative' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <div style={{ background: 'var(--color-gold-glow, #fef3c7)', color: 'var(--color-gold-dark, #b38600)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="20" height="20">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{docName}</h4>
+                          {isVerified && <Badge status="active">Verified</Badge>}
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{doc.fileName || 'PDF Document'} • {doc.fileSize || '—'}</span>
+                      </div>
                     </div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{doc.label}</h4>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>PDF Document • {doc.size}</span>
-                    </div>
+                    <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                      {doc.description || doc.desc || 'Uploaded document'}
+                    </p>
                   </div>
-                  <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                    {doc.desc}
-                  </p>
+                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
+                    <button 
+                      className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
+                      style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
+                      onClick={() => setViewingDoc({ label: docName, filename: doc.fileName || 'document.pdf', agentName: doc.holder || agent.name, status: isVerified ? 'Verified' : 'Pending Verification', uploadedAt: doc.uploadedDate || doc.uploaded || agent.joinDate, url: doc.url })}
+                    >
+                      View Document
+                    </button>
+                    <button 
+                      className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
+                      style={{ padding: '6px 10px' }}
+                      onClick={() => {
+                        if (doc.url) {
+                          window.open(doc.url, '_blank');
+                        } else {
+                          const blob = new Blob([`Dummy file content for ${docName} of ${agent.name}`], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = doc.fileName || `${docName.replace(/\s/g, '_')}.pdf`;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        }
+                        addToast(`${docName} downloaded`, 'success', 'Downloaded');
+                      }}
+                      title="Download File"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
-                  <button 
-                    className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
-                    style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
-                    onClick={() => setViewingDoc({ ...doc, agentName: agent.name, status: 'Verified', uploadedAt: agent.joinDate || '2024-01-10' })}
-                  >
-                    View Document
-                  </button>
-                  <button 
-                    className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
-                    style={{ padding: '6px 10px' }}
-                    onClick={() => {
-                      const blob = new Blob([`Dummy file content for ${doc.label} of ${agent.name}`], { type: 'text/plain' });
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = doc.filename;
-                      link.click();
-                      URL.revokeObjectURL(url);
-                      addToast(`${doc.label} downloaded`, 'success', 'Downloaded');
-                    }}
-                    title="Download File"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -883,7 +1231,9 @@ export default function AgentDetail() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                     <span style={{ fontWeight: 600, color: '#64748b' }}>Status:</span>
-                    <span style={{ fontWeight: 700, color: '#10b981' }}>{viewingDoc.status}</span>
+                    <span style={{ fontWeight: 700, color: verifiedDocs[viewingDoc.label] ? '#10b981' : '#f59e0b' }}>
+                      {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                     <span style={{ fontWeight: 600, color: '#64748b' }}>Verification:</span>
@@ -908,16 +1258,32 @@ export default function AgentDetail() {
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
               >Close</button>
+              {!verifiedDocs[viewingDoc.label] && (
+                <button
+                  className="kfpl-btn kfpl-btn--sm"
+                  style={{ background: '#10B981', borderColor: 'transparent', color: '#FFFFFF' }}
+                  onClick={() => {
+                    handleVerifyDocument(viewingDoc.label);
+                    setViewingDoc(null);
+                  }}
+                >
+                  Verify Document
+                </button>
+              )}
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                 onClick={() => {
-                  const blob = new Blob([`Dummy file content for ${viewingDoc.label} of ${viewingDoc.agentName}`], { type: 'text/plain' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = viewingDoc.filename;
-                  link.click();
-                  URL.revokeObjectURL(url);
+                  if (viewingDoc.url) {
+                    window.open(viewingDoc.url, '_blank');
+                  } else {
+                    const blob = new Blob([`Dummy file content for ${viewingDoc.label} of ${viewingDoc.agentName}`], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = viewingDoc.filename;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  }
                   addToast(`${viewingDoc.label} downloaded`, 'success', 'Downloaded');
                   setViewingDoc(null);
                 }}

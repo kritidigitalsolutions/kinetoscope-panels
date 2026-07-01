@@ -21,18 +21,39 @@ export default function AgentList() {
     const fetchAgents = async () => {
       try {
         const data = await apiRequest('/api/super-admin/agents');
-        const raw = Array.isArray(data) ? data : (data.data || data.agents || []);
-        // Normalize field names from backend to what the table columns expect
-        const normalized = raw.map(a => ({
-          ...a,
-          id: a._id || a.id,
-          name: a.name || a.fullName || '',
-          agentId: a.agentId || a.code || '—',
-          joinDate: a.joinDate || (a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN') : '—'),
-          totalClients: a.totalClients ?? a.clientCount ?? 0,
-          totalInvestment: a.totalInvestment ?? 0,
-          status: a.status || 'active',
-        }));
+        
+        const extractAgents = (res) => {
+          if (!res) return [];
+          if (Array.isArray(res)) return res;
+          if (res.data) {
+            if (Array.isArray(res.data)) return res.data;
+            if (res.data.agents && Array.isArray(res.data.agents)) return res.data.agents;
+          }
+          if (res.agents && Array.isArray(res.agents)) return res.agents;
+          return [];
+        };
+
+        const raw = extractAgents(data);
+        
+        // Normalize field names from backend nested user and profile structures
+        const normalized = raw.map(a => {
+          const user = a.user || {};
+          const profile = a.profile || {};
+          return {
+            ...a,
+            id: user._id || profile.userId || a._id || a.id,
+            name: profile.fullName || user.name || '—',
+            email: profile.email || user.email || '—',
+            phone: profile.phone || '—',
+            agentId: user.clientCode || profile.agentId || '—',
+            joinDate: user.createdAt 
+              ? new Date(user.createdAt).toLocaleDateString('en-IN') 
+              : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—'),
+            totalClients: a.clientsCount ?? a.totalClients ?? 0,
+            totalInvestment: a.totalInvestment ?? 0,
+            status: profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
+          };
+        });
         setAgentsList(normalized);
       } catch (err) {
         console.error('Failed to fetch agents:', err);
