@@ -3,13 +3,13 @@
    Description: Form to edit an existing investor/client profile.
                 Fetches client data from API on mount, submits
                 changes via PATCH /api/super-admin/clients/:id.
+                Removes all mock data dependency.
    ============================================================ */
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import Badge from '../../components/ui/Badge';
-import FileDropzone from '../../components/ui/FileDropzone';
 import { apiRequest } from '../../config/apiHelper';
 
 const COMMISSION_PRESETS = [
@@ -24,129 +24,85 @@ export default function EditInvestor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const addToast = useToast();
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [clientData, setClientData] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [dbAgents, setDbAgents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', dob: '', address: '',
     pan: '', bankName: '', accountNo: '', ifsc: '',
     category: '', status: '',
     nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
-    riskProfile: '',
-    citizenship: 'National',
-    nomineeCitizenship: 'National',
+    riskProfile: 'Conservative',
+    citizenship: 'National (Domestic)',
+    nomineeCitizenship: 'National (Domestic)',
     commissionSlab: 'slab-2',
     commissionOneTime: '1.5',
     commissionMonthly: '0.75',
-    roiPercentage: '',
+    roiPercentage: '1.2',
   });
 
-  // Fetch client data on mount
+  // Fetch client details and agents on mount
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await apiRequest(`/api/super-admin/clients/${id}`);
-        const data = res.data || res;
-        setClientData(data);
+        // Fetch Agents list
+        let agentsList = [];
+        try {
+          const agentsRes = await apiRequest('/api/super-admin/agents');
+          agentsList = agentsRes.data || agentsRes.agents || [];
+          if (Array.isArray(agentsList)) {
+            setDbAgents(agentsList);
+          }
+        } catch (e) {
+          console.error('Failed to load agents in edit page:', e);
+        }
 
+        // Fetch client details
+        const clientRes = await apiRequest(`/api/super-admin/clients/${id}`);
+        const data = clientRes.data || clientRes;
         const profile = data.profile || data;
         const header = data.header || {};
-
-        // Format DOB for date input (YYYY-MM-DD)
-        let dobFormatted = '';
-        if (profile.dob) {
-          const d = new Date(profile.dob);
-          if (!isNaN(d.getTime())) {
-            dobFormatted = d.toISOString().split('T')[0];
-          } else {
-            dobFormatted = profile.dob;
-          }
-        }
+        const summary = data.summaryCards || {};
 
         setForm({
           fullName: profile.fullName || profile.name || '',
           email: profile.email || '',
           phone: profile.phone || '',
-          dob: dobFormatted,
+          dob: profile.dob ? new Date(profile.dob).toISOString().split('T')[0] : '',
           address: profile.address || '',
           pan: profile.panNumber || profile.pan || '',
           bankName: profile.bankName || '',
           accountNo: profile.accountNumber || profile.accountNo || '',
           ifsc: profile.ifscCode || profile.ifsc || '',
-          category: (header.tier || profile.tier || profile.category || 'silver').toLowerCase(),
+          category: (header.tier || profile.tier || 'silver').toUpperCase(),
           status: (header.status || profile.status || 'active').toLowerCase(),
           nomineeName: profile.nomineeName || '',
           nomineeRelation: profile.nomineeRelation || '',
           nomineeContact: profile.nomineePhone || '',
           nomineeEmail: profile.nomineeEmail || '',
           riskProfile: profile.riskProfile || 'Conservative',
-          citizenship: (profile.residencyStatus || profile.citizenship || 'National').includes('International') ? 'International' : 'National',
-          nomineeCitizenship: (profile.nomineeResidency || '').includes('International') ? 'International' : 'National',
-          commissionSlab: 'slab-2',
-          commissionOneTime: '1.5',
-          commissionMonthly: '0.75',
-          roiPercentage: profile.monthlyRoi || profile.roiPercentage || 1.2,
+          citizenship: profile.residencyStatus || 'National (Domestic)',
+          nomineeCitizenship: profile.nomineeResidency || 'National (Domestic)',
+          commissionSlab: profile.commissionSlab || 'slab-2',
+          commissionOneTime: String(profile.commissionOneTime || '1.5'),
+          commissionMonthly: String(profile.commissionMonthly || '0.75'),
+          roiPercentage: String(summary.monthlyRoi || profile.monthlyRoi || '1.2'),
         });
 
-        // Set assigned agent
-        if (profile.assignedAgent) {
-          setSelectedAgentId(typeof profile.assignedAgent === 'object' ? profile.assignedAgent._id : profile.assignedAgent);
-        }
+        // Set selected agent ID
+        setSelectedAgentId(profile.assignedAgent || '');
       } catch (err) {
-        console.error('Failed to fetch client for edit:', err);
-        addToast(err.message || 'Failed to load client data', 'error', 'Error');
+        console.error('Failed to fetch client details:', err);
+        addToast(err.message || 'Error fetching client details', 'error', 'Error');
       } finally {
         setLoading(false);
       }
     };
-
-    const fetchAgents = async () => {
-      try {
-        const res = await apiRequest('/api/super-admin/agents');
-        const agents = res.data || res.agents || [];
-        if (Array.isArray(agents)) {
-          setDbAgents(agents);
-        }
-      } catch (err) {
-        console.error('Failed to fetch agents:', err);
-      }
-    };
-
     fetchData();
-    fetchAgents();
   }, [id]);
-
-  if (loading) {
-    return (
-      <div className="kfpl-page">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
-          <div style={{
-            width: '40px', height: '40px', border: '4px solid var(--color-border)',
-            borderTopColor: 'var(--color-primary)', borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading client data...</span>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (!clientData) {
-    return (
-      <div className="kfpl-page">
-        <div className="kfpl-empty">
-          <div className="kfpl-empty-title">Client not found</div>
-          <button className="kfpl-btn kfpl-btn--primary mt-4" onClick={() => navigate('/investors')}>Back to List</button>
-        </div>
-      </div>
-    );
-  }
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -166,40 +122,36 @@ export default function EditInvestor() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
-      alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
+      addToast('Nominee Name is required if relation/contact is provided.', 'error', 'Validation Error');
       return;
     }
 
-    setSaving(true);
+    setSubmitLoading(true);
+
     try {
-      // Build the PATCH payload
+      // Map form fields to API PATCH body structure
       const payload = {
         fullName: form.fullName,
         email: form.email,
         phone: form.phone,
         dob: form.dob,
         address: form.address,
-        riskProfile: form.riskProfile,
-        residencyStatus: form.citizenship === 'International' ? 'International' : 'National (Domestic)',
-        monthlyRoi: parseFloat(form.roiPercentage) || 1.2,
-        status: form.status,
-        tier: form.category.toUpperCase(),
         panNumber: form.pan,
         bankName: form.bankName,
         accountNumber: form.accountNo,
         ifscCode: form.ifsc,
+        tier: form.category,
+        status: form.status,
+        riskProfile: form.riskProfile,
+        residencyStatus: form.citizenship,
+        monthlyRoi: parseFloat(form.roiPercentage) || 1.2,
+        assignedAgent: selectedAgentId || 'Direct Client (No Agent)',
         nomineeName: form.nomineeName,
         nomineeRelation: form.nomineeRelation,
         nomineePhone: form.nomineeContact,
         nomineeEmail: form.nomineeEmail,
-        nomineeResidency: form.nomineeCitizenship === 'International' ? 'International' : 'National (Domestic)',
+        nomineeResidency: form.nomineeCitizenship,
       };
-
-      // Only include assignedAgent if it's a valid MongoDB ID
-      const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(selectedAgentId);
-      if (selectedAgentId && isValidMongoId) {
-        payload.assignedAgent = selectedAgentId;
-      }
 
       await apiRequest(`/api/super-admin/clients/${id}`, {
         method: 'PATCH',
@@ -209,24 +161,31 @@ export default function EditInvestor() {
       addToast(`Client "${form.fullName}" updated successfully!`, 'success', 'Client Updated');
       setTimeout(() => navigate(`/investors/${id}`), 500);
     } catch (err) {
-      addToast(err.message || 'Failed to update client', 'error', 'Update Failed');
+      console.error('Failed to update client:', err);
+      addToast(err.message || 'Failed to update client', 'error', 'Error');
     } finally {
-      setSaving(false);
+      setSubmitLoading(false);
     }
   };
 
-  const profile = clientData?.profile || clientData || {};
-  const header = clientData?.header || {};
-  const displayName = header.clientName || profile.fullName || profile.name || '';
-  const displayCode = header.clientCode || profile.clientCode || profile.clientId || '';
-  const displayTier = (header.tier || profile.tier || profile.category || 'silver').toLowerCase();
+  if (loading) {
+    return (
+      <div className="kfpl-page">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid var(--color-border)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading form details...</span>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="kfpl-page">
       <div className="kfpl-page-header">
         <div className="kfpl-page-header-left">
           <h2 className="kfpl-page-title">Edit Client Profile</h2>
-          <p className="kfpl-page-subtitle">Update details for <strong>{displayName}</strong> — {displayCode}</p>
+          <p className="kfpl-page-subtitle">Update details for <strong>{form.fullName}</strong></p>
         </div>
         <div className="kfpl-page-header-actions">
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={() => navigate(`/investors/${id}`)}>Cancel</button>
@@ -237,9 +196,8 @@ export default function EditInvestor() {
         <div className="kfpl-form-card-header">
           <div>
             <h3 className="kfpl-form-card-title">Personal Information</h3>
-            <p className="kfpl-form-card-subtitle">Client ID: {displayCode}</p>
           </div>
-          <Badge status={displayTier}>{displayTier.toUpperCase()} Tier</Badge>
+          <Badge status={form.category}>{form.category} Tier</Badge>
         </div>
 
         <div className="kfpl-form">
@@ -279,10 +237,10 @@ export default function EditInvestor() {
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Category / Tier</label>
                 <select className="kfpl-input" name="category" value={form.category} onChange={handleChange}>
-                  <option value="silver">Silver</option>
-                  <option value="gold">Gold</option>
-                  <option value="diamond">Diamond</option>
-                  <option value="platinum">Platinum</option>
+                  <option value="SILVER">Silver</option>
+                  <option value="GOLD">Gold</option>
+                  <option value="DIAMOND">Diamond</option>
+                  <option value="PLATINUM">Platinum</option>
                 </select>
               </div>
               <div className="kfpl-input-group">
@@ -292,7 +250,6 @@ export default function EditInvestor() {
                   <option value="inactive">Inactive</option>
                   <option value="suspended">Suspended</option>
                   <option value="blocked">Blocked</option>
-                  <option value="hold">Hold</option>
                 </select>
               </div>
               <div className="kfpl-input-group">
@@ -307,8 +264,8 @@ export default function EditInvestor() {
             <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
               <div className="kfpl-input-group" style={{ flex: 1 }}>
                 <label className="kfpl-input-label">Residency / Citizenship</label>
-                <select className="kfpl-select" name="citizenship" value={form.citizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                  <option value="National">National (Domestic)</option>
+                <select className="kfpl-select" name="citizenship" value={form.citizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }}>
+                  <option value="National (Domestic)">National (Domestic)</option>
                   <option value="International">International</option>
                 </select>
               </div>
@@ -318,13 +275,11 @@ export default function EditInvestor() {
                   className="kfpl-select" 
                   value={selectedAgentId} 
                   onChange={(e) => setSelectedAgentId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }}
                 >
-                  <option value="">Direct Client (No Agent)</option>
+                  <option value="Direct Client (No Agent)">Direct Client (No Agent)</option>
                   {dbAgents.map(a => (
-                    <option key={a._id || a.id} value={a._id || a.id}>
-                      {a.name} ({a.agentId || a.code || 'Agent'})
-                    </option>
+                    <option key={a._id || a.id} value={a._id || a.id}>{a.fullName || a.name}</option>
                   ))}
                 </select>
               </div>
@@ -345,79 +300,30 @@ export default function EditInvestor() {
               </div>
               <div style={{ flex: 1 }}></div>
             </div>
-
-            {selectedAgentId && (
-              <div className="kfpl-form-row-3" style={{ marginTop: '16px' }}>
-                <div className="kfpl-input-group">
-                  <label className="kfpl-input-label">Agent Commission Slab</label>
-                  <select 
-                    className="kfpl-select" 
-                    name="commissionSlab"
-                    value={form.commissionSlab} 
-                    onChange={handleSlabChange}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
-                  >
-                    {COMMISSION_PRESETS.map(preset => (
-                      <option key={preset.id} value={preset.id}>{preset.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="kfpl-input-group">
-                  <label className="kfpl-input-label">One-Time Commission (%)</label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    className="kfpl-input" 
-                    name="commissionOneTime" 
-                    value={form.commissionOneTime} 
-                    onChange={handleChange} 
-                    disabled={form.commissionSlab !== 'custom'} 
-                    placeholder="e.g. 1.5"
-                  />
-                </div>
-                <div className="kfpl-input-group">
-                  <label className="kfpl-input-label">Monthly Commission (%)</label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    className="kfpl-input" 
-                    name="commissionMonthly" 
-                    value={form.commissionMonthly} 
-                    onChange={handleChange} 
-                    disabled={form.commissionSlab !== 'custom'} 
-                    placeholder="e.g. 0.75"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* KYC Document Uploads */}
-          <FileDropzone label={form.citizenship === 'International' ? 'Tax ID Upload' : 'PAN Card Upload'} />
-          <FileDropzone label={form.citizenship === 'International' ? 'International Passport / National ID Card Upload' : 'Aadhaar Card Upload'} />
-          <FileDropzone label="Bank Details Document (Cancelled Cheque / Bank Statement)" />
+          {/* Bank Details */}
           <div className="kfpl-form-section">
-            <div className="kfpl-form-section-title">KYC & Bank Details</div>
-            <div className="kfpl-form-row-3">
+            <div className="kfpl-form-section-title">KYC & Banking Information</div>
+            <div className="kfpl-form-row">
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'Tax ID / SSN Number' : 'PAN Number'}</label>
-                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'Tax ID or SSN' : 'ABCPK1234L'} />
+                <label className="kfpl-input-label">PAN Card / Tax ID <span className="required">*</span></label>
+                <input className="kfpl-input" name="pan" value={form.pan} onChange={handleChange} placeholder="PAN Card or SWIFT code" required />
               </div>
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">Bank Name</label>
-                <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Bank name" />
-              </div>
-              <div className="kfpl-input-group">
-                <label className="kfpl-input-label">Account Number</label>
-                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" />
+                <label className="kfpl-input-label">Bank Name <span className="required">*</span></label>
+                <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="HDFC, SBI, etc." required />
               </div>
             </div>
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}</label>
-                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0001234'} />
+                <label className="kfpl-input-label">Account Number <span className="required">*</span></label>
+                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Bank account number" required />
               </div>
-              <div></div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">IFSC / Routing Code <span className="required">*</span></label>
+                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder="IFSC code" required />
+              </div>
             </div>
           </div>
 
@@ -426,60 +332,43 @@ export default function EditInvestor() {
             <div className="kfpl-form-section-title">Nominee Details</div>
             <div className="kfpl-form-row">
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">Nominee Name {(form.nomineeRelation || form.nomineeContact) && <span className="required">*</span>}</label>
-                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter nominee's full name" required={!!(form.nomineeRelation || form.nomineeContact)} />
+                <label className="kfpl-input-label">Nominee Full Name</label>
+                <input className="kfpl-input" name="nomineeName" value={form.nomineeName} onChange={handleChange} placeholder="Enter nominee name" />
               </div>
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">Nominee Relation</label>
-                <select className="kfpl-select" name="nomineeRelation" value={form.nomineeRelation} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                  <option value="">Select Relation</option>
-                  <option value="Spouse">Spouse</option>
-                  <option value="Parent">Parent</option>
-                  <option value="Child">Child</option>
-                  <option value="Sibling">Sibling</option>
-                  <option value="Other">Other</option>
-                </select>
+                <label className="kfpl-input-label">Relationship to Client</label>
+                <input className="kfpl-input" name="nomineeRelation" value={form.nomineeRelation} onChange={handleChange} placeholder="Spouse, Son, Daughter, etc." />
               </div>
             </div>
-            <div className="kfpl-form-row-3">
+            <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Contact Number</label>
-                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Enter contact number" />
+                <input className="kfpl-input" name="nomineeContact" value={form.nomineeContact} onChange={handleChange} placeholder="Phone number" />
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Nominee Email Address</label>
                 <input className="kfpl-input" name="nomineeEmail" type="email" value={form.nomineeEmail} onChange={handleChange} placeholder="nominee@email.com" />
               </div>
-              <div className="kfpl-input-group">
-                <label className="kfpl-input-label">Nominee Residency / Citizenship</label>
-                <select className="kfpl-select" name="nomineeCitizenship" value={form.nomineeCitizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                  <option value="National">National (Domestic)</option>
-                  <option value="International">International</option>
-                </select>
-              </div>
+            </div>
+            <div className="kfpl-input-group" style={{ marginTop: '16px' }}>
+              <label className="kfpl-input-label">Nominee Residency Status</label>
+              <select className="kfpl-select" name="nomineeCitizenship" value={form.nomineeCitizenship} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }}>
+                <option value="National (Domestic)">National (Domestic)</option>
+                <option value="International">International</option>
+              </select>
             </div>
           </div>
+        </div>
 
-          {/* Nominee ID Proof Upload */}
-          <FileDropzone label={form.nomineeCitizenship === 'International' ? 'Nominee International Passport / National ID Card Upload' : 'Nominee ID Proof (Aadhaar / Driving License / Passport)'} />
-
-          {/* Agreement Upload */}
-          <FileDropzone label="Agreement Document" />
-
-          {/* Actions */}
-          <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate(`/investors/${id}`)}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={saving}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16" style={{ marginRight: '6px' }}>
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2 2h11l5 5v11z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-              </svg>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+        <div className="kfpl-form-footer" style={{ borderTop: '1px solid var(--color-border)', padding: '24px 30px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate(`/investors/${id}`)} disabled={submitLoading}>
+            Cancel
+          </button>
+          <button type="submit" className="kfpl-btn kfpl-btn--primary" style={{ minWidth: '140px' }} disabled={submitLoading}>
+            {submitLoading ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </form>
     </div>
   );
 }
-
-/* ============ END: EditInvestor.jsx ============ */

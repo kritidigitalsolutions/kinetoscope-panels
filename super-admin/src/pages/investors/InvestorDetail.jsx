@@ -1,7 +1,6 @@
 /* ============================================================
    Page: InvestorDetail.jsx
-   Description: Investor profile with tabs for investments, ROI, perks.
-                All data fetched from backend APIs.
+   Description: Investor profile with tabs for investments, ROI, perks
    ============================================================ */
 
 import { useState, useEffect } from 'react';
@@ -17,10 +16,10 @@ import { apiRequest } from '../../config/apiHelper';
 function downloadClientROISingleCSV(roi, client) {
   const rows = [
     ['ROI Payout Statement'],
-    ['Client Name', client.fullName || client.name],
-    ['Client ID', client.clientCode || client.clientId],
-    ['Period / Month', roi.payoutMonth || roi.month],
-    ['Payout Date', roi.processedDate || new Date(roi.paidAt || roi.date || new Date()).toLocaleDateString('en-IN')],
+    ['Client Name', client.name],
+    ['Client ID', client.clientId],
+    ['Period / Month', roi.month],
+    ['Payout Date', new Date(roi.paidAt || roi.date || new Date()).toLocaleDateString('en-IN')],
     ['ROI Amount', `₹${roi.amount}`],
     ['Status', roi.status],
   ];
@@ -29,26 +28,24 @@ function downloadClientROISingleCSV(roi, client) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `ROI_Statement_${(roi.payoutMonth || roi.month || '').replace(/\s/g, '_')}_${(client.fullName || client.name || '').replace(/\s/g, '_')}.csv`;
+  link.download = `ROI_Statement_${roi.month.replace(/\s/g, '_')}_${client.name.replace(/\s/g, '_')}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
 
-function downloadClientROISinglePDF(roi, client, investments) {
-  const clientName = client.fullName || client.name || '';
-  const clientId = client.clientCode || client.clientId || '';
-  const dateStr = roi.processedDate || new Date(roi.paidAt || roi.date || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  const invList = investments || [];
+function downloadClientROISinglePDF(roi, client) {
+  const dateStr = new Date(roi.paidAt || roi.date || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const investments = client.investments || [];
 
-  const rowsHtml = invList.map(inv => {
-    const monthlyROI = Math.round(((inv.investmentAmount || inv.amount || 0) * (inv.roiPercentage || inv.roi || 1)) / 100);
+  const rowsHtml = investments.map(inv => {
+    const monthlyROI = Math.round((inv.amount * (inv.roi || client.roiPercentage || 1)) / 100);
     return `
       <tr>
         <td style="border: 1px solid #CFDDD5; padding: 10px; font-weight: 500;">${inv.segment}</td>
-        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${inv.investmentDate || inv.allocationDate || inv.date || '—'}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${inv.date || '—'}</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">—</td>
-        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: 600;">₹${(inv.investmentAmount || inv.amount || 0).toLocaleString('en-IN')}</td>
-        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right;">${inv.roiPercentage || inv.roi || 1}%</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: 600;">₹${inv.amount.toLocaleString('en-IN')}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right;">${inv.roi || client.roiPercentage || 1}%</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: bold; color: #0F766E;">₹${monthlyROI.toLocaleString('en-IN')}</td>
       </tr>
     `;
@@ -58,7 +55,7 @@ function downloadClientROISinglePDF(roi, client, investments) {
   printWindow.document.write(`
     <html>
     <head>
-      <title>ROI Payout Statement - ${roi.payoutMonth || roi.month} - ${clientName}</title>
+      <title>ROI Payout Statement - ${roi.month} - ${client.name}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #11221A; background-color: #FFFFFF; padding: 40px; margin: 0; }
@@ -101,15 +98,15 @@ function downloadClientROISinglePDF(roi, client, investments) {
         <div class="meta-grid">
           <div class="meta-item">
             <span class="meta-label">Client Name:</span>
-            <span class="meta-val">${clientName}</span>
+            <span class="meta-val">${client.name}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Client ID:</span>
-            <span class="meta-val">${clientId}</span>
+            <span class="meta-val">${client.clientId}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Period:</span>
-            <span class="meta-val">${roi.payoutMonth || roi.month}</span>
+            <span class="meta-val">${roi.month}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Payout Date:</span>
@@ -152,20 +149,18 @@ function downloadClientROISinglePDF(roi, client, investments) {
 }
 
 function downloadAllClientROICSV(roiList, client) {
-  const clientName = client.fullName || client.name || '';
-  const clientId = client.clientCode || client.clientId || '';
   const rows = [
     ['Client ROI Statement History'],
-    ['Client Name', clientName],
-    ['Client ID', clientId],
+    ['Client Name', client.name],
+    ['Client ID', client.clientId],
     [''],
     ['Month', 'ROI Amount', 'Payment Date', 'Status']
   ];
   roiList.forEach(roi => {
     rows.push([
-      roi.payoutMonth || roi.month,
+      roi.month,
       roi.amount,
-      roi.processedDate || roi.paidAt || roi.date || '—',
+      roi.paidAt || roi.date || '—',
       roi.status
     ]);
   });
@@ -174,26 +169,22 @@ function downloadAllClientROICSV(roiList, client) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `ROI_Statement_All_${clientName.replace(/\s/g, '_')}.csv`;
+  link.download = `ROI_Statement_All_${client.name.replace(/\s/g, '_')}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
 
 function downloadAllClientROIPDF(roiList, client) {
-  const clientName = client.fullName || client.name || '';
-  const clientId = client.clientCode || client.clientId || '';
   const printWindow = window.open('', '_blank', 'width=900,height=700');
   const totalReceived = roiList.reduce((sum, r) => sum + r.amount, 0);
 
   const rowsHtml = roiList.map(roi => {
-    const month = roi.payoutMonth || roi.month;
-    const status = roi.status || '';
     return `
       <tr>
-        <td style="border: 1px solid #CFDDD5; padding: 10px; font-weight: 500;">${month}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; font-weight: 500;">${roi.month}</td>
         <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: right; font-weight: bold; color: ${roi.amount > 0 ? '#059669' : '#11221A'};">₹${roi.amount.toLocaleString('en-IN')}</td>
-        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${roi.processedDate || roi.paidAt || roi.date || '—'}</td>
-        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center; color: ${status.toUpperCase() === 'PAID' ? '#059669' : '#D97706'}; font-weight: 600;">${status.toUpperCase()}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center;">${roi.paidAt || roi.date || '—'}</td>
+        <td style="border: 1px solid #CFDDD5; padding: 10px; text-align: center; color: ${roi.status === 'paid' ? '#059669' : '#D97706'}; font-weight: 600;">${roi.status.toUpperCase()}</td>
       </tr>
     `;
   }).join('');
@@ -201,7 +192,7 @@ function downloadAllClientROIPDF(roiList, client) {
   printWindow.document.write(`
     <html>
     <head>
-      <title>ROI Statement History - ${clientName}</title>
+      <title>ROI Statement History - ${client.name}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #11221A; background-color: #FFFFFF; padding: 40px; margin: 0; }
@@ -244,11 +235,11 @@ function downloadAllClientROIPDF(roiList, client) {
         <div class="meta-grid">
           <div class="meta-item">
             <span class="meta-label">Client Name:</span>
-            <span class="meta-val">${clientName}</span>
+            <span class="meta-val">${client.name}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Client ID:</span>
-            <span class="meta-val">${clientId}</span>
+            <span class="meta-val">${client.clientId}</span>
           </div>
           <div class="meta-item" style="grid-column: span 2; border-bottom: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #CFDDD5;">
             <span class="meta-label" style="font-size: 16px; color: #061D13;">Total ROI Received:</span>
@@ -363,18 +354,12 @@ const infoIcons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" /><path d="M4 6v12c0 1.1.9 2 2 2h14v-4" /><path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z" />
     </svg>
+  ),
+  globe: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
   )
-};
-
-const perkIconMap = {
-  phone: '📞',
-  star: '⭐',
-  gift: '🎁',
-  ticket: '🎟️',
-  chart: '📊',
-  film: '🎬',
-  popcorn: '🍿',
-  money: '💰',
 };
 
 const perkDetails = {
@@ -392,18 +377,15 @@ export default function InvestorDetail() {
   const addToast = useToast();
   const [activeTab, setActiveTab] = useState('profile');
 
-  // ── API Data States ──────────────────────────
-  const [clientData, setClientData] = useState(null);
+  // ── API-driven state ─────────────────────────
+  const [loading, setLoading] = useState(true);
+  const [investor, setInvestor] = useState(null);
   const [investmentsData, setInvestmentsData] = useState(null);
   const [roiData, setRoiData] = useState(null);
   const [perksData, setPerksData] = useState(null);
   const [docsData, setDocsData] = useState(null);
-
-  const [loading, setLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
 
-  // ── Local editable states ────────────────────
   const [localRiskProfile, setLocalRiskProfile] = useState('Conservative');
   const [localStatus, setLocalStatus] = useState('active');
   const [localRoiPercentage, setLocalRoiPercentage] = useState(1.2);
@@ -411,45 +393,79 @@ export default function InvestorDetail() {
   const [roiEditStep, setRoiEditStep] = useState(1);
   const [roiInputVal, setRoiInputVal] = useState('1.2');
   const [viewingDoc, setViewingDoc] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [verifiedDocs, setVerifiedDocs] = useState({});
 
-  const tabs = ['profile', 'investments', 'roi', 'perks', 'documents'];
-
-  // ── Fetch client details on mount (API 2) ────
+  // ── API 2: Fetch client details on mount ─────
   useEffect(() => {
-    const fetchClientDetails = async () => {
+    const fetchClient = async () => {
       setLoading(true);
       try {
         const res = await apiRequest(`/api/super-admin/clients/${id}`);
         const data = res.data || res;
-        setClientData(data);
+        console.log('Client detail raw:', data);
 
-        // Initialize local editable states from API response
         const profile = data.profile || data;
-        setLocalRiskProfile(profile.riskProfile || 'Conservative');
-        setLocalStatus((data.header?.status || profile.status || 'active').toLowerCase());
-        setLocalRoiPercentage(profile.monthlyRoi || data.summaryCards?.monthlyRoi || 1.2);
-        setRoiInputVal(String(profile.monthlyRoi || data.summaryCards?.monthlyRoi || 1.2));
+        const header = data.header || {};
+        const summary = data.summaryCards || {};
+
+        // Normalize into a flat investor object for the UI
+        const inv = {
+          _id: id,
+          name: header.clientName || profile.fullName || profile.name || '',
+          clientId: header.clientCode || profile.clientCode || profile.clientId || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          dob: profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN') : '—',
+          address: profile.address || '—',
+          joinDate: profile.joinDate ? new Date(profile.joinDate).toLocaleDateString('en-IN') : '—',
+          category: (header.tier || profile.tier || 'silver').toLowerCase(),
+          status: (header.status || profile.status || 'active').toLowerCase(),
+          kyc: (header.kycStatus || summary.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
+          riskProfile: header.riskProfile || profile.riskProfile || 'Conservative',
+          totalInvestment: summary.totalInvestment || profile.totalPortfolioValue || 0,
+          roiPercentage: summary.monthlyRoi || profile.monthlyRoi || 1.2,
+          activeSegments: summary.activeInvestments || 0,
+          pan: profile.panNumber || profile.pan || '—',
+          aadhaar: profile.aadhaarNumber || profile.aadhaar || '—',
+          residencyStatus: profile.residencyStatus || 'National (Domestic)',
+          bankName: profile.bankName || '—',
+          accountNo: profile.accountNumber || profile.accountNo || '—',
+          ifsc: profile.ifscCode || profile.ifsc || '—',
+          nominee: {
+            name: profile.nomineeName || '',
+            relation: profile.nomineeRelation || '',
+            phone: profile.nomineePhone || '',
+            email: profile.nomineeEmail || '',
+          },
+          // These will be loaded lazily per tab
+          investments: [],
+          roiHistory: [],
+          perks: [],
+        };
+
+        setInvestor(inv);
+        setLocalRiskProfile(inv.riskProfile);
+        setLocalStatus(inv.status);
+        setLocalRoiPercentage(inv.roiPercentage);
+        setRoiInputVal(String(inv.roiPercentage));
       } catch (err) {
-        console.error('Failed to fetch client details:', err);
+        console.error('Failed to fetch client:', err);
         addToast(err.message || 'Failed to load client data', 'error', 'Error');
       } finally {
         setLoading(false);
       }
     };
-    fetchClientDetails();
+    fetchClient();
   }, [id]);
 
   // ── Fetch tab data on tab change ─────────────
   useEffect(() => {
-    if (activeTab === 'investments' && !investmentsData) {
-      fetchInvestments();
-    } else if (activeTab === 'roi' && !roiData) {
-      fetchRoi();
-    } else if (activeTab === 'perks' && !perksData) {
-      fetchPerks();
-    } else if (activeTab === 'documents' && !docsData) {
-      fetchDocuments();
-    }
+    if (activeTab === 'investments' && !investmentsData) fetchInvestments();
+    else if (activeTab === 'roi' && !roiData) fetchRoi();
+    else if (activeTab === 'perks' && !perksData) fetchPerks();
+    else if (activeTab === 'documents' && !docsData) fetchDocuments();
   }, [activeTab]);
 
   // API 3: Investments
@@ -457,13 +473,12 @@ export default function InvestorDetail() {
     setTabLoading(true);
     try {
       const res = await apiRequest(`/api/super-admin/clients/${id}/investments`);
-      setInvestmentsData(res.data || res);
+      const data = res.data || res;
+      setInvestmentsData(data);
     } catch (err) {
       console.error('Failed to fetch investments:', err);
       setInvestmentsData({ investments: [] });
-    } finally {
-      setTabLoading(false);
-    }
+    } finally { setTabLoading(false); }
   };
 
   // API 4: ROI
@@ -471,13 +486,12 @@ export default function InvestorDetail() {
     setTabLoading(true);
     try {
       const res = await apiRequest(`/api/super-admin/clients/${id}/roi`);
-      setRoiData(res.data || res);
+      const data = res.data || res;
+      setRoiData(data);
     } catch (err) {
       console.error('Failed to fetch ROI:', err);
       setRoiData({ roiHistory: [], totalRoiPaid: 0, totalRoiPending: 0 });
-    } finally {
-      setTabLoading(false);
-    }
+    } finally { setTabLoading(false); }
   };
 
   // API 5: Perks
@@ -485,13 +499,12 @@ export default function InvestorDetail() {
     setTabLoading(true);
     try {
       const res = await apiRequest(`/api/super-admin/clients/${id}/perks`);
-      setPerksData(res.data || res);
+      const data = res.data || res;
+      setPerksData(data);
     } catch (err) {
       console.error('Failed to fetch perks:', err);
       setPerksData({ perks: [] });
-    } finally {
-      setTabLoading(false);
-    }
+    } finally { setTabLoading(false); }
   };
 
   // API 6: Documents
@@ -499,126 +512,43 @@ export default function InvestorDetail() {
     setTabLoading(true);
     try {
       const res = await apiRequest(`/api/super-admin/clients/${id}/documents`);
-      setDocsData(res.data || res);
+      const data = res.data || res;
+      setDocsData(data);
+
+      const docs = data.documents || [];
+      const verifiedMap = {};
+      docs.forEach(doc => {
+        const label = doc.name || doc.label;
+        if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified) {
+          verifiedMap[label] = true;
+        }
+      });
+      setVerifiedDocs(verifiedMap);
     } catch (err) {
       console.error('Failed to fetch documents:', err);
       setDocsData({ documents: [] });
-    } finally {
-      setTabLoading(false);
-    }
+    } finally { setTabLoading(false); }
   };
 
-  // ── Helper getters from API data ─────────────
-  const profile = clientData?.profile || clientData || {};
-  const header = clientData?.header || {};
-  const summary = clientData?.summaryCards || {};
-
-  const clientName = header.clientName || profile.fullName || profile.name || '';
-  const clientCode = header.clientCode || profile.clientCode || profile.clientId || '';
-  const tier = (header.tier || profile.tier || profile.category || 'silver').toLowerCase();
-  const kycStatus = header.kycStatus || summary.kycStatus || profile.kycStatus || 'Pending';
-
-  // ── API 7: Edit client (PATCH) ───────────────
   const handleConfirmRoiChange = async () => {
     const newRoi = parseFloat(roiInputVal);
     if (isNaN(newRoi) || newRoi < 0) {
       addToast('Please enter a valid ROI rate', 'error', 'Invalid Rate');
       return;
     }
-    setActionLoading(true);
     try {
       await apiRequest(`/api/super-admin/clients/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ monthlyRoi: newRoi }),
+        body: JSON.stringify({ monthlyRoi: newRoi })
       });
       setLocalRoiPercentage(newRoi);
       addToast(`Monthly ROI % updated to ${newRoi}%`, 'success', 'ROI Updated');
       setShowRoiEditModal(false);
       setRoiEditStep(1);
     } catch (err) {
+      console.error('Failed to update ROI rate:', err);
       addToast(err.message || 'Failed to update ROI rate', 'error', 'Update Failed');
-    } finally {
-      setActionLoading(false);
     }
-  };
-
-  const handleRiskProfileChange = async (e) => {
-    const newRisk = e.target.value;
-    const prevRisk = localRiskProfile;
-    setLocalRiskProfile(newRisk);
-    try {
-      await apiRequest(`/api/super-admin/clients/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ riskProfile: newRisk }),
-      });
-      addToast(`Risk profile updated to ${newRisk}`, 'success', 'Profile Updated');
-    } catch (err) {
-      setLocalRiskProfile(prevRisk);
-      addToast(err.message || 'Failed to update risk profile', 'error', 'Update Failed');
-    }
-  };
-
-  // ── API 8: Update Portal Status ──────────────
-  const handleBlockClient = async () => {
-    const newStatus = localStatus === 'suspended' || localStatus === 'blocked' ? 'active' : 'blocked';
-    const prevStatus = localStatus;
-    setLocalStatus(newStatus);
-    try {
-      await apiRequest(`/api/super-admin/client-portal/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-      });
-      addToast(`Client status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
-    } catch (err) {
-      setLocalStatus(prevStatus);
-      addToast(err.message || 'Failed to update status', 'error', 'Update Failed');
-    }
-  };
-
-  const handleHoldClient = async () => {
-    const newStatus = localStatus === 'inactive' || localStatus === 'hold' ? 'active' : 'hold';
-    const prevStatus = localStatus;
-    setLocalStatus(newStatus);
-    try {
-      await apiRequest(`/api/super-admin/client-portal/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-      });
-      addToast(`Client status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
-    } catch (err) {
-      setLocalStatus(prevStatus);
-      addToast(err.message || 'Failed to update status', 'error', 'Update Failed');
-    }
-  };
-
-  // ── API 9: Delete Client (DISABLED — uncomment apiRequest to enable) ──
-  const handleDeleteClient = async () => {
-    if (!window.confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY delete client "${clientName}"?\n\nThis action will remove the profile, credentials, and all files from the database. This CANNOT be undone.`)) return;
-    if (!window.confirm(`🔴 FINAL CONFIRMATION: Type OK to permanently delete "${clientName}" from the database.`)) return;
-
-    addToast('Delete is disabled to prevent accidental data loss. Contact developer to enable.', 'error', 'Delete Disabled');
-
-    // ⚠️ UNCOMMENT BELOW TO ENABLE REAL DELETE:
-    // setActionLoading(true);
-    // try {
-    //   await apiRequest(`/api/super-admin/clients/${id}`, {
-    //     method: 'DELETE',
-    //   });
-    //   addToast('Client profile deleted successfully!', 'success', 'Client Deleted');
-    //   navigate('/investors');
-    // } catch (err) {
-    //   addToast(err.message || 'Failed to delete client', 'error', 'Delete Failed');
-    // } finally {
-    //   setActionLoading(false);
-    // }
-  };
-
-  // ── Format date helper ───────────────────────
-  const formatDate = (raw) => {
-    if (!raw) return '—';
-    const d = new Date(raw);
-    if (isNaN(d.getTime())) return raw;
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   // ── Loading state ────────────────────────────
@@ -626,19 +556,15 @@ export default function InvestorDetail() {
     return (
       <div className="kfpl-page">
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
-          <div style={{
-            width: '40px', height: '40px', border: '4px solid var(--color-border)',
-            borderTopColor: 'var(--color-primary)', borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading client details...</span>
+          <div style={{ width: '40px', height: '40px', border: '4px solid var(--color-border)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Loading client data...</span>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  if (!clientData) {
+  if (!investor) {
     return (
       <div className="kfpl-page">
         <div className="kfpl-empty">
@@ -649,37 +575,124 @@ export default function InvestorDetail() {
     );
   }
 
-  // ── Tab loading spinner component ────────────
-  const TabSpinner = () => (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px', flexDirection: 'column', gap: '12px' }}>
-      <div style={{
-        width: '32px', height: '32px', border: '3px solid var(--color-border)',
-        borderTopColor: 'var(--color-primary)', borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite'
-      }} />
-      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Loading...</span>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
+  const tabs = ['profile', 'investments', 'roi', 'perks', 'documents'];
 
-  // ── Computed data for ROI tab ────────────────
+  // ROI tab calculations (from API data)
   const roiHistory = roiData?.roiHistory || [];
-  const totalPaidROI = roiData?.totalRoiPaid || roiHistory.filter(r => (r.status || '').toUpperCase() === 'PAID').reduce((sum, r) => sum + (r.amount || 0), 0);
-  const totalPendingROI = roiData?.totalRoiPending || roiHistory.filter(r => (r.status || '').toUpperCase() === 'PENDING').reduce((sum, r) => sum + (r.amount || 0), 0);
+  const totalPaidROI = roiData?.totalRoiPaid || roiHistory.filter(r => (r.status || '').toLowerCase() === 'paid').reduce((sum, r) => sum + (r.amount || 0), 0);
+  const totalPendingROI = roiData?.totalRoiPending || roiHistory.filter(r => (r.status || '').toLowerCase() === 'pending').reduce((sum, r) => sum + (r.amount || 0), 0);
 
-  // ── Computed data for investments tab ────────
+  // Investments from API
   const investmentsList = investmentsData?.investments || [];
 
-  // ── Computed data for perks tab ──────────────
+  // Perks from API
   const perksList = perksData?.perks || [];
 
-  // ── Computed data for documents tab ──────────
+  // Documents from API
   const documentsList = docsData?.documents || [];
+  const allDocsVerified = documentsList.length > 0 && documentsList.every(doc => !!verifiedDocs[doc.name || doc.label]);
 
   const riskMap = {
-    'Conservative': 'active',
-    'Moderate': 'gold',
-    'Aggressive': 'rejected'
+    'Conservative': 'active', // green
+    'Moderate': 'gold',       // gold
+    'Aggressive': 'rejected'   // red
+  };
+
+  const handleRiskProfileChange = async (e) => {
+    const newRisk = e.target.value;
+    try {
+      await apiRequest(`/api/super-admin/clients/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ riskProfile: newRisk })
+      });
+      setLocalRiskProfile(newRisk);
+      addToast(`Risk profile updated to ${newRisk}`, 'success', 'Profile Updated');
+    } catch (err) {
+      console.error('Failed to update risk profile:', err);
+      addToast(err.message || 'Failed to update risk profile', 'error', 'Update Failed');
+    }
+  };
+
+  const handleBlockClient = async () => {
+    const newStatus = localStatus === 'suspended' ? 'active' : 'suspended';
+    try {
+      await apiRequest(`/api/super-admin/client-portal/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus })
+      });
+      setLocalStatus(newStatus);
+      addToast(`Client status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+    } catch (err) {
+      console.error('Failed to toggle block status:', err);
+      addToast(err.message || 'Failed to change portal status', 'error', 'Status Change Failed');
+    }
+  };
+
+  const handleHoldClient = async () => {
+    const newStatus = localStatus === 'inactive' ? 'active' : 'inactive';
+    try {
+      await apiRequest(`/api/super-admin/client-portal/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus })
+      });
+      setLocalStatus(newStatus);
+      addToast(`Client status set to ${newStatus.toUpperCase()}`, 'info', 'Status Changed');
+    } catch (err) {
+      console.error('Failed to toggle hold status:', err);
+      addToast(err.message || 'Failed to change portal status', 'error', 'Status Change Failed');
+    }
+  };
+
+  const handleDeleteClient = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      await apiRequest(`/api/super-admin/clients/${id}`, {
+        method: 'DELETE'
+      });
+      addToast('Client profile deleted successfully!', 'success', 'Client Deleted');
+      setShowDeleteModal(false);
+      navigate('/investors');
+    } catch (err) {
+      console.error('Failed to delete client:', err);
+      addToast(err.message || 'Failed to delete client', 'error', 'Deletion Failed');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleVerifyDocument = (docLabel) => {
+    setVerifiedDocs(prev => ({ ...prev, [docLabel]: true }));
+    if (docsData && docsData.documents) {
+      const updatedDocs = docsData.documents.map(d => {
+        if ((d.name || d.label) === docLabel) {
+          return { ...d, status: 'Verified' };
+        }
+        return d;
+      });
+      setDocsData({ ...docsData, documents: updatedDocs });
+    }
+    addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
+  };
+
+  const handleKycStatusChange = async (newKycStatus) => {
+    try {
+      await apiRequest(`/api/super-admin/clients/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+          kycStatus: newKycStatus,
+          kyc: newKycStatus
+        })
+      });
+      setInvestor(prev => prev ? { ...prev, kyc: newKycStatus } : null);
+      addToast(`Client KYC status updated to ${newKycStatus}`, 'success', 'KYC Updated');
+    } catch (err) {
+      console.error('Failed to update KYC status:', err);
+      addToast(err.message || 'Failed to update KYC status', 'error', 'Update Failed');
+    }
   };
 
   return (
@@ -688,13 +701,13 @@ export default function InvestorDetail() {
       <div className="kfpl-detail-card-header">
         <div className="kfpl-detail-profile">
           <div className="kfpl-detail-avatar">
-            {clientName.split(' ').map(n => n[0]).join('')}
+            {investor.name.split(' ').map(n => n[0]).join('')}
           </div>
           <div>
-            <h2 className="kfpl-detail-name" style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>{clientName}</h2>
-            <div className="kfpl-detail-id" style={{ marginTop: '2px' }}>ID: {clientCode}</div>
+            <h2 className="kfpl-detail-name" style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>{investor.name}</h2>
+            <div className="kfpl-detail-id" style={{ marginTop: '2px' }}>ID: {investor.clientId}</div>
             <div className="kfpl-detail-meta" style={{ marginTop: '8px' }}>
-              <Badge status={tier}>{tier.toUpperCase()} Tier</Badge>
+              <Badge status={investor.category}>{investor.category} Tier</Badge>
               <Badge status={localStatus}>{localStatus}</Badge>
               <Badge status={riskMap[localRiskProfile]}>{localRiskProfile} Risk</Badge>
             </div>
@@ -704,13 +717,13 @@ export default function InvestorDetail() {
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: 'rgba(255, 255, 255, 0.05)' }} onClick={() => navigate('/investors')}>
             ← Back
           </button>
-          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'suspended' || localStatus === 'blocked' ? '#EF4444' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleBlockClient} disabled={actionLoading}>
-            {localStatus === 'suspended' || localStatus === 'blocked' ? 'Unblock Client' : 'Block Client'}
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'suspended' ? '#EF4444' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleBlockClient}>
+            {localStatus === 'suspended' ? 'Unblock Client' : 'Block Client'}
           </button>
-          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'inactive' || localStatus === 'hold' ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleHoldClient} disabled={actionLoading}>
-            {localStatus === 'inactive' || localStatus === 'hold' ? 'Resume Client' : 'Hold Client'}
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'inactive' ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleHoldClient}>
+            {localStatus === 'inactive' ? 'Resume Client' : 'Hold Client'}
           </button>
-          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={handleDeleteClient} disabled={actionLoading}>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={() => setShowDeleteModal(true)}>
             Delete Client
           </button>
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" style={{ background: '#10B981', color: 'var(--color-white)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }} onClick={() => navigate(`/investors/${id}/edit`)}>
@@ -726,21 +739,49 @@ export default function InvestorDetail() {
       <div className="kfpl-detail-kpis-summary">
         <div className="kfpl-detail-kpi-summary-card">
           <span className="kfpl-detail-kpi-summary-label">Total Investment</span>
-          <span className="kfpl-detail-kpi-summary-value" style={{ color: '#10B981' }}>{formatCurrency(summary.totalInvestment || profile.totalPortfolioValue || 0)}</span>
+          <span className="kfpl-detail-kpi-summary-value" style={{ color: '#10B981' }}>{formatCurrency(investor.totalInvestment)}</span>
         </div>
         <div className="kfpl-detail-kpi-summary-card">
           <span className="kfpl-detail-kpi-summary-label">Active Segments</span>
-          <span className="kfpl-detail-kpi-summary-value">{summary.activeInvestments || 0} Segments</span>
+          <span className="kfpl-detail-kpi-summary-value">{investor.activeSegments || investmentsList.filter(i => (i.status || '').toUpperCase() === 'ACTIVE').length} Segments</span>
         </div>
         <div className="kfpl-detail-kpi-summary-card">
           <span className="kfpl-detail-kpi-summary-label">Monthly ROI %</span>
           <span className="kfpl-detail-kpi-summary-value" style={{ color: '#F59E0B' }}>{localRoiPercentage}% Monthly</span>
         </div>
-        <div className="kfpl-detail-kpi-summary-card">
+        <div className="kfpl-detail-kpi-summary-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <span className="kfpl-detail-kpi-summary-label">KYC Verification</span>
-          <span className="kfpl-detail-kpi-summary-value">
-            <Badge status={kycStatus.toUpperCase() === 'VERIFIED' ? 'active' : 'pending'}>{kycStatus}</Badge>
-          </span>
+          <div style={{ marginTop: '4px' }}>
+            {allDocsVerified ? (
+              <select
+                className="kfpl-select"
+                value={investor.kyc || 'PENDING'}
+                onChange={(e) => handleKycStatusChange(e.target.value)}
+                style={{ 
+                  width: '100%',
+                  padding: '4px 8px', 
+                  fontSize: '0.85rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #10B981', 
+                  background: investor.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
+                  color: investor.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="PENDING">Pending</option>
+                <option value="VERIFIED">Verified</option>
+              </select>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <Badge status={investor.kyc === 'VERIFIED' ? 'active' : 'pending'}>{investor.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}</Badge>
+                <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
+                  ⚠️ Verify all docs first
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -767,42 +808,42 @@ export default function InvestorDetail() {
               <div className="kfpl-detail-info-item-icon">{infoIcons.user}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Full Name</span>
-                <span className="kfpl-detail-info-item-value">{profile.fullName || profile.name || '—'}</span>
+                <span className="kfpl-detail-info-item-value">{investor.name}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.mail}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Email Address</span>
-                <span className="kfpl-detail-info-item-value">{profile.email || '—'}</span>
+                <span className="kfpl-detail-info-item-value">{investor.email}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.phone}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Phone Number</span>
-                <span className="kfpl-detail-info-item-value">{profile.phone || '—'}</span>
+                <span className="kfpl-detail-info-item-value">{investor.phone}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.calendar}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Date of Birth</span>
-                <span className="kfpl-detail-info-item-value">{formatDate(profile.dob)}</span>
+                <span className="kfpl-detail-info-item-value">{investor.dob}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.mapPin}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Address</span>
-                <span className="kfpl-detail-info-item-value">{profile.address || '—'}</span>
+                <span className="kfpl-detail-info-item-value">{investor.address}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.calendar}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Join Date</span>
-                <span className="kfpl-detail-info-item-value">{formatDate(profile.joinDate || profile.createdAt)}</span>
+                <span className="kfpl-detail-info-item-value">{investor.joinDate}</span>
               </div>
             </div>
           </div>
@@ -811,11 +852,42 @@ export default function InvestorDetail() {
             <div className="kfpl-detail-info-title">KYC & Financial Information</div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.shield}</div>
-              <div className="kfpl-detail-info-item-content">
-                <span className="kfpl-detail-info-item-label">KYC Status</span>
-                <span className="kfpl-detail-info-item-value">
-                  <Badge status={kycStatus.toUpperCase() === 'VERIFIED' ? 'active' : 'pending'}>{kycStatus}</Badge>
-                </span>
+              <div className="kfpl-detail-info-item-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <div>
+                  <span className="kfpl-detail-info-item-label">KYC Status</span>
+                  <span className="kfpl-detail-info-item-value" style={{ display: 'block', marginTop: '2px' }}>
+                    {!allDocsVerified && (
+                      <Badge status={investor.kyc === 'VERIFIED' ? 'active' : 'pending'}>
+                        {investor.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}
+                      </Badge>
+                    )}
+                  </span>
+                </div>
+                {allDocsVerified ? (
+                  <select
+                    className="kfpl-select"
+                    value={investor.kyc || 'PENDING'}
+                    onChange={(e) => handleKycStatusChange(e.target.value)}
+                    style={{ 
+                      padding: '4px 8px', 
+                      fontSize: '0.8rem', 
+                      borderRadius: '6px', 
+                      border: '1px solid #10B981', 
+                      background: investor.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
+                      color: investor.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="PENDING">Pending</option>
+                    <option value="VERIFIED">Verified</option>
+                  </select>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: '#EF4444', fontWeight: 500 }}>
+                    ⚠️ Verify all docs first
+                  </span>
+                )}
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
@@ -861,38 +933,58 @@ export default function InvestorDetail() {
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.globe}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Residency Status</span>
+                <span className="kfpl-detail-info-item-value">{investor.residencyStatus}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.fileText}</div>
               <div className="kfpl-detail-info-item-content">
-                <span className="kfpl-detail-info-item-label">PAN Card Number</span>
-                <span className="kfpl-detail-info-item-value">{profile.panNumber || profile.pan || '—'}</span>
+                <span className="kfpl-detail-info-item-label">
+                  {investor.residencyStatus === 'International' ? 'Tax ID / SSN Number' : 'PAN Card Number'}
+                </span>
+                <span className="kfpl-detail-info-item-value">{investor.pan}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.fileText}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">
+                  {investor.residencyStatus === 'International' ? 'Passport / National ID Number' : 'Aadhaar Number'}
+                </span>
+                <span className="kfpl-detail-info-item-value">{investor.aadhaar}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.landmark}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Bank Name</span>
-                <span className="kfpl-detail-info-item-value">{profile.bankName || '—'}</span>
+                <span className="kfpl-detail-info-item-value">{investor.bankName}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.fileText}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Account No.</span>
-                <span className="kfpl-detail-info-item-value">{profile.accountNumber || profile.accountNo || '—'}</span>
+                <span className="kfpl-detail-info-item-value">{investor.accountNo}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon">{infoIcons.shield}</div>
               <div className="kfpl-detail-info-item-content">
-                <span className="kfpl-detail-info-item-label">IFSC Code</span>
-                <span className="kfpl-detail-info-item-value">{profile.ifscCode || profile.ifsc || '—'}</span>
+                <span className="kfpl-detail-info-item-label">
+                  {investor.residencyStatus === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}
+                </span>
+                <span className="kfpl-detail-info-item-value">{investor.ifsc}</span>
               </div>
             </div>
             <div className="kfpl-detail-info-row-item">
               <div className="kfpl-detail-info-item-icon" style={{ background: '#ECFDF5', color: '#10B981' }}>{infoIcons.wallet}</div>
               <div className="kfpl-detail-info-item-content">
                 <span className="kfpl-detail-info-item-label">Total Portfolio Value</span>
-                <span className="kfpl-detail-info-item-value" style={{ color: '#10B981', fontWeight: 800 }}>{formatCurrency(summary.totalInvestment || profile.totalPortfolioValue || 0)}</span>
+                <span className="kfpl-detail-info-item-value" style={{ color: '#10B981', fontWeight: 800 }}>{formatCurrency(investor.totalInvestment)}</span>
               </div>
             </div>
           </div>
@@ -900,46 +992,187 @@ export default function InvestorDetail() {
       )}
 
       {activeTab === 'investments' && (
-        tabLoading && !investmentsData ? <TabSpinner /> : (
-          <div className="kfpl-table-container">
-            <div className="kfpl-table-toolbar">
-              <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Active Segment Distribution</h3>
+        <div className="kfpl-table-container">
+          <div className="kfpl-table-toolbar">
+            <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Active Segment Distribution</h3>
+          </div>
+          <div className="kfpl-table-scroll">
+            <table className="kfpl-table">
+              <thead>
+                <tr>
+                  <th>Segment</th>
+                  <th>Amount</th>
+                  <th>ROI Rate</th>
+                  <th>Risk Level</th>
+                  <th>Allocation Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tabLoading ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>Loading investments...</td></tr>
+                ) : investmentsList.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>No investments found.</td></tr>
+                ) : investmentsList.map(inv => (
+                  <tr key={inv._id || inv.id}>
+                    <td className="kfpl-table-cell-primary">{inv.segment}</td>
+                    <td className="font-semibold" style={{ color: '#10B981' }}>{formatCurrency(inv.investmentAmount || inv.amount || 0)}</td>
+                    <td>{inv.roiPercentage || inv.roi || localRoiPercentage}%</td>
+                    <td>
+                      <Badge status={inv.riskPercentage > 50 ? 'rejected' : inv.riskPercentage > 25 ? 'pending' : 'active'}>
+                        {inv.riskPercentage > 50 ? 'High' : inv.riskPercentage > 25 ? 'Medium' : 'Low'}
+                      </Badge>
+                    </td>
+                    <td>{inv.allocationDate ? new Date(inv.allocationDate).toLocaleDateString('en-IN') : inv.investmentDate ? new Date(inv.investmentDate).toLocaleDateString('en-IN') : '—'}</td>
+                    <td><Badge status={(inv.status || 'active').toLowerCase()}>{inv.status || 'Active'}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'roi' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* ROI Stats row */}
+          <div className="kfpl-grid-2col" style={{ gap: '20px' }}>
+            <div className="kfpl-detail-kpi-summary-card" style={{ borderLeft: '4px solid #10B981' }}>
+              <span className="kfpl-detail-kpi-summary-label">Total ROI Paid</span>
+              <span className="kfpl-detail-kpi-summary-value" style={{ color: '#10B981' }}>{formatCurrency(totalPaidROI)}</span>
             </div>
+            <div className="kfpl-detail-kpi-summary-card" style={{ borderLeft: '4px solid #F59E0B' }}>
+              <span className="kfpl-detail-kpi-summary-label">Total ROI Pending</span>
+              <span className="kfpl-detail-kpi-summary-value" style={{ color: '#F59E0B' }}>{formatCurrency(totalPendingROI)}</span>
+            </div>
+          </div>
+
+          <div className="kfpl-table-container">
+            <div className="kfpl-table-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>ROI Payout Statements</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Export CSV or print PDF statements for client's ROI returns</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
+                  onClick={() => {
+                    setRoiInputVal(String(localRoiPercentage));
+                    setRoiEditStep(1);
+                    setShowRoiEditModal(true);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit ROI Rate
+                </button>
+                <button
+                  className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                  onClick={() => {
+                    downloadAllClientROICSV(roiHistory, investor);
+                    addToast('All CSV statements downloaded', 'success', 'Download Complete');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  CSV (All)
+                </button>
+                <button
+                  className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                  onClick={() => {
+                    downloadAllClientROIPDF(roiHistory, investor);
+                    addToast('All PDF statements generated', 'success', 'Download Complete');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  PDF (All)
+                </button>
+              </div>
+            </div>
+
             <div className="kfpl-table-scroll">
               <table className="kfpl-table">
                 <thead>
                   <tr>
-                    <th>Segment</th>
-                    <th>Amount</th>
+                    <th>Payout Month</th>
                     <th>ROI Rate</th>
-                    <th>Risk Level</th>
-                    <th>Allocation Date</th>
-                    <th>Status</th>
+                    <th>Payout Amount</th>
+                    <th>Payout Status</th>
+                    <th>Processed Date</th>
+                    <th style={{ textAlign: 'center' }}>Download Statement</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {investmentsList.length === 0 ? (
+                  {tabLoading ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>Loading ROI data...</td></tr>
+                  ) : roiHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>
-                        No investments found for this client.
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>
+                        No ROI payout records found for this client.
                       </td>
                     </tr>
                   ) : (
-                    investmentsList.map((inv, idx) => (
-                      <tr key={inv._id || idx}>
-                        <td className="kfpl-table-cell-primary">{inv.segment}</td>
-                        <td className="font-semibold" style={{ color: '#10B981' }}>{formatCurrency(inv.investmentAmount || inv.amount || 0)}</td>
-                        <td>{inv.roiPercentage || inv.roi || 0}%</td>
-                        <td>
-                          <Badge status={
-                            (inv.riskPercentage || 0) >= 50 ? 'rejected' :
-                            (inv.riskPercentage || 0) >= 25 ? 'pending' : 'active'
-                          }>
-                            {(inv.riskPercentage || 0) >= 50 ? 'High' : (inv.riskPercentage || 0) >= 25 ? 'Medium' : 'Low'}
-                          </Badge>
+                    roiHistory.map(roi => (
+                      <tr key={roi._id || roi.id}>
+                        <td className="kfpl-table-cell-primary">{roi.payoutMonth || roi.month}</td>
+                        <td><strong>{roi.roiRate || roi.roiPercentage || localRoiPercentage || 1.2}%</strong></td>
+                        <td className="font-semibold">{formatCurrency(roi.amount || 0)}</td>
+                        <td><Badge status={(roi.status || 'pending').toLowerCase()}>{roi.status}</Badge></td>
+                        <td>{roi.processedDate || roi.paidAt || '—'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'center' }}>
+                            <button
+                              className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                              onClick={() => {
+                                downloadClientROISingleCSV({...roi, month: roi.payoutMonth || roi.month}, investor);
+                                addToast(`Statement CSV downloaded for ${roi.payoutMonth || roi.month}`, 'success', 'Downloaded');
+                              }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '4px 8px' }}
+                              title="Download CSV"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+                              </svg>
+                              CSV
+                            </button>
+                            <button
+                              className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                              onClick={() => {
+                                downloadClientROISinglePDF({...roi, month: roi.payoutMonth || roi.month}, investor);
+                                addToast(`Statement PDF generated for ${roi.payoutMonth || roi.month}`, 'success', 'Downloaded');
+                              }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '4px 8px' }}
+                              title="Download PDF"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+                              </svg>
+                              PDF
+                            </button>
+                          </div>
                         </td>
-                        <td>{formatDate(inv.allocationDate || inv.investmentDate || inv.date)}</td>
-                        <td><Badge status={(inv.status || 'active').toLowerCase()}>{inv.status || 'Active'}</Badge></td>
+                        <td>
+                          {(roi.status || '').toLowerCase() === 'pending' && (
+                            <button
+                              className="kfpl-btn kfpl-btn--success kfpl-btn--sm"
+                              style={{ background: '#10B981', borderColor: 'transparent', color: 'var(--color-white)' }}
+                              onClick={() => addToast(`ROI payout of ${formatCurrency(roi.amount || 0)} for ${roi.payoutMonth || roi.month} marked as paid`, 'success', 'ROI Paid')}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" style={{ marginRight: '4px' }}>
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Mark Paid
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -947,312 +1180,126 @@ export default function InvestorDetail() {
               </table>
             </div>
           </div>
-        )
-      )}
-
-      {activeTab === 'roi' && (
-        tabLoading && !roiData ? <TabSpinner /> : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* ROI Stats row */}
-            <div className="kfpl-grid-2col" style={{ gap: '20px' }}>
-              <div className="kfpl-detail-kpi-summary-card" style={{ borderLeft: '4px solid #10B981' }}>
-                <span className="kfpl-detail-kpi-summary-label">Total ROI Paid</span>
-                <span className="kfpl-detail-kpi-summary-value" style={{ color: '#10B981' }}>{formatCurrency(totalPaidROI)}</span>
-              </div>
-              <div className="kfpl-detail-kpi-summary-card" style={{ borderLeft: '4px solid #F59E0B' }}>
-                <span className="kfpl-detail-kpi-summary-label">Total ROI Pending</span>
-                <span className="kfpl-detail-kpi-summary-value" style={{ color: '#F59E0B' }}>{formatCurrency(totalPendingROI)}</span>
-              </div>
-            </div>
-
-            <div className="kfpl-table-container">
-              <div className="kfpl-table-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>ROI Payout Statements</h3>
-                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Export CSV or print PDF statements for client's ROI returns</p>
-                </div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <button
-                    className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
-                    onClick={() => {
-                      setRoiInputVal(String(localRoiPercentage));
-                      setRoiEditStep(1);
-                      setShowRoiEditModal(true);
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Edit ROI Rate
-                  </button>
-                  <button
-                    className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
-                    onClick={() => {
-                      downloadAllClientROICSV(roiHistory, { fullName: clientName, clientCode });
-                      addToast('All CSV statements downloaded', 'success', 'Download Complete');
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    CSV (All)
-                  </button>
-                  <button
-                    className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
-                    onClick={() => {
-                      downloadAllClientROIPDF(roiHistory, { fullName: clientName, clientCode });
-                      addToast('All PDF statements generated', 'success', 'Download Complete');
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    PDF (All)
-                  </button>
-                </div>
-              </div>
-
-              <div className="kfpl-table-scroll">
-                <table className="kfpl-table">
-                  <thead>
-                    <tr>
-                      <th>Payout Month</th>
-                      <th>ROI Rate</th>
-                      <th>Payout Amount</th>
-                      <th>Payout Status</th>
-                      <th>Processed Date</th>
-                      <th style={{ textAlign: 'center' }}>Download Statement</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roiHistory.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>
-                          No ROI payout records found for this client.
-                        </td>
-                      </tr>
-                    ) : (
-                      roiHistory.map((roi, idx) => (
-                        <tr key={roi._id || idx}>
-                          <td className="kfpl-table-cell-primary">{roi.payoutMonth || roi.month}</td>
-                          <td><strong>{roi.roiRate || `${localRoiPercentage}%`}</strong></td>
-                          <td className="font-semibold">{formatCurrency(roi.amount)}</td>
-                          <td><Badge status={(roi.status || '').toLowerCase()}>{roi.status}</Badge></td>
-                          <td>{roi.processedDate || '—'}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'center' }}>
-                              <button
-                                className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
-                                onClick={() => {
-                                  downloadClientROISingleCSV(roi, { fullName: clientName, clientCode });
-                                  addToast(`Statement CSV downloaded for ${roi.payoutMonth || roi.month}`, 'success', 'Downloaded');
-                                }}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '4px 8px' }}
-                                title="Download CSV"
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12">
-                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
-                                </svg>
-                                CSV
-                              </button>
-                              <button
-                                className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
-                                onClick={() => {
-                                  downloadClientROISinglePDF(roi, { fullName: clientName, clientCode }, investmentsList);
-                                  addToast(`Statement PDF generated for ${roi.payoutMonth || roi.month}`, 'success', 'Downloaded');
-                                }}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '4px 8px' }}
-                                title="Download PDF"
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12">
-                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
-                                </svg>
-                                PDF
-                              </button>
-                            </div>
-                          </td>
-                          <td>
-                            {(roi.status || '').toUpperCase() === 'PENDING' && (
-                              <button
-                                className="kfpl-btn kfpl-btn--success kfpl-btn--sm"
-                                style={{ background: '#10B981', borderColor: 'transparent', color: 'var(--color-white)' }}
-                                onClick={() => addToast(`ROI payout of ${formatCurrency(roi.amount)} for ${roi.payoutMonth || roi.month} marked as paid`, 'success', 'ROI Paid')}
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" style={{ marginRight: '4px' }}>
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                Mark Paid
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )
+        </div>
       )}
 
       {activeTab === 'perks' && (
-        tabLoading && !perksData ? <TabSpinner /> : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="kfpl-page-header" style={{ marginBottom: '4px' }}>
-              <div>
-                <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Assigned Loyalty Perks</h3>
-                <p className="kfpl-page-subtitle" style={{ margin: '2px 0 0 0' }}>Client benefits based on their {tier.toUpperCase()} recognition tier</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="kfpl-page-header" style={{ marginBottom: '4px' }}>
+            <div>
+              <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Assigned Loyalty Perks</h3>
+              <p className="kfpl-page-subtitle" style={{ margin: '2px 0 0 0' }}>Client benefits based on their {investor.category} recognition tier</p>
+            </div>
+          </div>
+
+          {tabLoading ? (
+            <div className="kfpl-detail-info-card"><div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>Loading perks...</div></div>
+          ) : perksList.length === 0 ? (
+            <div className="kfpl-detail-info-card">
+              <div className="kfpl-empty" style={{ padding: '40px' }}>
+                <div className="kfpl-empty-title">No perks assigned</div>
+                <div className="kfpl-empty-text">Upgrade client recognition tier or assign custom perks.</div>
               </div>
             </div>
-
-            {perksList.length === 0 ? (
-              <div className="kfpl-detail-info-card">
-                <div className="kfpl-empty" style={{ padding: '40px' }}>
-                  <div className="kfpl-empty-title">No perks assigned</div>
-                  <div className="kfpl-empty-text">Upgrade client recognition tier or assign custom perks.</div>
-                </div>
-              </div>
-            ) : (
-              <div className="kfpl-perks-grid">
-                {perksList.map((perk, i) => {
-                  // Support both API format (object with title/description) and legacy format (string name)
-                  const perkTitle = typeof perk === 'string' ? perk : (perk.title || '');
-                  const perkDesc = typeof perk === 'string'
-                    ? (perkDetails[perk]?.desc || 'Assigned platform benefit and VIP privileges.')
-                    : (perk.description || perkDetails[perkTitle]?.desc || 'Assigned platform benefit and VIP privileges.');
-                  const perkBadge = typeof perk === 'string' ? tier : (perk.badge || tier);
-                  const perkIcon = typeof perk === 'string'
-                    ? (perkDetails[perk]?.icon || '⭐')
-                    : (perkIconMap[perk.icon] || perkDetails[perkTitle]?.icon || '⭐');
-
-                  return (
-                    <div key={i} className="kfpl-perk-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                      <div className="kfpl-perk-tier-stripe" style={{ background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)' }} />
-                      <div className="kfpl-perk-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 0' }}>
-                        <div className="kfpl-perk-icon-wrap" style={{ background: 'var(--color-gold-light)', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>
-                          <span style={{ fontSize: '1.25rem' }}>{perkIcon}</span>
-                        </div>
-                        <Badge status={perkBadge}>{(typeof perkBadge === 'string' ? perkBadge : tier).toUpperCase()}</Badge>
+          ) : (
+            <div className="kfpl-perks-grid">
+              {perksList.map((perk, i) => {
+                const perkName = perk.title || perk.name || perk;
+                const perkDesc = perk.description || perkDetails[perkName]?.desc || 'Assigned platform benefit and VIP privileges.';
+                const perkIcon = perkDetails[perkName]?.icon || '⭐';
+                const perkBadge = (perk.badge || investor.category || 'silver').toLowerCase();
+                return (
+                  <div key={i} className="kfpl-perk-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="kfpl-perk-tier-stripe" style={{ background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)' }} />
+                    <div className="kfpl-perk-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 0' }}>
+                      <div className="kfpl-perk-icon-wrap" style={{ background: 'var(--color-gold-light)', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '1.25rem' }}>{perkIcon}</span>
                       </div>
-                      <div className="kfpl-perk-card-body" style={{ flex: 1, padding: '16px 20px' }}>
-                        <h4 className="kfpl-perk-card-title" style={{ margin: '0 0 8px 0', fontSize: '1rem', fontWeight: 700 }}>{perkTitle}</h4>
-                        <p className="kfpl-perk-card-desc" style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5 }}>
-                          {perkDesc}
-                        </p>
-                      </div>
+                      <Badge status={perkBadge}>{perkBadge}</Badge>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )
+                    <div className="kfpl-perk-card-body" style={{ flex: 1, padding: '16px 20px' }}>
+                      <h4 className="kfpl-perk-card-title" style={{ margin: '0 0 8px 0', fontSize: '1rem', fontWeight: 700 }}>{perkName}</h4>
+                      <p className="kfpl-perk-card-desc" style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5 }}>
+                        {perkDesc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'documents' && (
-        tabLoading && !docsData ? <TabSpinner /> : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="kfpl-page-header" style={{ marginBottom: '4px' }}>
-              <div>
-                <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Onboarded Documents</h3>
-                <p className="kfpl-page-subtitle" style={{ margin: '2px 0 0 0' }}>KYC, financial verification, agreement, and nominee documents</p>
-              </div>
-            </div>
-
-            <div className="kfpl-detail-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {documentsList.length === 0 ? (
-                // Fallback: show standard document placeholders
-                [
-                  { key: 'panDocument', name: 'PAN Card Upload', description: 'Proof of PAN Card Identification' },
-                  { key: 'aadhaarDocument', name: 'Aadhaar Card Upload', description: 'Proof of Identity and Address' },
-                  { key: 'bankProofDocument', name: 'Bank Details Document', description: 'Cancelled Cheque or Bank Statement' },
-                  { key: 'nomineeProofDocument', name: 'Nominee ID Proof', description: 'ID Proof for Nominee' },
-                  { key: 'agreementDocument', name: 'Agreement Document', description: 'Signed Investment Agreement Contract' }
-                ].map((doc, idx) => (
-                  <div key={idx} className="kfpl-detail-info-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', minHeight: '160px', position: 'relative' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <div style={{ background: 'var(--color-gold-glow, #fef3c7)', color: 'var(--color-gold-dark, #b38600)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="20" height="20">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{doc.name}</h4>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>No file uploaded</span>
-                        </div>
-                      </div>
-                      <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                        {doc.description}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                documentsList.map((doc, idx) => (
-                  <div key={idx} className="kfpl-detail-info-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', minHeight: '160px', position: 'relative' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <div style={{ background: 'var(--color-gold-glow, #fef3c7)', color: 'var(--color-gold-dark, #b38600)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="20" height="20">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{doc.name}</h4>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>PDF Document • {doc.fileSize || '—'}</span>
-                        </div>
-                      </div>
-                      <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                        {doc.description || 'Uploaded document'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
-                      <button 
-                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
-                        style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
-                        onClick={() => setViewingDoc({
-                          label: doc.name,
-                          filename: doc.fileName || `${clientName.replace(/\s/g, '_')}_${doc.key || 'doc'}.pdf`,
-                          size: doc.fileSize || '—',
-                          investorName: clientName,
-                          status: doc.status || 'Uploaded',
-                          uploadedAt: doc.uploadedDate || doc.uploaded || formatDate(profile.joinDate || profile.createdAt),
-                          url: doc.url,
-                          verification: doc.verification || '—',
-                        })}
-                      >
-                        View Document
-                      </button>
-                      <button 
-                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
-                        style={{ padding: '6px 10px' }}
-                        onClick={() => {
-                          if (doc.url) {
-                            window.open(doc.url, '_blank');
-                          } else {
-                            addToast('No file URL available for download', 'error', 'Download Failed');
-                          }
-                          addToast(`${doc.name} download initiated`, 'success', 'Downloaded');
-                        }}
-                        title="Download File"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="kfpl-page-header" style={{ marginBottom: '4px' }}>
+            <div>
+              <h3 className="kfpl-form-card-title" style={{ margin: 0 }}>Onboarded Documents</h3>
+              <p className="kfpl-page-subtitle" style={{ margin: '2px 0 0 0' }}>KYC, financial verification, agreement, and nominee documents</p>
             </div>
           </div>
-        )
+
+          <div className="kfpl-detail-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+            {tabLoading ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>Loading documents...</div>
+            ) : documentsList.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>No documents found.</div>
+            ) : documentsList.map((doc, idx) => {
+              const docName = doc.name || doc.label;
+              const isVerified = !!verifiedDocs[docName];
+              return (
+                <div key={idx} className="kfpl-detail-info-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', minHeight: '160px', position: 'relative' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <div style={{ background: 'var(--color-gold-glow, #fef3c7)', color: 'var(--color-gold-dark, #b38600)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="20" height="20">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{docName}</h4>
+                          {isVerified && <Badge status="active">Verified</Badge>}
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{doc.fileName || 'PDF Document'} • {doc.fileSize || '—'}</span>
+                      </div>
+                    </div>
+                    <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                      {doc.description || doc.desc || 'Uploaded document'}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
+                    <button 
+                      className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
+                      style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
+                      onClick={() => setViewingDoc({ label: docName, filename: doc.fileName || 'document.pdf', investorName: doc.holder || investor.name, status: isVerified ? 'Verified' : 'Pending Verification', uploadedAt: doc.uploadedDate || doc.uploaded || investor.joinDate, url: doc.url })}
+                    >
+                      View Document
+                    </button>
+                    <button 
+                      className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
+                      style={{ padding: '6px 10px' }}
+                      onClick={() => {
+                        if (doc.url) {
+                          window.open(doc.url, '_blank');
+                        } else {
+                          addToast('No file URL available', 'error', 'Download Failed');
+                        }
+                        addToast(`${docName} download initiated`, 'success', 'Downloaded');
+                      }}
+                      title="Download File"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* ── Document Viewer Modal ─── */}
@@ -1298,11 +1345,13 @@ export default function InvestorDetail() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                     <span style={{ fontWeight: 600, color: '#64748b' }}>Status:</span>
-                    <span style={{ fontWeight: 700, color: '#10b981' }}>{viewingDoc.status}</span>
+                    <span style={{ fontWeight: 700, color: verifiedDocs[viewingDoc.label] ? '#10b981' : '#f59e0b' }}>
+                      {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                     <span style={{ fontWeight: 600, color: '#64748b' }}>Verification:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.verification || 'Digital Signatures Valid'}</span>
+                    <span style={{ fontWeight: 700, color: '#1e293b' }}>Digital Signatures Valid</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                     <span style={{ fontWeight: 600, color: '#64748b' }}>Uploaded:</span>
@@ -1323,15 +1372,28 @@ export default function InvestorDetail() {
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
               >Close</button>
+              {!verifiedDocs[viewingDoc.label] && (
+                <button
+                  className="kfpl-btn kfpl-btn--sm"
+                  style={{ background: '#10B981', borderColor: 'transparent', color: '#FFFFFF' }}
+                  onClick={() => {
+                    handleVerifyDocument(viewingDoc.label);
+                  }}
+                >
+                  Verify Document
+                </button>
+              )}
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                 onClick={() => {
-                  if (viewingDoc.url) {
-                    window.open(viewingDoc.url, '_blank');
-                  } else {
-                    addToast('No file URL available', 'error', 'Download Failed');
-                  }
-                  addToast(`${viewingDoc.label} download initiated`, 'success', 'Downloaded');
+                  const blob = new Blob([`Dummy file content for ${viewingDoc.label} of ${viewingDoc.investorName}`], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = viewingDoc.filename;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                  addToast(`${viewingDoc.label} downloaded`, 'success', 'Downloaded');
                   setViewingDoc(null);
                 }}
               >Download Original File</button>
@@ -1376,9 +1438,8 @@ export default function InvestorDetail() {
               <button 
                 className="kfpl-btn kfpl-btn--primary" 
                 onClick={handleConfirmRoiChange}
-                disabled={actionLoading}
               >
-                {actionLoading ? 'Updating...' : 'Confirm Rate'}
+                Confirm Rate
               </button>
             </>
           )
@@ -1389,7 +1450,7 @@ export default function InvestorDetail() {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '12px', borderRadius: '8px' }}>
               <span style={{ fontSize: '1.25rem' }}>⚠️</span>
               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text)', lineHeight: '1.4' }}>
-                Are you sure you want to adjust the Monthly ROI rate for <strong>{clientName}</strong>? 
+                Are you sure you want to adjust the Monthly ROI rate for <strong>{investor.name}</strong>? 
                 This will update their profile and affect all subsequent monthly ROI payouts.
               </p>
             </div>
@@ -1397,7 +1458,7 @@ export default function InvestorDetail() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-              Specify the new Monthly ROI Rate (% p.m.) for <strong>{clientName}</strong> below:
+              Specify the new Monthly ROI Rate (% p.m.) for <strong>{investor.name}</strong> below:
             </p>
             <div className="kfpl-input-group">
               <label className="kfpl-input-label">Monthly ROI Percentage (% p.m.) <span className="required">*</span></label>
@@ -1418,6 +1479,69 @@ export default function InvestorDetail() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Confirm Client Deletion"
+        footer={
+          <>
+            <button 
+              className="kfpl-btn kfpl-btn--ghost" 
+              onClick={() => setShowDeleteModal(false)}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              className="kfpl-btn" 
+              style={{ background: '#EF4444', borderColor: 'transparent', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
+              onClick={handleConfirmDelete}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Deleting...' : 'Yes, Delete Client'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px' }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: '16px', 
+            alignItems: 'flex-start', 
+            background: 'rgba(239, 68, 68, 0.05)', 
+            border: '1px solid rgba(239, 68, 68, 0.15)', 
+            padding: '16px', 
+            borderRadius: '12px' 
+          }}>
+            <div style={{ 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              color: '#EF4444', 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              flexShrink: 0,
+              fontSize: '1.25rem',
+              fontWeight: 'bold'
+            }}>
+              ⚠️
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#111827' }}>
+                Permanently delete client profile?
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#4B5563', lineHeight: '1.5' }}>
+                Are you sure you want to completely remove <strong>{investor.name}</strong> from the database? 
+                This action is irreversible and will delete all associated profiles, credentials, investments, statements, and documents.
+              </p>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -14,7 +14,7 @@ export default function AddAgent() {
   const addToast = useToast();
   const [form, setForm] = useState({
     name: '', email: '', phone: '', pan: '',
-    bankName: '', accountNo: '', ifsc: '',
+    bankName: '', accountNo: '', confirmAccountNo: '', ifsc: '',
     commissionOneTime: '', commissionMonthly: '', commissionSpecial: '',
     nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
     citizenship: 'National',
@@ -79,6 +79,10 @@ export default function AddAgent() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (form.accountNo !== form.confirmAccountNo) {
+      addToast('Account Number and Confirm Account Number do not match!', 'danger', 'Validation Error');
+      return;
+    }
     if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
       alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
       return;
@@ -183,18 +187,24 @@ export default function AddAgent() {
 
           <div className="kfpl-form-section">
             <div className="kfpl-form-section-title">Bank Details</div>
-            <div className="kfpl-form-row-3">
+            <div className="kfpl-form-row">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Bank Name</label>
                 <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Bank name" />
               </div>
               <div className="kfpl-input-group">
+                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}</label>
+                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0004321'} />
+              </div>
+            </div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Account Number</label>
                 <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" />
               </div>
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">{form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'}</label>
-                <input className="kfpl-input" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder={form.citizenship === 'International' ? 'SWIFT or IFSC code' : 'HDFC0004321'} />
+                <label className="kfpl-input-label">Confirm Account Number</label>
+                <input className="kfpl-input" name="confirmAccountNo" value={form.confirmAccountNo} onChange={handleChange} placeholder="Confirm account number" />
               </div>
             </div>
           </div>

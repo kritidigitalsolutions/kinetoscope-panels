@@ -18,7 +18,7 @@ export default function AddInvestor() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', dob: '', address: '',
-    pan: '', bankName: '', accountNo: '', ifsc: '',
+    pan: '', bankName: '', accountNo: '', confirmAccountNo: '', ifsc: '',
     aadhaarNumber: '',
     nomineeName: '', nomineeRelation: '', nomineeContact: '', nomineeEmail: '',
     riskProfile: 'Conservative',
@@ -71,7 +71,13 @@ export default function AddInvestor() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => {
-      const nextForm = { ...prev, [name]: value };
+      let nextValue = value;
+      if (name === 'aadhaarNumber' && prev.citizenship === 'National') {
+        const digits = value.replace(/\D/g, '');
+        const match = digits.substring(0, 12).match(/(\d{1,4})/g);
+        nextValue = match ? match.join('-') : '';
+      }
+      const nextForm = { ...prev, [name]: nextValue };
       if (name === 'email') {
         setPortalEmail(value);
       }
@@ -123,6 +129,10 @@ export default function AddInvestor() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.accountNo !== form.confirmAccountNo) {
+      addToast('Account Number and Confirm Account Number do not match!', 'danger', 'Validation Error');
+      return;
+    }
     if ((form.nomineeRelation || form.nomineeContact) && !form.nomineeName) {
       alert('Nominee Name is required if Nominee Relation or Nominee Contact is provided.');
       return;
@@ -382,12 +392,6 @@ export default function AddInvestor() {
                 <input className="kfpl-input" name="bankName" value={form.bankName} onChange={handleChange} placeholder="Bank name" required />
               </div>
               <div className="kfpl-input-group">
-                <label className="kfpl-input-label">Account Number <span className="required">*</span></label>
-                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" required />
-              </div>
-            </div>
-            <div className="kfpl-form-row">
-              <div className="kfpl-input-group">
                 <label className="kfpl-input-label">
                   {form.citizenship === 'International' ? 'IFSC / SWIFT Code' : 'IFSC Code'} <span className="required">*</span>
                 </label>
@@ -400,7 +404,16 @@ export default function AddInvestor() {
                   required 
                 />
               </div>
-              <div style={{ flex: 1 }}></div>
+            </div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Account Number <span className="required">*</span></label>
+                <input className="kfpl-input" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account number" required />
+              </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Confirm Account Number <span className="required">*</span></label>
+                <input className="kfpl-input" name="confirmAccountNo" value={form.confirmAccountNo} onChange={handleChange} placeholder="Confirm account number" required />
+              </div>
             </div>
           </div>
 

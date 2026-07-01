@@ -28,7 +28,70 @@ export default function InvestorList() {
         // Support multiple response shapes from backend
         const list = res.data?.clients || res.data || res.clients || [];
         if (Array.isArray(list)) {
-          setClients(list);
+          console.log('Fetched raw clients:', list);
+          
+          // 1. Filter out empty/corrupt records first so they don't consume sequential IDs
+          const cleanRawList = list.filter(c => {
+            if (!c || typeof c !== 'object') return false;
+            const profile = c.profile || {};
+            const header = c.header || {};
+            const name = c.fullName || header.clientName || profile.fullName || c.name || profile.name || '';
+            const email = c.email || profile.email || '';
+            return name.trim() !== '' || email.trim() !== '';
+          });
+
+          // 2. Sort by creation date ascending so that the sequential index corresponds to creation order
+          cleanRawList.sort((a, b) => {
+            const profileA = a.profile || {};
+            const profileB = b.profile || {};
+            const dateA = new Date(a.createdAt || a.joinDate || profileA.joinDate || 0);
+            const dateB = new Date(b.createdAt || b.joinDate || profileB.joinDate || 0);
+            return dateA - dateB;
+          });
+
+          // 3. Map and assign clientCode fallback if not provided by backend
+          const normalized = cleanRawList.map((c, index) => {
+            const profile = c.profile || {};
+            const header = c.header || {};
+            const summary = c.summaryCards || {};
+            
+            // Sequential fallback ID (e.g., C-001, C-002, etc.)
+            const padIndex = String(index + 1).padStart(3, '0');
+            const fallbackCode = `C-${padIndex}`;
+
+            const userId = (c.userId && typeof c.userId === 'object' ? c.userId._id : null) || 
+                           (c.user && typeof c.user === 'object' ? c.user._id : null) || 
+                           (profile.userId && typeof profile.userId === 'object' ? profile.userId._id : null) ||
+                           (profile.user && typeof profile.user === 'object' ? profile.user._id : null) ||
+                           c.userId || 
+                           c.user || 
+                           profile.userId ||
+                           profile.user ||
+                           c._id || 
+                           profile._id || 
+                           c.id || 
+                           profile.id;
+
+            return {
+              _id: userId,
+              clientCode: c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode,
+              fullName: c.fullName || header.clientName || profile.fullName || c.name || profile.name || '',
+              email: c.email || profile.email || '',
+              phone: c.phone || profile.phone || '',
+              dob: c.dob || profile.dob || '',
+              joinDate: c.joinDate || profile.joinDate || c.createdAt || profile.createdAt || '',
+              totalInvestment: c.totalInvestment || summary.totalInvestment || profile.totalPortfolioValue || 0,
+              monthlyRoi: c.monthlyRoi || summary.monthlyRoi || profile.monthlyRoi || c.roiPercentage || profile.roiPercentage || 1.2,
+              tier: c.tier || header.tier || profile.tier || c.category || profile.category || 'silver',
+              status: c.status || header.status || profile.status || 'active',
+              assignedAgent: c.assignedAgent || profile.assignedAgent || '',
+              assignedAgentName: c.assignedAgentName || header.assignedAgentName || profile.assignedAgentName || '',
+              agentCommissionMonthly: c.agentCommissionMonthly || profile.agentCommissionMonthly || '',
+              residencyStatus: c.residencyStatus || profile.residencyStatus || c.citizenship || profile.citizenship || '',
+              riskProfile: c.riskProfile || header.riskProfile || profile.riskProfile || 'Conservative',
+            };
+          });
+          setClients(normalized);
         }
       } catch (err) {
         console.error('Failed to fetch clients:', err);
@@ -66,7 +129,7 @@ export default function InvestorList() {
     return `${day}/${mon}/${d.getFullYear()}`;
   };
 
-  // Filter clients based on agentFilter, residencyFilter, and tierFilter
+  // Filter clients
   const filteredClients = clients.filter(c => {
     const hasAgent = !!(c.assignedAgent && c.assignedAgent !== 'Direct Client (No Agent)');
     if (agentFilter === 'with-agent' && !hasAgent) return false;
@@ -74,12 +137,12 @@ export default function InvestorList() {
 
     if (residencyFilter !== 'all') {
       const isInt = residencyFilter === 'international';
-      const actualInt = (c.residencyStatus || c.citizenship || '').toLowerCase().includes('international');
+      const actualInt = (c.residencyStatus || '').toLowerCase().includes('international');
       if (isInt !== actualInt) return false;
     }
 
     if (tierFilter !== 'all') {
-      const clientTier = (c.tier || c.category || 'silver').toLowerCase();
+      const clientTier = (c.tier || 'silver').toLowerCase();
       if (clientTier !== tierFilter.toLowerCase()) return false;
     }
 
@@ -89,8 +152,7 @@ export default function InvestorList() {
   const columns = [
     {
       header: 'Client ID',
-      accessor: 'clientCode',
-      render: (row) => <span>{row.clientCode || row.clientId || '—'}</span>,
+      render: (row) => <span>{row.clientCode || '—'}</span>,
     },
     {
       header: 'Join Date',
@@ -102,7 +164,7 @@ export default function InvestorList() {
     },
     {
       header: 'Client Name',
-      render: (row) => <span style={{ fontWeight: 600 }}>{row.fullName || row.name || '—'}</span>,
+      render: (row) => <span style={{ fontWeight: 600 }}>{row.fullName || '—'}</span>,
     },
     { header: 'Email Address', accessor: 'email' },
     {
@@ -111,7 +173,7 @@ export default function InvestorList() {
     },
     {
       header: 'Monthly ROI % Allocated',
-      render: (row) => `${row.monthlyRoi || row.roiPercentage || 1.2}%`,
+      render: (row) => `${row.monthlyRoi || 1.2}%`,
     },
     {
       header: 'Perks',
@@ -160,9 +222,9 @@ export default function InvestorList() {
       render: (row) => {
         const risk = row.riskProfile || 'Conservative';
         const statusMap = {
-          'Conservative': 'active', // green
-          'Moderate': 'gold',       // gold
-          'Aggressive': 'rejected'   // red
+          'Conservative': 'active',
+          'Moderate': 'gold',
+          'Aggressive': 'rejected'
         };
         return <Badge status={statusMap[risk] || 'active'}>{risk}</Badge>;
       }
