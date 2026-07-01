@@ -47,6 +47,13 @@ function getPeriodInvestmentDate(investor, com) {
     const d = new Date(investor.joinDate);
     if (d.getMonth() === targetMonth) return formatDateDMY(investor.joinDate);
   }
+  // Fallback: Return first investment date or joinDate for recurring monthly commissions
+  if (investor.investments && investor.investments.length > 0) {
+    return formatDateDMY(investor.investments[0].date);
+  }
+  if (investor.joinDate) {
+    return formatDateDMY(investor.joinDate);
+  }
   return '';
 }
 

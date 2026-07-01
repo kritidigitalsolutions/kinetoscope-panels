@@ -37,6 +37,10 @@ function makeAutoSaveProxy(initialData, storageKey) {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         rawData = JSON.parse(stored);
+        if (Array.isArray(rawData) && rawData.length === 0 && initialData.length > 0) {
+          rawData = initialData;
+          localStorage.setItem(storageKey, JSON.stringify(initialData));
+        }
       } else {
         localStorage.setItem(storageKey, JSON.stringify(initialData));
       }
@@ -215,7 +219,71 @@ export const monthlyInvestmentData = [
 ];
 
 // ── Investors ───────────────────────
-const defaultInvestors = [];
+const defaultInvestors = [
+  {
+    id: 1,
+    clientId: 'KFPL-1001',
+    name: 'Rajesh Kumar',
+    email: 'rajesh.kumar@gmail.com',
+    phone: '+91 98765 43210',
+    status: 'active',
+    residencyStatus: 'Domestic',
+    pan: 'ABCDE1234F',
+    aadhaar: '123456789012',
+    bankName: 'State Bank of India',
+    bankAccount: '100020003000',
+    ifsc: 'SBIN0001234',
+    totalInvestment: 25000000,
+    roiPercentage: 12.0,
+    riskProfile: 'Moderate',
+    joinDate: '2024-01-10',
+    investments: [
+      { id: 101, segment: 'Film Making', amount: 25000000, date: '2024-01-10', roi: 12, status: 'active', risk: 'Medium' }
+    ]
+  },
+  {
+    id: 2,
+    clientId: 'KFPL-1002',
+    name: 'Priya Sharma',
+    email: 'priya.sharma@yahoo.com',
+    phone: '+91 98765 43211',
+    status: 'active',
+    residencyStatus: 'Domestic',
+    pan: 'FGHIJ5678K',
+    aadhaar: '987654321098',
+    bankName: 'HDFC Bank',
+    bankAccount: '500060007000',
+    ifsc: 'HDFC0001234',
+    totalInvestment: 18000000,
+    roiPercentage: 12.0,
+    riskProfile: 'Conservative',
+    joinDate: '2024-01-15',
+    investments: [
+      { id: 102, segment: 'Film Making', amount: 18000000, date: '2024-01-15', roi: 12, status: 'active', risk: 'Low' }
+    ]
+  },
+  {
+    id: 3,
+    clientId: 'KFPL-1003',
+    name: 'Anita Desai',
+    email: 'anita.desai@outlook.com',
+    phone: '+91 98765 43212',
+    status: 'active',
+    residencyStatus: 'Domestic',
+    pan: 'LMNOP9012Q',
+    aadhaar: '456789012345',
+    bankName: 'ICICI Bank',
+    bankAccount: '900080007000',
+    ifsc: 'ICIC0001234',
+    totalInvestment: 12000000,
+    roiPercentage: 12.0,
+    riskProfile: 'Aggressive',
+    joinDate: '2024-01-20',
+    investments: [
+      { id: 103, segment: 'Film Making', amount: 12000000, date: '2024-01-20', roi: 12, status: 'active', risk: 'High' }
+    ]
+  }
+];
 
 export const investors = makeAutoSaveProxy(defaultInvestors, 'kfpl_investors_v3');
 
