@@ -20,6 +20,13 @@ const COMMISSION_PRESETS = [
   { id: 'custom', name: 'Custom Rates...', oneTime: '', monthly: '' },
 ];
 
+const formatDateToInputVal = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString().split('T')[0];
+};
+
 export default function EditInvestor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -41,6 +48,9 @@ export default function EditInvestor() {
     commissionOneTime: '1.5',
     commissionMonthly: '0.75',
     roiPercentage: '1.2',
+    contractStartDate: '',
+    contractEndDate: '',
+    extendContractDate: '',
   });
 
   // Fetch client details and agents on mount
@@ -98,6 +108,8 @@ export default function EditInvestor() {
           commissionOneTime: String(profile.commissionOneTime || '1.5'),
           commissionMonthly: String(profile.commissionMonthly || '0.75'),
           roiPercentage: String(summary.monthlyRoi || profile.monthlyRoi || '1.2'),
+          contractStartDate: formatDateToInputVal(profile.contractStartDate || profile.joinDate || profile.createdAt),
+          contractEndDate: formatDateToInputVal(profile.contractEndDate),
         });
 
         // Set selected agent ID
@@ -147,6 +159,7 @@ export default function EditInvestor() {
         panNumber: form.pan,
         bankName: form.bankName,
         accountNumber: form.accountNo,
+        confirmAccountNumber: form.accountNo,
         ifscCode: form.ifsc,
         tier: form.category,
         status: form.status,
@@ -154,6 +167,9 @@ export default function EditInvestor() {
         residencyStatus: form.citizenship,
         monthlyRoi: parseFloat(form.roiPercentage) || 1.2,
         assignedAgent: selectedAgentId || 'Direct Client (No Agent)',
+        contractStartDate: form.contractStartDate,
+        contractEndDate: form.extendContractDate || form.contractEndDate,
+        joinDate: form.contractStartDate,
         nomineeName: form.nomineeName,
         nomineeRelation: form.nomineeRelation,
         nomineePhone: form.nomineeContact,
@@ -304,6 +320,44 @@ export default function EditInvestor() {
                   value={form.roiPercentage} 
                   onChange={handleChange} 
                   required 
+                />
+              </div>
+              <div style={{ flex: 1 }}></div>
+            </div>
+
+            <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Contract Start Date</label>
+                <input 
+                  type="date" 
+                  className="kfpl-input" 
+                  name="contractStartDate" 
+                  value={form.contractStartDate} 
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Contract End Date</label>
+                <input 
+                  type="date" 
+                  className="kfpl-input" 
+                  name="contractEndDate" 
+                  value={form.contractEndDate} 
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Extend Contract Date</label>
+                <input 
+                  type="date" 
+                  className="kfpl-input" 
+                  name="extendContractDate" 
+                  value={form.extendContractDate} 
+                  onChange={handleChange} 
+                  min={form.contractEndDate || form.contractStartDate || undefined}
                 />
               </div>
               <div style={{ flex: 1 }}></div>

@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
-import { formatCurrency, getCategoryFromAmount } from '../../data/mockData';
+import { formatCurrency, getCategoryFromAmount, investors } from '../../data/mockData';
 import { apiRequest } from '../../config/apiHelper';
 
 export default function InvestorList() {
@@ -25,22 +25,21 @@ export default function InvestorList() {
       setLoading(true);
       try {
         const res = await apiRequest('/api/super-admin/clients');
-        // Support multiple response shapes from backend
         const list = res.data?.clients || res.data || res.clients || [];
         if (Array.isArray(list)) {
           console.log('Fetched raw clients:', list);
           
-          // 1. Filter out empty/corrupt records first so they don't consume sequential IDs
           const cleanRawList = list.filter(c => {
             if (!c || typeof c !== 'object') return false;
             const profile = c.profile || {};
             const header = c.header || {};
-            const name = c.fullName || header.clientName || profile.fullName || c.name || profile.name || '';
-            const email = c.email || profile.email || '';
+            const user = (c.userId && typeof c.userId === 'object' ? c.userId : null) || 
+                         (c.user && typeof c.user === 'object' ? c.user : null) || {};
+            const name = profile.fullName || user.name || user.fullName || c.fullName || header.clientName || c.name || profile.name || '';
+            const email = profile.email || user.email || c.email || '';
             return name.trim() !== '' || email.trim() !== '';
           });
 
-          // 2. Sort by creation date ascending so that the sequential index corresponds to creation order
           cleanRawList.sort((a, b) => {
             const profileA = a.profile || {};
             const profileB = b.profile || {};
@@ -49,37 +48,29 @@ export default function InvestorList() {
             return dateA - dateB;
           });
 
-          // 3. Map and assign clientCode fallback if not provided by backend
           const normalized = cleanRawList.map((c, index) => {
             const profile = c.profile || {};
             const header = c.header || {};
             const summary = c.summaryCards || {};
+            const user = (c.userId && typeof c.userId === 'object' ? c.userId : null) || 
+                         (c.user && typeof c.user === 'object' ? c.user : null) || 
+                         (profile.userId && typeof profile.userId === 'object' ? profile.userId : null) ||
+                         (profile.user && typeof profile.user === 'object' ? profile.user : null) || {};
             
-            // Sequential fallback ID (e.g., C-001, C-002, etc.)
             const padIndex = String(index + 1).padStart(3, '0');
             const fallbackCode = `C-${padIndex}`;
 
-            const userId = (c.userId && typeof c.userId === 'object' ? c.userId._id : null) || 
-                           (c.user && typeof c.user === 'object' ? c.user._id : null) || 
-                           (profile.userId && typeof profile.userId === 'object' ? profile.userId._id : null) ||
-                           (profile.user && typeof profile.user === 'object' ? profile.user._id : null) ||
-                           c.userId || 
-                           c.user || 
-                           profile.userId ||
-                           profile.user ||
-                           c._id || 
-                           profile._id || 
-                           c.id || 
-                           profile.id;
+            const userId = c._id || user._id || profile.userId || c.id;
 
             return {
               _id: userId,
-              clientCode: c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode,
-              fullName: c.fullName || header.clientName || profile.fullName || c.name || profile.name || '',
-              email: c.email || profile.email || '',
-              phone: c.phone || profile.phone || '',
-              dob: c.dob || profile.dob || '',
-              joinDate: c.joinDate || profile.joinDate || c.createdAt || profile.createdAt || '',
+              clientCode: user.clientCode || c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode,
+              fullName: profile.fullName || user.name || user.fullName || c.fullName || header.clientName || c.name || profile.name || '',
+              email: profile.email || user.email || c.email || '',
+              phone: profile.phone || c.phone || '',
+              dob: profile.dob || c.dob || '',
+              joinDate: c.contractStartDate || profile.contractStartDate || c.joinDate || profile.joinDate || c.createdAt || profile.createdAt || '',
+              contractEndDate: c.contractEndDate || profile.contractEndDate || '',
               totalInvestment: c.totalInvestment || summary.totalInvestment || profile.totalPortfolioValue || 0,
               monthlyRoi: c.monthlyRoi || summary.monthlyRoi || profile.monthlyRoi || c.roiPercentage || profile.roiPercentage || 1.2,
               tier: c.tier || header.tier || profile.tier || c.category || profile.category || 'silver',
@@ -92,9 +83,12 @@ export default function InvestorList() {
             };
           });
           setClients(normalized);
+        } else {
+          setClients([]);
         }
       } catch (err) {
         console.error('Failed to fetch clients:', err);
+        setClients([]);
       } finally {
         setLoading(false);
       }
@@ -108,7 +102,15 @@ export default function InvestorList() {
 
   // Calculate contract end date (joinDate + longest contract period, default 24 months)
   const getContractEndDate = (row) => {
-    if (row.contractEndDate) return row.contractEndDate;
+    if (row.contractEndDate) {
+      const d = new Date(row.contractEndDate);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const mon = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}/${mon}/${d.getFullYear()}`;
+      }
+      return row.contractEndDate;
+    }
     const rawDate = row.joinDate || row.createdAt;
     if (rawDate) {
       const d = new Date(rawDate);

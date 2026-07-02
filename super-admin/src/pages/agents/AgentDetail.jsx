@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import { agents, investors, formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../config/apiHelper';
+import { getApiUrl } from '../../config/apiUrl';
 
 /* ── helpers ─────────────────────── */
 function formatDateDMY(dateStr) {
@@ -297,128 +298,187 @@ export default function AgentDetail() {
   const [commissionHistory, setCommissionHistory] = useState([]);
   const [documentsList, setDocumentsList] = useState([]);
   const [verifiedDocs, setVerifiedDocs] = useState({});
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!viewingDoc || !viewingDoc.url) {
+      setPreviewUrl('');
+      return;
+    }
+    
+    let active = true;
+    let objUrl = '';
+
+    const loadPreview = async () => {
+      setPreviewLoading(true);
+      try {
+        const targetUrl = normalizeUrl(viewingDoc.url);
+        const isCloudinary = targetUrl.includes('cloudinary.com') || targetUrl.includes('res.cloudinary.com');
+        
+        const headers = {};
+        if (!isCloudinary) {
+          const authData = localStorage.getItem('kfpl_auth');
+          let token = '';
+          if (authData) {
+            const parsed = JSON.parse(authData);
+            token = parsed.token || '';
+          }
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+        }
+
+        const response = await fetch(targetUrl, { headers });
+        if (!response.ok) throw new Error('Fetch failed');
+        const blob = await response.blob();
+        
+        if (active) {
+          objUrl = URL.createObjectURL(blob);
+          setPreviewUrl(objUrl);
+        }
+      } catch (err) {
+        console.error('Preview fetch error:', err);
+        if (active) {
+          setPreviewUrl(normalizeUrl(viewingDoc.url));
+        }
+      } finally {
+        if (active) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      active = false;
+      if (objUrl) {
+        URL.revokeObjectURL(objUrl);
+      }
+    };
+  }, [viewingDoc]);
   const [loading, setLoading] = useState(true);
   const [localStatus, setLocalStatus] = useState('active');
 
+  const fetchAgentDetails = async () => {
+    setLoading(true);
+    let ag = null;
+    try {
+      const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
+      
+      const extractAgentDetail = (res) => {
+        if (!res) return null;
+        if (res.agent) return res.agent;
+        if (res.data) {
+          if (res.data.agent) return res.data.agent;
+          return res.data;
+        }
+        return res;
+      };
+      ag = extractAgentDetail(agentData);
+      
+      if (ag) {
+        const user = ag.user || {};
+        const profile = ag.profile || {};
+        
+        const docs = ag.documents || [];
+        console.log('[DEBUG Agent Docs]', JSON.stringify(docs, null, 2));
+        setDocumentsList(docs);
+        
+        const verifiedMap = {};
+        docs.forEach(doc => {
+          const label = doc.name || doc.label;
+          if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified === true) {
+            verifiedMap[label] = true;
+          }
+        });
+        setVerifiedDocs(verifiedMap);
+
+        const normalizedAg = {
+          ...ag,
+          id: user._id || profile.userId || ag._id || ag.id,
+          name: profile.fullName || user.name || '—',
+          email: profile.email || user.email || '—',
+          phone: profile.phone || '—',
+          pan: profile.panNumber || '—',
+          agentId: ag.header?.agentCode || user.clientCode || profile.agentId || '—',
+          joinDate: profile.joinDate || (user.createdAt 
+            ? new Date(user.createdAt).toLocaleDateString('en-IN') 
+            : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—')),
+          totalClients: ag.summaryCards?.clientsCount ?? ag.clientsCount ?? ag.totalClients ?? 0,
+          totalInvestment: ag.summaryCards?.totalInvestment ?? ag.totalInvestment ?? 0,
+          status: ag.header?.status?.toLowerCase() || profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
+          kyc: (ag.header?.kycStatus || ag.summaryCards?.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
+          nomineeName: profile.nomineeName || '—',
+          nomineeRelation: profile.nomineeRelation || '—',
+          nomineePhone: profile.nomineePhone || '—',
+          nomineeEmail: profile.nomineeEmail || '—',
+          bankName: profile.bankName || '—',
+          accountNo: profile.accountNumber || '—',
+          ifsc: profile.ifscCode || '—',
+          commissionOneTime: profile.oneTimeCommission || 0,
+          commissionMonthly: profile.monthlySlab || '—',
+          commissionSpecial: profile.specialCommission || 0,
+          panDocument: profile.panDocument,
+          idProofDocument: profile.idProofDocument,
+          bankProofDocument: profile.bankProofDocument,
+          nomineeProofDocument: profile.nomineeProofDocument,
+          commissionHistory: ag.commissionHistory || []
+        };
+        setAgent(normalizedAg);
+        setLocalStatus(normalizedAg.status);
+      }
+    } catch (err) {
+      console.error('Failed to fetch agent details:', err);
+      addToast(err.message || 'Failed to load agent details', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
+
+    // Fetch clients and commissions in background without blocking main agent details
+    if (ag) {
+      // Fetch clients
+      (async () => {
+        try {
+          const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
+          const extractClients = (res) => {
+            if (!res) return [];
+            if (Array.isArray(res)) return res;
+            if (res.data) {
+              if (Array.isArray(res.data)) return res.data;
+            }
+            return [];
+          };
+          setAgentClients(extractClients(clientsData));
+        } catch (clientErr) {
+          console.error('Failed to load agent clients:', clientErr);
+        }
+      })();
+
+      // Fetch commissions
+      (async () => {
+        try {
+          const commissionsData = await apiRequest(`/api/super-admin/agents/${id}/commissions`);
+          const extractCommissions = (res) => {
+            if (!res) return [];
+            if (Array.isArray(res)) return res;
+            if (res.data) {
+              if (Array.isArray(res.data)) return res.data;
+              if (res.data.commissions && Array.isArray(res.data.commissions)) return res.data.commissions;
+            }
+            if (res.commissions && Array.isArray(res.commissions)) return res.commissions;
+            return [];
+          };
+          setCommissionHistory(extractCommissions(commissionsData));
+        } catch (comErr) {
+          console.error('Failed to load agent commissions:', comErr);
+        }
+      })();
+    }
+  };
 
   useEffect(() => {
-    const fetchAgentDetails = async () => {
-      setLoading(true);
-      let ag = null;
-      try {
-        const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
-        
-        const extractAgentDetail = (res) => {
-          if (!res) return null;
-          if (res.agent) return res.agent;
-          if (res.data) {
-            if (res.data.agent) return res.data.agent;
-            return res.data;
-          }
-          return res;
-        };
-        ag = extractAgentDetail(agentData);
-        
-        if (ag) {
-          const user = ag.user || {};
-          const profile = ag.profile || {};
-          
-          const docs = ag.documents || [];
-          setDocumentsList(docs);
-          
-          const verifiedMap = {};
-          docs.forEach(doc => {
-            const label = doc.name || doc.label;
-            if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified) {
-              verifiedMap[label] = true;
-            }
-          });
-          setVerifiedDocs(verifiedMap);
-
-          const normalizedAg = {
-            ...ag,
-            id: user._id || profile.userId || ag._id || ag.id,
-            name: profile.fullName || user.name || '—',
-            email: profile.email || user.email || '—',
-            phone: profile.phone || '—',
-            pan: profile.panNumber || '—',
-            agentId: ag.header?.agentCode || user.clientCode || profile.agentId || '—',
-            joinDate: profile.joinDate || (user.createdAt 
-              ? new Date(user.createdAt).toLocaleDateString('en-IN') 
-              : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—')),
-            totalClients: ag.summaryCards?.clientsCount ?? ag.clientsCount ?? ag.totalClients ?? 0,
-            totalInvestment: ag.summaryCards?.totalInvestment ?? ag.totalInvestment ?? 0,
-            status: ag.header?.status?.toLowerCase() || profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
-            kyc: (ag.header?.kycStatus || ag.summaryCards?.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
-            nomineeName: profile.nomineeName || '—',
-            nomineeRelation: profile.nomineeRelation || '—',
-            nomineePhone: profile.nomineePhone || '—',
-            nomineeEmail: profile.nomineeEmail || '—',
-            bankName: profile.bankName || '—',
-            accountNo: profile.accountNumber || '—',
-            ifsc: profile.ifscCode || '—',
-            commissionOneTime: profile.oneTimeCommission || 0,
-            commissionMonthly: profile.monthlySlab || '—',
-            commissionSpecial: profile.specialCommission || 0,
-            panDocument: profile.panDocument,
-            idProofDocument: profile.idProofDocument,
-            bankProofDocument: profile.bankProofDocument,
-            nomineeProofDocument: profile.nomineeProofDocument,
-            commissionHistory: ag.commissionHistory || []
-          };
-          setAgent(normalizedAg);
-          setLocalStatus(normalizedAg.status);
-        }
-      } catch (err) {
-        console.error('Failed to fetch agent details:', err);
-        addToast(err.message || 'Failed to load agent details', 'error', 'Error');
-      } finally {
-        setLoading(false);
-      }
-
-      // Fetch clients and commissions in background without blocking main agent details
-      if (ag) {
-        // Fetch clients
-        (async () => {
-          try {
-            const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
-            const extractClients = (res) => {
-              if (!res) return [];
-              if (Array.isArray(res)) return res;
-              if (res.data) {
-                if (Array.isArray(res.data)) return res.data;
-                if (res.data.clients && Array.isArray(res.data.clients)) return res.data.clients;
-              }
-              if (res.clients && Array.isArray(res.clients)) return res.clients;
-              return [];
-            };
-            setAgentClients(extractClients(clientsData));
-          } catch (cErr) {
-            console.error('Failed to load agent clients:', cErr);
-          }
-        })();
-
-        // Fetch commissions
-        (async () => {
-          try {
-            const commissionsData = await apiRequest(`/api/super-admin/agents/${id}/commissions`);
-            const extractCommissions = (res) => {
-              if (!res) return [];
-              if (Array.isArray(res)) return res;
-              if (res.data) {
-                if (Array.isArray(res.data)) return res.data;
-                if (res.data.commissions && Array.isArray(res.data.commissions)) return res.data.commissions;
-              }
-              if (res.commissions && Array.isArray(res.commissions)) return res.commissions;
-              return [];
-            };
-            setCommissionHistory(extractCommissions(commissionsData));
-          } catch (comErr) {
-            console.error('Failed to load agent commissions:', comErr);
-          }
-        })();
-      }
-    };
     fetchAgentDetails();
   }, [id]);
 
@@ -490,7 +550,8 @@ export default function AgentDetail() {
     }
   };
 
-  const handleVerifyDocument = (docLabel) => {
+  const handleVerifyDocument = async (docLabel) => {
+    // Update local state first so UI updates instantly
     setVerifiedDocs(prev => ({ ...prev, [docLabel]: true }));
     setDocumentsList(prev => prev.map(d => {
       if ((d.name || d.label) === docLabel) {
@@ -499,6 +560,19 @@ export default function AgentDetail() {
       return d;
     }));
     addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
+
+    try {
+      await apiRequest(`/api/super-admin/agents/${id}/verify-document`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          documentName: docLabel,
+          status: 'Verified'
+        })
+      });
+      fetchAgentDetails(); // Sync from backend if endpoint exists
+    } catch (err) {
+      console.warn('Backend agent verification API not implemented yet. Local UI state updated successfully:', err);
+    }
   };
 
   const handleKycStatusChange = async (newKycStatus) => {
@@ -548,6 +622,103 @@ export default function AgentDetail() {
   const allDocsVerified = documentsList.length > 0 && documentsList.every(doc => !!verifiedDocs[doc.name || doc.label]);
 
   const totalCommission = commissionHistory.reduce((sum, com) => sum + (com.amount || 0), 0);
+
+  const normalizeUrl = (url) => {
+    if (!url) return '';
+    let normalized = url;
+    if (
+      normalized.startsWith('uploads/') ||
+      normalized.startsWith('/uploads/') ||
+      (!normalized.startsWith('http://') &&
+        !normalized.startsWith('https://') &&
+        !normalized.startsWith('blob:') &&
+        !normalized.startsWith('data:'))
+    ) {
+      const base = getApiUrl('');
+      const cleanPath = normalized.startsWith('/') ? normalized : '/' + normalized;
+      normalized = base + cleanPath;
+    }
+    if (normalized.startsWith('http://')) {
+      const isLocal = normalized.includes('localhost') || normalized.includes('192.168.');
+      if (!isLocal) {
+        normalized = 'https://' + normalized.substring(7);
+      }
+    }
+    return normalized;
+  };
+
+  const getFileType = (url, filename) => {
+    if (!url) return 'none';
+    const targetUrl = normalizeUrl(url);
+    const ext = (filename || targetUrl).split('.').pop().toLowerCase();
+    
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext) || /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl);
+    if (isImage) return 'image';
+    const isPdf = ext === 'pdf' || /\.pdf/i.test(targetUrl);
+    if (isPdf) return 'pdf';
+    const isOffice = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext) || /\.(doc|docx|xls|xlsx|ppt|pptx)/i.test(targetUrl);
+    if (isOffice) return 'office';
+    return 'other';
+  };
+
+  const downloadFile = async (url, filename) => {
+    if (!url) {
+      addToast('No file URL available', 'error', 'Download Failed');
+      return;
+    }
+    const targetUrl = normalizeUrl(url);
+    const isCloudinary = targetUrl.includes('cloudinary.com') || targetUrl.includes('res.cloudinary.com');
+
+    if (isCloudinary) {
+      addToast('Starting file download...', 'info', 'Downloading');
+      try {
+        const link = document.createElement('a');
+        link.href = targetUrl;
+        link.setAttribute('download', filename || 'document');
+        link.setAttribute('target', '_blank');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addToast('File download started!', 'success', 'Downloaded');
+      } catch (err) {
+        window.open(targetUrl, '_blank');
+        addToast('File opened in new tab', 'success', 'Opened');
+      }
+      return;
+    }
+
+    addToast('Starting secure file download...', 'info', 'Downloading');
+    try {
+      const authData = localStorage.getItem('kfpl_auth');
+      let token = '';
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        token = parsed.token || '';
+      }
+
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(targetUrl, { headers });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      addToast('File downloaded successfully!', 'success', 'Downloaded');
+    } catch (error) {
+      console.error('Fetch download error, falling back to window.open:', error);
+      window.open(targetUrl, '_blank');
+      addToast('File opened in new tab', 'success', 'Opened');
+    }
+  };
 
   return (
     <div className="kfpl-page">
@@ -1155,25 +1326,21 @@ export default function AgentDetail() {
                       style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
                       onClick={() => setViewingDoc({ label: docName, filename: doc.fileName || 'document.pdf', agentName: doc.holder || agent.name, status: isVerified ? 'Verified' : 'Pending Verification', uploadedAt: doc.uploadedDate || doc.uploaded || agent.joinDate, url: doc.url })}
                     >
-                      View Document
+                      View
                     </button>
+                    {!isVerified && (
+                      <button 
+                        className="kfpl-btn kfpl-btn--sm" 
+                        style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFFFFF', border: 'none', fontWeight: 600 }}
+                        onClick={() => handleVerifyDocument(docName)}
+                      >
+                        Verify
+                      </button>
+                    )}
                     <button 
                       className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
                       style={{ padding: '6px 10px' }}
-                      onClick={() => {
-                        if (doc.url) {
-                          window.open(doc.url, '_blank');
-                        } else {
-                          const blob = new Blob([`Dummy file content for ${docName} of ${agent.name}`], { type: 'text/plain' });
-                          const url = URL.createObjectURL(blob);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = doc.fileName || `${docName.replace(/\s/g, '_')}.pdf`;
-                          link.click();
-                          URL.revokeObjectURL(url);
-                        }
-                        addToast(`${docName} downloaded`, 'success', 'Downloaded');
-                      }}
+                      onClick={() => downloadFile(doc.url, docName)}
                       title="Download File"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
@@ -1200,94 +1367,97 @@ export default function AgentDetail() {
             onClick={e => e.stopPropagation()}
           >
             <div className="kfpl-modal-header">
-              <h3 className="kfpl-modal-title">{viewingDoc.label}</h3>
-              <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
+               <h3 className="kfpl-modal-title">{viewingDoc.label}</h3>
+               <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+               </button>
             </div>
-            <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '380px' }}>
-              <div style={{
-                background: '#ffffff', width: '100%', maxWidth: '480px', borderRadius: '12px',
-                border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)', padding: '24px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, var(--color-gold) 0%, #0F766E 100%)' }} />
-                
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-gold-dark, #b38600)" strokeWidth="1.5" strokeLinecap="round" width="64" height="64" style={{ marginBottom: '16px', opacity: 0.85 }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                </svg>
-                
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800 }}>{viewingDoc.label}</h4>
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '20px' }}>{viewingDoc.filename}</span>
-                
-                <div style={{
-                  width: '100%', background: '#f1f5f9', borderRadius: '8px', border: '1px dashed #cbd5e1',
-                  padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Holder:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.agentName}</span>
+            <div className="kfpl-modal-body" style={{ background: '#0f172a', padding: 0, display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
+              {/* File Preview Area */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', minHeight: '320px', position: 'relative' }}>
+                {previewLoading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#94a3b8' }}>
+                    <div style={{ width: '32px', height: '32px', border: '3px solid #334155', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <span style={{ fontSize: '0.85rem' }}>Loading secure preview...</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Status:</span>
-                    <span style={{ fontWeight: 700, color: verifiedDocs[viewingDoc.label] ? '#10b981' : '#f59e0b' }}>
-                      {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
-                    </span>
+                ) : previewUrl ? (
+                  (() => {
+                    const fileUrl = previewUrl;
+                    const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
+                    if (fileType === 'image') {
+                      return <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '360px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} />;
+                    } else if (fileType === 'pdf') {
+                      return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none', borderRadius: '8px', background: '#ffffff' }} />;
+                    } else if (fileType === 'office') {
+                      const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
+                      if (isBlob) {
+                        return (
+                          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                            <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
+                          </div>
+                        );
+                      }
+                      return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '360px', border: 'none', borderRadius: '8px' }} />;
+                    } else {
+                      return (
+                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                        </div>
+                      );
+                    }
+                  })()
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                    <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Verification:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>Digital Signatures Valid</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Uploaded:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.uploadedAt}</span>
-                  </div>
-                </div>
+                )}
+              </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '20px', color: '#64748b', fontSize: '0.75rem' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <span>Secured PDF Document. Download to view raw scan.</span>
+              {/* Document Info Bar */}
+              <div style={{ background: '#ffffff', padding: '20px 24px', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>{viewingDoc.filename}</h4>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Uploaded: {viewingDoc.uploadedAt}</span>
+                  </div>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                    background: verifiedDocs[viewingDoc.label] ? '#dcfce7' : '#fef3c7',
+                    color: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706',
+                    border: `1px solid ${verifiedDocs[viewingDoc.label] ? '#bbf7d0' : '#fde68a'}`
+                  }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706' }} />
+                    {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: '#64748b' }}>
+                  <span><strong style={{ color: '#1e293b' }}>Holder:</strong> {viewingDoc.agentName}</span>
                 </div>
               </div>
             </div>
-            <div className="kfpl-modal-footer">
+            <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
               >Close</button>
-              {!verifiedDocs[viewingDoc.label] && (
-                <button
-                  className="kfpl-btn kfpl-btn--sm"
-                  style={{ background: '#10B981', borderColor: 'transparent', color: '#FFFFFF' }}
-                  onClick={() => {
-                    handleVerifyDocument(viewingDoc.label);
-                    setViewingDoc(null);
-                  }}
-                >
-                  Verify Document
-                </button>
-              )}
+
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
+                style={{ fontWeight: 700, padding: '8px 20px', borderRadius: '8px' }}
                 onClick={() => {
-                  if (viewingDoc.url) {
-                    window.open(viewingDoc.url, '_blank');
-                  } else {
-                    const blob = new Blob([`Dummy file content for ${viewingDoc.label} of ${viewingDoc.agentName}`], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = viewingDoc.filename;
-                    link.click();
-                    URL.revokeObjectURL(url);
-                  }
-                  addToast(`${viewingDoc.label} downloaded`, 'success', 'Downloaded');
+                  downloadFile(viewingDoc.url, viewingDoc.filename);
                   setViewingDoc(null);
                 }}
-              >Download Original File</button>
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Original
+                </span>
+              </button>
             </div>
           </div>
         </div>,

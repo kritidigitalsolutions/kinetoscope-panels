@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
 import { investors, formatCurrency } from '../../data/mockData';
-import { getApiUrl } from '../../config/apiUrl';
+import { apiRequest } from '../../config/apiHelper';
 import { useToast } from '../../components/ui/Toast';
 
 function formatDateDMY(dateStr) {
@@ -56,32 +56,21 @@ export default function InvestmentList() {
 
   useEffect(() => {
     const fetchInvestments = async () => {
-      const authData = localStorage.getItem('kfpl_auth');
-      const token = authData ? JSON.parse(authData)?.token : null;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
+      setLoading(true);
       try {
-        const response = await fetch(getApiUrl('/api/super-admin/investments'), {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setInvestments(Array.isArray(data) ? data : (data.investments || []));
-        }
+        const data = await apiRequest('/api/super-admin/investments');
+        const list = Array.isArray(data) ? data : (data.investments || []);
+        setInvestments(list);
       } catch (err) {
         console.error('Failed to fetch investments from API', err);
+        setInvestments([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchInvestments();
-  }, []);
+  }, [renderTrigger]);
 
   const handleExtendContractToDate = (investmentId, newEndDateStr) => {
     if (!newEndDateStr) return;

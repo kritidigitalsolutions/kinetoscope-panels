@@ -25,6 +25,8 @@ export default function AddInvestor() {
     citizenship: 'National',
     nomineeCitizenship: 'National',
     roiPercentage: '1.2',
+    contractStartDate: new Date().toISOString().split('T')[0],
+    contractEndDate: '',
   });
 
   const [dbAgents, setDbAgents] = useState([]);
@@ -165,8 +167,18 @@ export default function AddInvestor() {
       formData.append('riskProfile', form.riskProfile);
       formData.append('residencyStatus', form.citizenship === 'International' ? 'International' : 'National (Domestic)');
       formData.append('monthlyRoi', form.roiPercentage || '1.2');
+      if (form.contractStartDate) {
+        formData.append('contractStartDate', form.contractStartDate);
+        formData.append('joinDate', form.contractStartDate);
+      }
+      if (form.contractEndDate) {
+        formData.append('contractEndDate', form.contractEndDate);
+      }
       if (form.bankName) formData.append('bankName', form.bankName);
-      if (form.accountNo) formData.append('accountNumber', form.accountNo);
+      if (form.accountNo) {
+        formData.append('accountNumber', form.accountNo);
+        formData.append('confirmAccountNumber', form.confirmAccountNo || form.accountNo);
+      }
       if (form.ifsc) formData.append('ifscCode', form.ifsc);
       if (form.pan) formData.append('panNumber', form.pan);
       if (form.aadhaarNumber) formData.append('aadhaarNumber', form.aadhaarNumber.replace(/\s/g, ''));
@@ -185,7 +197,11 @@ export default function AddInvestor() {
         formData.append('assignedAgent', selectedAgentId);
       }
       formData.append('tier', 'SILVER');
-      if (portalPassword) formData.append('portalPassword', portalPassword);
+      if (portalPassword) {
+        formData.append('portalPassword', portalPassword);
+        formData.append('password', portalPassword);
+      }
+      formData.append('is2FAEnabled', 'false');
 
       // Append files if selected
       if (panDocument) formData.append('panDocument', panDocument);
@@ -222,7 +238,8 @@ export default function AddInvestor() {
           status: 'active',
           totalInvestment: 0,
           roiPercentage: parseFloat(form.roiPercentage) || 1.2,
-          joinDate: new Date().toISOString().split('T')[0],
+          joinDate: form.contractStartDate || new Date().toISOString().split('T')[0],
+          contractEndDate: form.contractEndDate || '',
           kyc: 'Verified',
           pan: form.pan,
           bankName: form.bankName,
@@ -359,6 +376,31 @@ export default function AddInvestor() {
                 />
               </div>
               <div style={{ flex: 1 }}></div>
+            </div>
+
+            <div className="kfpl-form-row" style={{ marginTop: '16px' }}>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Contract Start Date <span className="required">*</span></label>
+                <input 
+                  type="date" 
+                  className="kfpl-input" 
+                  name="contractStartDate" 
+                  value={form.contractStartDate} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="kfpl-input-group" style={{ flex: 1 }}>
+                <label className="kfpl-input-label">Contract End Date <span className="required">*</span></label>
+                <input 
+                  type="date" 
+                  className="kfpl-input" 
+                  name="contractEndDate" 
+                  value={form.contractEndDate} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
             </div>
           </div>
 

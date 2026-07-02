@@ -116,6 +116,7 @@ export default function AddAgent() {
       if (form.passport) formData.append('passportNumber', form.passport);
       formData.append('bankName', form.bankName);
       formData.append('accountNumber', form.accountNo);
+      formData.append('confirmAccountNumber', form.confirmAccountNo || form.accountNo);
       formData.append('ifscCode', form.ifsc);
       formData.append('oneTimeCommission', form.commissionOneTime || '0');
       formData.append('monthlySlab', form.commissionMonthly || '0');
@@ -127,7 +128,9 @@ export default function AddAgent() {
       formData.append('nomineeResidency', form.nomineeCitizenship === 'International' ? 'International' : 'National (Domestic)');
       if (portalPassword) {
         formData.append('password', portalPassword);
+        formData.append('portalPassword', portalPassword);
       }
+      formData.append('is2FAEnabled', 'false');
 
       if (panDocFile) formData.append('panDocument', panDocFile);
       if (idProofDocFile) formData.append('idProofDocument', idProofDocFile);

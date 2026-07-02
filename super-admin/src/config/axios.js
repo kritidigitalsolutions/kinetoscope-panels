@@ -9,8 +9,8 @@ import axios from 'axios';
 // Local + Production URLs
 const BASE_URL =
   window.location.hostname === 'localhost'
-    ? 'http://192.168.1.23:5000/api'
-    : 'https://kinetoscope-backend.vercel.app/api';
+    ? 'http://192.168.1.22:5000/api'
+    : 'http://192.168.1.22:5000/api';
 
 const api = axios.create({
   baseURL: BASE_URL,

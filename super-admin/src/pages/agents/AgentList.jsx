@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
-import { formatCurrency } from '../../data/mockData';
+import { formatCurrency, agents } from '../../data/mockData';
 import { apiRequest } from '../../config/apiHelper';
 
 export default function AgentList() {
@@ -19,6 +19,7 @@ export default function AgentList() {
 
   useEffect(() => {
     const fetchAgents = async () => {
+      setLoading(true);
       try {
         const data = await apiRequest('/api/super-admin/agents');
         
@@ -34,29 +35,34 @@ export default function AgentList() {
         };
 
         const raw = extractAgents(data);
-        
-        // Normalize field names from backend nested user and profile structures
-        const normalized = raw.map(a => {
-          const user = a.user || {};
-          const profile = a.profile || {};
-          return {
-            ...a,
-            id: user._id || profile.userId || a._id || a.id,
-            name: profile.fullName || user.name || '—',
-            email: profile.email || user.email || '—',
-            phone: profile.phone || '—',
-            agentId: user.clientCode || profile.agentId || '—',
-            joinDate: user.createdAt 
-              ? new Date(user.createdAt).toLocaleDateString('en-IN') 
-              : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—'),
-            totalClients: a.clientsCount ?? a.totalClients ?? 0,
-            totalInvestment: a.totalInvestment ?? 0,
-            status: profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
-          };
-        });
-        setAgentsList(normalized);
+        if (Array.isArray(raw)) {
+          const normalized = raw
+            .filter(a => a && typeof a === 'object')
+            .map(a => {
+              const user = a.user || {};
+              const profile = a.profile || {};
+              return {
+                ...a,
+                id: user._id || profile.userId || a._id || a.id,
+                name: profile.fullName || user.name || '—',
+                email: profile.email || user.email || '—',
+                phone: profile.phone || '—',
+                agentId: user.clientCode || profile.agentId || '—',
+                joinDate: user.createdAt 
+                  ? new Date(user.createdAt).toLocaleDateString('en-IN') 
+                  : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—'),
+                totalClients: a.clientsCount ?? a.totalClients ?? 0,
+                totalInvestment: a.totalInvestment ?? 0,
+                status: profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
+              };
+            });
+          setAgentsList(normalized);
+        } else {
+          setAgentsList([]);
+        }
       } catch (err) {
         console.error('Failed to fetch agents:', err);
+        setAgentsList([]);
       } finally {
         setLoading(false);
       }

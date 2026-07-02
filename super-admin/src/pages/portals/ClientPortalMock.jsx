@@ -3,10 +3,11 @@
    Description: Client Portal Accounts & Credentials Listing
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Badge from '../../components/ui/Badge';
 import { useToast } from '../../components/ui/Toast';
-import { investors } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
+import Modal from '../../components/ui/Modal';
 
 export default function ClientPortalMock() {
   const addToast = useToast();
@@ -15,7 +16,63 @@ export default function ClientPortalMock() {
   const [tierFilter, setTierFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const filteredInvestors = investors.filter(inv => {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      setLoading(true);
+      try {
+        const res = await apiRequest('/api/super-admin/clients');
+        const list = res.data?.clients || res.data || res.clients || [];
+        if (Array.isArray(list)) {
+          const normalized = list.map((c, index) => {
+            const profile = c.profile || {};
+            const header = c.header || {};
+            const user = (c.userId && typeof c.userId === 'object' ? c.userId : null) || 
+                         (c.user && typeof c.user === 'object' ? c.user : null) || 
+                         (profile.userId && typeof profile.userId === 'object' ? profile.userId : null) ||
+                         (profile.user && typeof profile.user === 'object' ? profile.user : null) || {};
+            
+            const padIndex = String(index + 1).padStart(3, '0');
+            const fallbackCode = `C-${padIndex}`;
+
+            const name = profile.fullName || user.name || user.fullName || c.fullName || header.clientName || c.name || profile.name || '';
+            const firstWord = name.split(' ')[0] || 'client';
+            const cleanCode = user.clientCode || c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode;
+            const rawId = cleanCode.includes('-') ? cleanCode.split('-')[1] : '1001';
+            
+            const generatedPassword = `${firstWord.toLowerCase()}@${rawId}`;
+            const emailVal = profile.email || user.email || c.email || '';
+
+            return {
+              id: c._id || user._id || profile.userId || c.id,
+              clientId: cleanCode,
+              name: name || '—',
+              email: emailVal,
+              portalEmail: emailVal,
+              portalPassword: c.portalPassword || profile.portalPassword || user.portalPassword || c.password || profile.password || generatedPassword,
+              status: c.status || header.status || profile.status || 'Active',
+              residencyStatus: c.residencyStatus || profile.residencyStatus || c.citizenship || profile.citizenship || '',
+              tier: c.tier || header.tier || profile.tier || c.category || profile.category || 'silver',
+            };
+          });
+          setClients(normalized);
+        }
+      } catch (err) {
+        console.error('Failed to load clients portals:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClients();
+  }, []);
+
+  const filteredInvestors = clients.filter(inv => {
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       const email = (inv.portalEmail || inv.email || '').toLowerCase();
@@ -26,20 +83,39 @@ export default function ClientPortalMock() {
 
     if (residencyFilter !== 'all') {
       const isInt = residencyFilter === 'international';
-      const actualInt = inv.citizenship === 'International';
+      const actualInt = (inv.residencyStatus || '').toLowerCase() === 'international';
       if (isInt !== actualInt) return false;
     }
 
     if (tierFilter !== 'all') {
-      if ((inv.category || 'silver').toLowerCase() !== tierFilter.toLowerCase()) return false;
+      if ((inv.tier || 'silver').toLowerCase() !== tierFilter.toLowerCase()) return false;
     }
 
     if (statusFilter !== 'all') {
-      if (inv.status !== statusFilter) return false;
+      if ((inv.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
     }
 
     return true;
   });
+
+  const handleConfirmDelete = async () => {
+    if (!clientToDelete) return;
+    setDeleteLoading(true);
+    try {
+      await apiRequest(`/api/super-admin/clients/${clientToDelete.id}`, {
+        method: 'DELETE'
+      });
+      addToast('Client profile and credentials deleted successfully!', 'success', 'Portal Deleted');
+      setClients(prev => prev.filter(c => c.id !== clientToDelete.id));
+      setShowDeleteModal(false);
+      setClientToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete client portal:', err);
+      addToast(err.message || 'Failed to delete client', 'danger', 'Deletion Failed');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const copyPassword = (email, password) => {
     const text = `Email: ${email}\nPassword: ${password}`;
@@ -67,6 +143,14 @@ export default function ClientPortalMock() {
     }
     document.body.removeChild(textarea);
   };
+
+  if (loading) {
+    return (
+      <div className="kfpl-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <div style={{ color: 'var(--color-navy)', fontSize: '1.2rem', fontWeight: 500 }}>Loading Client Portals...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="kfpl-page">
@@ -149,9 +233,9 @@ export default function ClientPortalMock() {
           <div className="kfpl-table-toolbar-left">
             <span className="kfpl-table-count">
               {searchQuery.trim() || residencyFilter !== 'all' || tierFilter !== 'all' || statusFilter !== 'all' ? (
-                <>Showing <strong>{filteredInvestors.length}</strong> of <strong>{investors.length}</strong> clients</>
+                <>Showing <strong>{filteredInvestors.length}</strong> of <strong>{clients.length}</strong> clients</>
               ) : (
-                <>Showing Portal Login Credentials for <strong>{investors.length}</strong> clients</>
+                <>Showing Portal Login Credentials for <strong>{clients.length}</strong> clients</>
               )}
             </span>
           </div>
@@ -191,6 +275,16 @@ export default function ClientPortalMock() {
                       >
                         Copy Credentials
                       </button>
+                      <button 
+                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+                        onClick={() => {
+                          setClientToDelete(inv);
+                          setShowDeleteModal(true);
+                        }}
+                        style={{ padding: '6px 14px', fontSize: '0.8125rem', color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }}
+                      >
+                        Delete Client
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -199,6 +293,77 @@ export default function ClientPortalMock() {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          if (!deleteLoading) {
+            setShowDeleteModal(false);
+            setClientToDelete(null);
+          }
+        }}
+        title="Delete Client Profile & Credentials"
+        footer={
+          <>
+            <button
+              className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setClientToDelete(null);
+              }}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </button>
+            <button
+              className="kfpl-btn kfpl-btn--sm"
+              style={{ background: '#EF4444', borderColor: 'transparent', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
+              onClick={handleConfirmDelete}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Deleting...' : 'Yes, Delete Client'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px' }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: '16px', 
+            alignItems: 'flex-start', 
+            background: 'rgba(239, 68, 68, 0.05)', 
+            border: '1px solid rgba(239, 68, 68, 0.15)', 
+            padding: '16px', 
+            borderRadius: '12px' 
+          }}>
+            <div style={{ 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              color: '#EF4444', 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              flexShrink: 0,
+              fontSize: '1.25rem',
+              fontWeight: 'bold'
+            }}>
+              ⚠️
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#111827' }}>
+                Permanently delete client & portal access?
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#4B5563', lineHeight: '1.5' }}>
+                Are you sure you want to completely remove client <strong>{clientToDelete?.name}</strong> and revoke their portal access credentials? 
+                This action is irreversible and will delete all associated data from the database.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

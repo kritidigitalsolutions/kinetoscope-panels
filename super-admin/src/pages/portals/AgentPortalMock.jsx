@@ -3,10 +3,10 @@
    Description: Agent Portal Accounts & Credentials Listing
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Badge from '../../components/ui/Badge';
 import { useToast } from '../../components/ui/Toast';
-import { agents } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function AgentPortalMock() {
   const addToast = useToast();
@@ -14,7 +14,67 @@ export default function AgentPortalMock() {
   const [residencyFilter, setResidencyFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const filteredAgents = agents.filter(agt => {
+  const [agentsList, setAgentsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      setLoading(true);
+      try {
+        const data = await apiRequest('/api/super-admin/agents');
+        
+        const extractAgents = (res) => {
+          if (!res) return [];
+          if (Array.isArray(res)) return res;
+          if (res.data) {
+            if (Array.isArray(res.data)) return res.data;
+            if (res.data.agents && Array.isArray(res.data.agents)) return res.data.agents;
+          }
+          if (res.agents && Array.isArray(res.agents)) return res.agents;
+          return [];
+        };
+
+        const raw = extractAgents(data);
+        if (Array.isArray(raw)) {
+          const normalized = raw
+            .filter(a => a && typeof a === 'object')
+            .map((a, index) => {
+              const user = a.user || {};
+              const profile = a.profile || {};
+              
+              const padIndex = String(index + 1).padStart(3, '0');
+              const fallbackCode = `AGT-${padIndex}`;
+
+              const name = profile.fullName || user.name || a.name || '';
+              const firstWord = name.split(' ')[0] || 'agent';
+              const cleanCode = user.clientCode || profile.agentId || a.agentId || a._id || fallbackCode;
+              const rawId = cleanCode.includes('-') ? cleanCode.split('-')[1] : '001';
+              
+              const generatedPassword = `${firstWord.toLowerCase()}@${rawId}`;
+
+              return {
+                id: user._id || profile.userId || a._id || a.id,
+                name: name || '—',
+                email: profile.email || user.email || a.email || '—',
+                portalEmail: profile.email || user.email || a.email || '—',
+                agentId: cleanCode,
+                portalPassword: a.portalPassword || profile.portalPassword || user.portalPassword || a.password || profile.password || generatedPassword,
+                status: profile.status || (user.isActive ? 'Active' : 'Inactive') || a.status || 'Active',
+                residencyStatus: profile.residencyStatus || a.residencyStatus || a.citizenship || '',
+              };
+            });
+          setAgentsList(normalized);
+        }
+      } catch (err) {
+        console.error('Failed to load agents portals:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  const filteredAgents = agentsList.filter(agt => {
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       const email = (agt.portalEmail || agt.email || '').toLowerCase();
@@ -25,12 +85,12 @@ export default function AgentPortalMock() {
 
     if (residencyFilter !== 'all') {
       const isInt = residencyFilter === 'international';
-      const actualInt = agt.citizenship === 'International';
+      const actualInt = (agt.residencyStatus || '').toLowerCase() === 'international';
       if (isInt !== actualInt) return false;
     }
 
     if (statusFilter !== 'all') {
-      if (agt.status !== statusFilter) return false;
+      if ((agt.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
     }
 
     return true;
@@ -62,6 +122,14 @@ export default function AgentPortalMock() {
     }
     document.body.removeChild(textarea);
   };
+
+  if (loading) {
+    return (
+      <div className="kfpl-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <div style={{ color: 'var(--color-navy)', fontSize: '1.2rem', fontWeight: 500 }}>Loading Agent Portals...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="kfpl-page">
@@ -131,9 +199,9 @@ export default function AgentPortalMock() {
           <div className="kfpl-table-toolbar-left">
             <span className="kfpl-table-count">
               {searchQuery.trim() || residencyFilter !== 'all' || statusFilter !== 'all' ? (
-                <>Showing <strong>{filteredAgents.length}</strong> of <strong>{agents.length}</strong> agents</>
+                <>Showing <strong>{filteredAgents.length}</strong> of <strong>{agentsList.length}</strong> agents</>
               ) : (
-                <>Showing Portal Login Credentials for <strong>{agents.length}</strong> agents</>
+                <>Showing Portal Login Credentials for <strong>{agentsList.length}</strong> agents</>
               )}
             </span>
           </div>

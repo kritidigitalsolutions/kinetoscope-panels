@@ -11,6 +11,7 @@ import Modal from '../../components/ui/Modal';
 import { formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../config/apiHelper';
+import { getApiUrl } from '../../config/apiUrl';
 
 /* ── helpers for downloading statements ─────────────────────── */
 function downloadClientROISingleCSV(roi, client) {
@@ -392,10 +393,70 @@ export default function InvestorDetail() {
   const [showRoiEditModal, setShowRoiEditModal] = useState(false);
   const [roiEditStep, setRoiEditStep] = useState(1);
   const [roiInputVal, setRoiInputVal] = useState('1.2');
+  const [verifiedDocs, setVerifiedDocs] = useState({});
   const [viewingDoc, setViewingDoc] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [verifiedDocs, setVerifiedDocs] = useState({});
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!viewingDoc || !viewingDoc.url) {
+      setPreviewUrl('');
+      return;
+    }
+    
+    let active = true;
+    let objUrl = '';
+
+    const loadPreview = async () => {
+      setPreviewLoading(true);
+      try {
+        const targetUrl = normalizeUrl(viewingDoc.url);
+        const isCloudinary = targetUrl.includes('cloudinary.com') || targetUrl.includes('res.cloudinary.com');
+        
+        const headers = {};
+        if (!isCloudinary) {
+          const authData = localStorage.getItem('kfpl_auth');
+          let token = '';
+          if (authData) {
+            const parsed = JSON.parse(authData);
+            token = parsed.token || '';
+          }
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+        }
+
+        const response = await fetch(targetUrl, { headers });
+        if (!response.ok) throw new Error('Fetch failed');
+        const blob = await response.blob();
+        
+        if (active) {
+          objUrl = URL.createObjectURL(blob);
+          setPreviewUrl(objUrl);
+        }
+      } catch (err) {
+        console.error('Preview fetch error:', err);
+        if (active) {
+          setPreviewUrl(normalizeUrl(viewingDoc.url));
+        }
+      } finally {
+        if (active) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      active = false;
+      if (objUrl) {
+        URL.revokeObjectURL(objUrl);
+      }
+    };
+  }, [viewingDoc]);
 
   // ── API 2: Fetch client details on mount ─────
   useEffect(() => {
@@ -419,7 +480,8 @@ export default function InvestorDetail() {
           phone: profile.phone || '',
           dob: profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN') : '—',
           address: profile.address || '—',
-          joinDate: profile.joinDate ? new Date(profile.joinDate).toLocaleDateString('en-IN') : '—',
+          joinDate: (profile.contractStartDate || profile.joinDate) ? new Date(profile.contractStartDate || profile.joinDate).toLocaleDateString('en-IN') : '—',
+          contractEndDate: profile.contractEndDate ? new Date(profile.contractEndDate).toLocaleDateString('en-IN') : '—',
           category: (header.tier || profile.tier || 'silver').toLowerCase(),
           status: (header.status || profile.status || 'active').toLowerCase(),
           kyc: (header.kycStatus || summary.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
@@ -516,10 +578,11 @@ export default function InvestorDetail() {
       setDocsData(data);
 
       const docs = data.documents || [];
+      console.log('[DEBUG Client Docs]', JSON.stringify(docs, null, 2));
       const verifiedMap = {};
       docs.forEach(doc => {
         const label = doc.name || doc.label;
-        if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified) {
+        if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified === true) {
           verifiedMap[label] = true;
         }
       });
@@ -664,18 +727,61 @@ export default function InvestorDetail() {
     }
   };
 
-  const handleVerifyDocument = (docLabel) => {
-    setVerifiedDocs(prev => ({ ...prev, [docLabel]: true }));
-    if (docsData && docsData.documents) {
-      const updatedDocs = docsData.documents.map(d => {
-        if ((d.name || d.label) === docLabel) {
-          return { ...d, status: 'Verified' };
-        }
-        return d;
-      });
-      setDocsData({ ...docsData, documents: updatedDocs });
+  const handleVerifyDocument = async (docLabel) => {
+    let fieldName = 'panDocument';
+    const label = docLabel.toLowerCase();
+    if (label.includes('nominee')) {
+      fieldName = 'nomineeProofDocument';
+    } else if (label.includes('pan')) {
+      fieldName = 'panDocument';
+    } else if (label.includes('aadhaar') || label.includes('id proof')) {
+      fieldName = 'aadhaarDocument';
+    } else if (label.includes('bank') || label.includes('details')) {
+      fieldName = 'bankProofDocument';
+    } else if (label.includes('agreement')) {
+      fieldName = 'agreementDocument';
     }
-    addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
+
+    try {
+      await apiRequest(`/api/super-admin/clients/${id}/verify-document`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          documentName: docLabel,
+          documentField: fieldName,
+          field: fieldName,
+          fieldName: fieldName,
+          docField: fieldName,
+          status: 'Verified'
+        })
+      });
+
+      const newVerified = { ...verifiedDocs, [docLabel]: true };
+      setVerifiedDocs(newVerified);
+      if (docsData && docsData.documents) {
+        const updatedDocs = docsData.documents.map(d => {
+          if ((d.name || d.label) === docLabel) {
+            return { ...d, status: 'Verified' };
+          }
+          return d;
+        });
+        setDocsData({ ...docsData, documents: updatedDocs });
+
+        // Auto-verify KYC when ALL documents are verified
+        const allNowVerified = updatedDocs.length > 0 && updatedDocs.every(d => {
+          const label = d.name || d.label;
+          return newVerified[label] || d.status === 'Verified';
+        });
+        if (allNowVerified) {
+          handleKycStatusChange('VERIFIED');
+          addToast('All documents verified — KYC automatically set to Verified!', 'success', 'KYC Auto-Verified');
+        }
+      }
+      addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
+      fetchDocuments(); // Refresh from backend to sync
+    } catch (err) {
+      console.error('Failed to verify document:', err);
+      addToast(err.message || 'Failed to verify document', 'error', 'Verification Failed');
+    }
   };
 
   const handleKycStatusChange = async (newKycStatus) => {
@@ -688,10 +794,106 @@ export default function InvestorDetail() {
         })
       });
       setInvestor(prev => prev ? { ...prev, kyc: newKycStatus } : null);
-      addToast(`Client KYC status updated to ${newKycStatus}`, 'success', 'KYC Updated');
     } catch (err) {
       console.error('Failed to update KYC status:', err);
       addToast(err.message || 'Failed to update KYC status', 'error', 'Update Failed');
+    }
+  };
+
+  const normalizeUrl = (url) => {
+    if (!url) return '';
+    let normalized = url;
+    if (
+      normalized.startsWith('uploads/') ||
+      normalized.startsWith('/uploads/') ||
+      (!normalized.startsWith('http://') &&
+        !normalized.startsWith('https://') &&
+        !normalized.startsWith('blob:') &&
+        !normalized.startsWith('data:'))
+    ) {
+      const base = getApiUrl('');
+      const cleanPath = normalized.startsWith('/') ? normalized : '/' + normalized;
+      normalized = base + cleanPath;
+    }
+    if (normalized.startsWith('http://')) {
+      const isLocal = normalized.includes('localhost') || normalized.includes('192.168.');
+      if (!isLocal) {
+        normalized = 'https://' + normalized.substring(7);
+      }
+    }
+    return normalized;
+  };
+
+  const getFileType = (url, filename) => {
+    if (!url) return 'none';
+    const targetUrl = normalizeUrl(url);
+    const ext = (filename || targetUrl).split('.').pop().toLowerCase();
+    
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext) || /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl);
+    if (isImage) return 'image';
+    const isPdf = ext === 'pdf' || /\.pdf/i.test(targetUrl);
+    if (isPdf) return 'pdf';
+    const isOffice = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext) || /\.(doc|docx|xls|xlsx|ppt|pptx)/i.test(targetUrl);
+    if (isOffice) return 'office';
+    return 'other';
+  };
+
+  const downloadFile = async (url, filename) => {
+    if (!url) {
+      addToast('No file URL available', 'error', 'Download Failed');
+      return;
+    }
+    const targetUrl = normalizeUrl(url);
+    const isCloudinary = targetUrl.includes('cloudinary.com') || targetUrl.includes('res.cloudinary.com');
+
+    if (isCloudinary) {
+      addToast('Starting file download...', 'info', 'Downloading');
+      try {
+        const link = document.createElement('a');
+        link.href = targetUrl;
+        link.setAttribute('download', filename || 'document');
+        link.setAttribute('target', '_blank');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addToast('File download started!', 'success', 'Downloaded');
+      } catch (err) {
+        window.open(targetUrl, '_blank');
+        addToast('File opened in new tab', 'success', 'Opened');
+      }
+      return;
+    }
+
+    addToast('Starting secure file download...', 'info', 'Downloading');
+    try {
+      const authData = localStorage.getItem('kfpl_auth');
+      let token = '';
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        token = parsed.token || '';
+      }
+
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(targetUrl, { headers });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      addToast('File downloaded successfully!', 'success', 'Downloaded');
+    } catch (error) {
+      console.error('Fetch download error, falling back to window.open:', error);
+      window.open(targetUrl, '_blank');
+      addToast('File opened in new tab', 'success', 'Opened');
     }
   };
 
@@ -752,7 +954,9 @@ export default function InvestorDetail() {
         <div className="kfpl-detail-kpi-summary-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <span className="kfpl-detail-kpi-summary-label">KYC Verification</span>
           <div style={{ marginTop: '4px' }}>
-            {allDocsVerified ? (
+            {investor.kyc === 'VERIFIED' ? (
+              <Badge status="active">Verified</Badge>
+            ) : allDocsVerified ? (
               <select
                 className="kfpl-select"
                 value={investor.kyc || 'PENDING'}
@@ -763,8 +967,8 @@ export default function InvestorDetail() {
                   fontSize: '0.85rem', 
                   borderRadius: '6px', 
                   border: '1px solid #10B981', 
-                  background: investor.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
-                  color: investor.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                  background: '#FEF3C7',
+                  color: '#92400E',
                   fontWeight: 600,
                   cursor: 'pointer',
                   outline: 'none'
@@ -775,7 +979,7 @@ export default function InvestorDetail() {
               </select>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <Badge status={investor.kyc === 'VERIFIED' ? 'active' : 'pending'}>{investor.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}</Badge>
+                <Badge status="pending">Pending</Badge>
                 <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
                   ⚠️ Verify all docs first
                 </span>
@@ -856,14 +1060,14 @@ export default function InvestorDetail() {
                 <div>
                   <span className="kfpl-detail-info-item-label">KYC Status</span>
                   <span className="kfpl-detail-info-item-value" style={{ display: 'block', marginTop: '2px' }}>
-                    {!allDocsVerified && (
-                      <Badge status={investor.kyc === 'VERIFIED' ? 'active' : 'pending'}>
-                        {investor.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}
-                      </Badge>
+                    {investor.kyc === 'VERIFIED' ? (
+                      <Badge status="active">Verified</Badge>
+                    ) : (
+                      <Badge status="pending">Pending</Badge>
                     )}
                   </span>
                 </div>
-                {allDocsVerified ? (
+                {investor.kyc === 'VERIFIED' ? null : allDocsVerified ? (
                   <select
                     className="kfpl-select"
                     value={investor.kyc || 'PENDING'}
@@ -873,8 +1077,8 @@ export default function InvestorDetail() {
                       fontSize: '0.8rem', 
                       borderRadius: '6px', 
                       border: '1px solid #10B981', 
-                      background: investor.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
-                      color: investor.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                      background: '#FEF3C7',
+                      color: '#92400E',
                       fontWeight: 600,
                       cursor: 'pointer',
                       outline: 'none'
@@ -1280,14 +1484,7 @@ export default function InvestorDetail() {
                     <button 
                       className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
                       style={{ padding: '6px 10px' }}
-                      onClick={() => {
-                        if (doc.url) {
-                          window.open(doc.url, '_blank');
-                        } else {
-                          addToast('No file URL available', 'error', 'Download Failed');
-                        }
-                        addToast(`${docName} download initiated`, 'success', 'Downloaded');
-                      }}
+                      onClick={() => downloadFile(doc.url, docName)}
                       title="Download File"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
@@ -1319,55 +1516,74 @@ export default function InvestorDetail() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '380px' }}>
-              <div style={{
-                background: '#ffffff', width: '100%', maxWidth: '480px', borderRadius: '12px',
-                border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)', padding: '24px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, var(--color-gold) 0%, #0F766E 100%)' }} />
-                
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-gold-dark, #b38600)" strokeWidth="1.5" strokeLinecap="round" width="64" height="64" style={{ marginBottom: '16px', opacity: 0.85 }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                </svg>
-                
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800 }}>{viewingDoc.label}</h4>
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '20px' }}>{viewingDoc.filename}</span>
-                
-                <div style={{
-                  width: '100%', background: '#f1f5f9', borderRadius: '8px', border: '1px dashed #cbd5e1',
-                  padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Holder:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.investorName}</span>
+            <div className="kfpl-modal-body" style={{ background: '#0f172a', padding: 0, display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
+              {/* File Preview Area */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', minHeight: '320px', position: 'relative' }}>
+                {previewLoading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#94a3b8' }}>
+                    <div style={{ width: '32px', height: '32px', border: '3px solid #334155', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <span style={{ fontSize: '0.85rem' }}>Loading secure preview...</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Status:</span>
-                    <span style={{ fontWeight: 700, color: verifiedDocs[viewingDoc.label] ? '#10b981' : '#f59e0b' }}>
-                      {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
-                    </span>
+                ) : previewUrl ? (
+                  (() => {
+                    const fileUrl = previewUrl;
+                    const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
+                    if (fileType === 'image') {
+                      return <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '360px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} />;
+                    } else if (fileType === 'pdf') {
+                      return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none', borderRadius: '8px', background: '#ffffff' }} />;
+                    } else if (fileType === 'office') {
+                      const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
+                      if (isBlob) {
+                        return (
+                          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                            <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
+                          </div>
+                        );
+                      }
+                      return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '360px', border: 'none', borderRadius: '8px' }} />;
+                    } else {
+                      return (
+                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                        </div>
+                      );
+                    }
+                  })()
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                    <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Verification:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>Digital Signatures Valid</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Uploaded:</span>
-                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{viewingDoc.uploadedAt}</span>
-                  </div>
-                </div>
+                )}
+              </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '20px', color: '#64748b', fontSize: '0.75rem' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <span>Secured PDF Document. Download to view raw scan.</span>
+              {/* Document Info Bar */}
+              <div style={{ background: '#ffffff', padding: '20px 24px', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>{viewingDoc.filename}</h4>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Uploaded: {viewingDoc.uploadedAt}</span>
+                  </div>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                    background: verifiedDocs[viewingDoc.label] ? '#dcfce7' : '#fef3c7',
+                    color: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706',
+                    border: `1px solid ${verifiedDocs[viewingDoc.label] ? '#bbf7d0' : '#fde68a'}`
+                  }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706' }} />
+                    {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: '#64748b' }}>
+                  <span><strong style={{ color: '#1e293b' }}>Holder:</strong> {viewingDoc.investorName}</span>
                 </div>
               </div>
             </div>
-            <div className="kfpl-modal-footer">
+            <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
@@ -1375,28 +1591,28 @@ export default function InvestorDetail() {
               {!verifiedDocs[viewingDoc.label] && (
                 <button
                   className="kfpl-btn kfpl-btn--sm"
-                  style={{ background: '#10B981', borderColor: 'transparent', color: '#FFFFFF' }}
-                  onClick={() => {
-                    handleVerifyDocument(viewingDoc.label);
-                  }}
+                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', borderColor: 'transparent', color: '#FFFFFF', fontWeight: 700, padding: '8px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}
+                  onClick={() => handleVerifyDocument(viewingDoc.label)}
                 >
-                  Verify Document
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+                    Verify Document
+                  </span>
                 </button>
               )}
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
+                style={{ fontWeight: 700, padding: '8px 20px', borderRadius: '8px' }}
                 onClick={() => {
-                  const blob = new Blob([`Dummy file content for ${viewingDoc.label} of ${viewingDoc.investorName}`], { type: 'text/plain' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = viewingDoc.filename;
-                  link.click();
-                  URL.revokeObjectURL(url);
-                  addToast(`${viewingDoc.label} downloaded`, 'success', 'Downloaded');
+                  downloadFile(viewingDoc.url, viewingDoc.filename);
                   setViewingDoc(null);
                 }}
-              >Download Original File</button>
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Original
+                </span>
+              </button>
             </div>
           </div>
         </div>,
