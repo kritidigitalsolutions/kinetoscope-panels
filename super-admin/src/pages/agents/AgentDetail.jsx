@@ -11,11 +11,13 @@ import { agents, investors, formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../config/apiHelper';
 import { getApiUrl } from '../../config/apiUrl';
+import Modal from '../../components/ui/Modal';
 
 /* ── helpers ─────────────────────── */
 function formatDateDMY(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr || '—';
   const day = String(d.getDate()).padStart(2, '0');
   const mon = String(d.getMonth() + 1).padStart(2, '0');
   const yr = d.getFullYear();
@@ -292,6 +294,8 @@ export default function AgentDetail() {
   const [clientSearch, setClientSearch] = useState('');
   const [commissionSearch, setCommissionSearch] = useState('');
   const [viewingDoc, setViewingDoc] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [agent, setAgent] = useState(null);
   const [agentClients, setAgentClients] = useState([]);
@@ -361,8 +365,8 @@ export default function AgentDetail() {
   const [loading, setLoading] = useState(true);
   const [localStatus, setLocalStatus] = useState('active');
 
-  const fetchAgentDetails = async () => {
-    setLoading(true);
+  const fetchAgentDetails = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const [agentRes, clientsRes, commissionsRes] = await Promise.all([
         apiRequest(`/api/super-admin/agents/${id}`).catch(err => {
@@ -398,14 +402,23 @@ export default function AgentDetail() {
         setDocumentsList(docs);
         
         const verifiedMap = {};
+        let allDocsVerifiedOnLoad = docs.length > 0;
         docs.forEach(doc => {
           const label = doc.name || doc.label;
           const s = (doc.status || '').toLowerCase();
-          if (s === 'verified' || s === 'approved' || doc.verified === true) {
+          const isDocVerified = s === 'verified' || s === 'approved' || doc.verified === true;
+          if (isDocVerified) {
             verifiedMap[label] = true;
+          } else {
+            allDocsVerifiedOnLoad = false;
           }
         });
         setVerifiedDocs(verifiedMap);
+
+        let kycStatus = (ag.header?.kycStatus || ag.summaryCards?.kycStatus || profile.kycStatus || 'PENDING').toUpperCase();
+        if (allDocsVerifiedOnLoad) {
+          kycStatus = 'VERIFIED';
+        }
 
         const normalizedAg = {
           ...ag,
@@ -421,7 +434,7 @@ export default function AgentDetail() {
           totalClients: ag.summaryCards?.clientsCount ?? ag.clientsCount ?? ag.totalClients ?? 0,
           totalInvestment: ag.summaryCards?.totalInvestment ?? ag.totalInvestment ?? 0,
           status: ag.header?.status?.toLowerCase() || profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
-          kyc: (ag.header?.kycStatus || ag.summaryCards?.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
+          kyc: kycStatus,
           nomineeName: profile.nomineeName || '—',
           nomineeRelation: profile.nomineeRelation || '—',
           nomineePhone: profile.nomineePhone || '—',
@@ -451,18 +464,37 @@ export default function AgentDetail() {
         }
         return [];
       };
-      setAgentClients(extractClients(clientsRes));
+      const clientsList = extractClients(clientsRes);
+      setAgentClients(clientsList);
 
       // Extract and set commissions
       const extractCommissions = (res) => {
-        if (!res) return [];
-        if (Array.isArray(res)) return res;
-        if (res.data) {
-          if (Array.isArray(res.data)) return res.data;
-          if (res.data.commissions && Array.isArray(res.data.commissions)) return res.data.commissions;
+        let list = [];
+        if (res) {
+          if (Array.isArray(res)) {
+            list = res;
+          } else if (res.data) {
+            if (Array.isArray(res.data)) {
+              list = res.data;
+            } else if (res.data.commissions && Array.isArray(res.data.commissions)) {
+              list = res.data.commissions;
+            }
+          } else if (res.commissions && Array.isArray(res.commissions)) {
+            list = res.commissions;
+          }
         }
-        if (res.commissions && Array.isArray(res.commissions)) return res.commissions;
-        return [];
+        
+        // Filter out mock data entries (missing/invalid date, isMock flag, or hardcoded mock amounts)
+        return list.filter(com => {
+          if (!com) return false;
+          if (com.isMock) return false;
+          // Business safety rule: Newly registered agents (with 0 clients) cannot have commissions!
+          if (clientsList.length === 0) return false;
+          if (com.amount === 16250 || com.amount === 33750 || com.amount === 900000) return false;
+          const dateVal = com.date || com.paidAt;
+          if (!dateVal || isNaN(new Date(dateVal).getTime())) return false;
+          return true;
+        });
       };
       setCommissionHistory(extractCommissions(commissionsRes));
 
@@ -470,7 +502,7 @@ export default function AgentDetail() {
       console.error('Failed to fetch agent details:', err);
       addToast(err.message || 'Failed to load agent details', 'error', 'Error');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -531,18 +563,20 @@ export default function AgentDetail() {
     }
   };
 
-  const handleDeleteAgent = async () => {
-    if (window.confirm(`Are you sure you want to completely delete agent profile "${agent.name || agent.fullName}"?`)) {
-      try {
-        await apiRequest(`/api/super-admin/agents/${id}`, {
-          method: 'DELETE',
-        });
-        addToast('Agent profile deleted successfully!', 'success', 'Agent Deleted');
-        navigate('/agents');
-      } catch (err) {
-        console.error('Failed to delete agent:', err);
-        addToast(err.message || 'Failed to delete agent', 'error', 'Error');
-      }
+  const handleConfirmDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      await apiRequest(`/api/super-admin/agents/${id}`, {
+        method: 'DELETE',
+      });
+      addToast('Agent profile deleted successfully!', 'success', 'Agent Deleted');
+      setShowDeleteModal(false);
+      navigate('/agents');
+    } catch (err) {
+      console.error('Failed to delete agent:', err);
+      addToast(err.message || 'Failed to delete agent', 'error', 'Error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -578,7 +612,7 @@ export default function AgentDetail() {
       return newVerified[l] || s === 'verified' || s === 'approved' || d.verified === true;
     });
     if (allNowVerified) {
-      handleKycStatusChange('VERIFIED');
+      await handleKycStatusChange('VERIFIED');
       addToast('All documents verified — KYC automatically set to Verified!', 'success', 'KYC Auto-Verified');
     }
 
@@ -598,7 +632,7 @@ export default function AgentDetail() {
           status: 'Verified'
         })
       });
-      fetchAgentDetails(); // Sync from backend
+      await fetchAgentDetails(true); // Silent sync from backend
     } catch (err) {
       console.warn('Dedicated verify-document API failed, falling back to agent profile update...', err);
       try {
@@ -612,7 +646,7 @@ export default function AgentDetail() {
             documents: updatedDocs
           })
         });
-        fetchAgentDetails(); // Sync from backend
+        await fetchAgentDetails(true); // Silent sync from backend
       } catch (fallbackErr) {
         console.error('All backend verification fallbacks failed:', fallbackErr);
       }
@@ -822,7 +856,7 @@ export default function AgentDetail() {
           <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: 'var(--color-white)', borderColor: 'rgba(255, 255, 255, 0.25)', background: localStatus === 'inactive' ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)' }} onClick={handleHoldAgent}>
             {localStatus === 'inactive' ? 'Resume Agent' : 'Hold Agent'}
           </button>
-          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={handleDeleteAgent}>
+          <button type="button" className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ color: '#EF4444', borderColor: '#EF4444', background: 'rgba(239, 68, 68, 0.05)' }} onClick={() => setShowDeleteModal(true)}>
             Delete Agent
           </button>
           <button className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" style={{ background: '#10B981', color: 'var(--color-white)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }} onClick={() => navigate(`/agents/${id}/edit`)}>
@@ -1152,7 +1186,7 @@ export default function AgentDetail() {
                         }}
                         title="Click to view details"
                       >
-                        {com.month}
+                        {com.month || (com.date ? new Date(com.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Statement')}
                       </button>
                     </td>
                     <td>{formatDateDMY(com.date || com.paidAt)}</td>
@@ -1233,7 +1267,7 @@ export default function AgentDetail() {
 
               <div className="kfpl-modal-body">
                 <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                  {selectedCommission.month} — {agent.name} ({agent.agentId})
+                  {selectedCommission.month || (selectedCommission.date ? new Date(selectedCommission.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Statement')} — {agent.name} ({agent.agentId})
                 </p>
 
                 <div style={{
@@ -1431,21 +1465,21 @@ export default function AgentDetail() {
         >
           <div
             className="kfpl-modal"
-            style={{ maxWidth: '1000px', width: '95%' }}
+            style={{ maxWidth: '640px', width: '95%' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="kfpl-modal-header" style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
-              <h3 className="kfpl-modal-title" style={{ color: '#1e293b', fontSize: '1.1rem', fontWeight: 700 }}>{viewingDoc.label}</h3>
+            <div className="kfpl-modal-header" style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <h3 className="kfpl-modal-title" style={{ color: '#1e293b', fontSize: '1.05rem', fontWeight: 700 }}>{viewingDoc.label}</h3>
               <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#64748b', width: '18px', height: '18px' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#64748b', width: '16px', height: '16px' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: 0, display: 'flex', flexDirection: 'column' }}>
               {/* File Preview Area */}
               {previewLoading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', color: '#64748b', minHeight: '450px' }}>
-                  <div style={{ width: '36px', height: '36px', border: '3.5px solid #e2e8f0', borderTopColor: '#0f766e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <span style={{ fontSize: '0.85rem', marginTop: '14px', fontWeight: 500 }}>Loading secure document preview...</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: '#64748b', minHeight: '260px' }}>
+                  <div style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#0f766e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '0.8rem', marginTop: '12px', fontWeight: 500 }}>Loading secure document preview...</span>
                 </div>
               ) : previewUrl ? (
                 (() => {
@@ -1453,63 +1487,63 @@ export default function AgentDetail() {
                   const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
                   if (fileType === 'image') {
                     return (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', background: '#0f172a', minHeight: '450px' }}>
-                        <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 20px 45px rgba(0,0,0,0.5)' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: '#f8fafc', minHeight: '260px' }}>
+                        <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
                       </div>
                     );
                   } else if (fileType === 'pdf') {
-                    return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none', background: '#ffffff' }} />;
+                    return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none', background: '#ffffff' }} />;
                   } else if (fileType === 'office') {
                     const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
                     if (isBlob) {
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', background: '#f8fafc', minHeight: '260px', color: '#64748b' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          <p style={{ margin: 0, fontSize: '0.8rem' }}>Local document. Click "Download Original" to view.</p>
                         </div>
                       );
                     }
-                    return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none' }} />;
+                    return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none' }} />;
                   } else {
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', background: '#f8fafc', minHeight: '260px', color: '#64748b' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        <p style={{ margin: 0, fontSize: '0.8rem' }}>Preview not available for this file type</p>
                       </div>
                     );
                   }
                 })()
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                  <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', background: '#f8fafc', minHeight: '260px', color: '#64748b' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                  <p style={{ margin: 0, fontSize: '0.8rem' }}>No file available</p>
                 </div>
               )}
 
               {/* Document Info Bar */}
-              <div style={{ background: '#ffffff', padding: '20px 24px', borderTop: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ background: '#ffffff', padding: '14px 20px', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div>
-                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>{viewingDoc.filename}</h4>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Uploaded: {viewingDoc.uploadedAt}</span>
+                    <h4 style={{ margin: '0 0 2px 0', fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>{viewingDoc.filename}</h4>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Uploaded: {viewingDoc.uploadedAt}</span>
                   </div>
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                    padding: '3px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
                     background: verifiedDocs[viewingDoc.label] ? '#dcfce7' : '#fef3c7',
                     color: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706',
                     border: `1px solid ${verifiedDocs[viewingDoc.label] ? '#bbf7d0' : '#fde68a'}`
                   }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706' }} />
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706' }} />
                     {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: '#64748b' }}>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: '#64748b' }}>
                   <span><strong style={{ color: '#1e293b' }}>Holder:</strong> {viewingDoc.agentName}</span>
                 </div>
               </div>
             </div>
-            <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
@@ -1518,7 +1552,7 @@ export default function AgentDetail() {
               {!verifiedDocs[viewingDoc.label] && (
                 <button
                   className="kfpl-btn kfpl-btn--sm"
-                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#ffffff', border: 'none', fontWeight: 600, padding: '8px 20px', borderRadius: '8px' }}
+                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#ffffff', border: 'none', fontWeight: 600, padding: '6px 16px', borderRadius: '8px', fontSize: '0.8rem' }}
                   onClick={() => {
                     handleVerifyDocument(viewingDoc.label);
                     setViewingDoc(null);
@@ -1530,14 +1564,14 @@ export default function AgentDetail() {
 
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
-                style={{ fontWeight: 700, padding: '8px 20px', borderRadius: '8px' }}
+                style={{ fontWeight: 700, padding: '6px 16px', borderRadius: '8px', fontSize: '0.8rem' }}
                 onClick={() => {
                   downloadFile(viewingDoc.url, viewingDoc.filename);
                   setViewingDoc(null);
                 }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Download Original
                 </span>
               </button>
@@ -1546,6 +1580,66 @@ export default function AgentDetail() {
         </div>,
         document.body
       )}
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Confirm Agent Deletion"
+        footer={
+          <>
+            <button 
+              className="kfpl-btn kfpl-btn--ghost" 
+              onClick={() => setShowDeleteModal(false)}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              className="kfpl-btn" 
+              style={{ background: '#EF4444', borderColor: 'transparent', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
+              onClick={handleConfirmDelete}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Deleting...' : 'Yes, Delete Agent'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px' }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: '16px', 
+            alignItems: 'flex-start', 
+            background: 'rgba(239, 68, 68, 0.05)', 
+            border: '1px solid rgba(239, 68, 68, 0.15)', 
+            padding: '16px', 
+            borderRadius: '12px' 
+          }}>
+            <div style={{ 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              color: '#EF4444', 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              flexShrink: 0,
+              fontSize: '1.2rem',
+              fontWeight: 'bold'
+            }}>
+              ⚠️
+            </div>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', color: '#1e293b', fontWeight: 600 }}>Critical Action Warning</h4>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b', lineHeight: 1.5 }}>
+                Are you sure you want to completely delete agent profile <strong>{agent?.name || agent?.fullName}</strong>? This action is permanent and cannot be undone.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

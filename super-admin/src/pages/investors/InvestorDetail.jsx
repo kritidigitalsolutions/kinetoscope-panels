@@ -486,11 +486,34 @@ export default function InvestorDetail() {
           })
         ]);
 
+        let allDocsVerifiedOnLoad = false;
+        const verifiedMap = {};
+        if (docsRes) {
+          const data = docsRes.data || docsRes;
+          const docs = data.documents || [];
+          allDocsVerifiedOnLoad = docs.length > 0;
+          docs.forEach(doc => {
+            const label = doc.name || doc.label;
+            const s = (doc.status || '').toLowerCase();
+            const isDocVerified = s === 'verified' || s === 'approved' || doc.verified === true;
+            if (isDocVerified) {
+              verifiedMap[label] = true;
+            } else {
+              allDocsVerifiedOnLoad = false;
+            }
+          });
+        }
+
         if (clientRes) {
           const data = clientRes.data || clientRes;
           const profile = data.profile || data;
           const header = data.header || {};
           const summary = data.summaryCards || {};
+
+          let kycStatus = (header.kycStatus || summary.kycStatus || profile.kycStatus || 'PENDING').toUpperCase();
+          if (allDocsVerifiedOnLoad) {
+            kycStatus = 'VERIFIED';
+          }
 
           // Normalize into a flat investor object for the UI
           const inv = {
@@ -505,7 +528,7 @@ export default function InvestorDetail() {
             contractEndDate: profile.contractEndDate ? new Date(profile.contractEndDate).toLocaleDateString('en-IN') : '—',
             category: (header.tier || profile.tier || 'silver').toLowerCase(),
             status: (header.status || profile.status || 'active').toLowerCase(),
-            kyc: (header.kycStatus || summary.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
+            kyc: kycStatus,
             riskProfile: header.riskProfile || profile.riskProfile || 'Conservative',
             totalInvestment: summary.totalInvestment || profile.totalPortfolioValue || 0,
             roiPercentage: summary.monthlyRoi || profile.monthlyRoi || 1.2,
@@ -555,16 +578,6 @@ export default function InvestorDetail() {
         if (docsRes) {
           const data = docsRes.data || docsRes;
           setDocsData(data);
-
-          const docs = data.documents || [];
-          const verifiedMap = {};
-          docs.forEach(doc => {
-            const label = doc.name || doc.label;
-            const s = (doc.status || '').toLowerCase();
-            if (s === 'verified' || s === 'approved' || doc.verified === true) {
-              verifiedMap[label] = true;
-            }
-          });
           setVerifiedDocs(verifiedMap);
         } else {
           setDocsData({ documents: [] });
@@ -819,12 +832,12 @@ export default function InvestorDetail() {
           return newVerified[label] || d.status === 'Verified';
         });
         if (allNowVerified) {
-          handleKycStatusChange('VERIFIED');
+          await handleKycStatusChange('VERIFIED');
           addToast('All documents verified — KYC automatically set to Verified!', 'success', 'KYC Auto-Verified');
         }
       }
       addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
-      fetchDocuments(); // Refresh from backend to sync
+      await fetchDocuments(); // Refresh from backend to sync
     } catch (err) {
       console.error('Failed to verify document:', err);
       addToast(err.message || 'Failed to verify document', 'error', 'Verification Failed');
@@ -1554,21 +1567,21 @@ export default function InvestorDetail() {
         >
           <div
             className="kfpl-modal"
-            style={{ maxWidth: '1000px', width: '95%' }}
+            style={{ maxWidth: '640px', width: '95%' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="kfpl-modal-header" style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
-              <h3 className="kfpl-modal-title" style={{ color: '#1e293b', fontSize: '1.1rem', fontWeight: 700 }}>{viewingDoc.label}</h3>
+            <div className="kfpl-modal-header" style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <h3 className="kfpl-modal-title" style={{ color: '#1e293b', fontSize: '1.05rem', fontWeight: 700 }}>{viewingDoc.label}</h3>
               <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#64748b', width: '18px', height: '18px' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#64748b', width: '16px', height: '16px' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: 0, display: 'flex', flexDirection: 'column' }}>
               {/* File Preview Area */}
               {previewLoading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', color: '#64748b', minHeight: '450px' }}>
-                  <div style={{ width: '36px', height: '36px', border: '3.5px solid #e2e8f0', borderTopColor: '#0f766e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <span style={{ fontSize: '0.85rem', marginTop: '14px', fontWeight: 500 }}>Loading secure document preview...</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: '#64748b', minHeight: '260px' }}>
+                  <div style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#0f766e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '0.8rem', marginTop: '12px', fontWeight: 500 }}>Loading secure document preview...</span>
                 </div>
               ) : previewUrl ? (
                 (() => {
@@ -1576,63 +1589,63 @@ export default function InvestorDetail() {
                   const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
                   if (fileType === 'image') {
                     return (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', background: '#0f172a', minHeight: '450px' }}>
-                        <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 20px 45px rgba(0,0,0,0.5)' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: '#f8fafc', minHeight: '260px' }}>
+                        <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
                       </div>
                     );
                   } else if (fileType === 'pdf') {
-                    return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none', background: '#ffffff' }} />;
+                    return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none', background: '#ffffff' }} />;
                   } else if (fileType === 'office') {
                     const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
                     if (isBlob) {
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', background: '#f8fafc', minHeight: '260px', color: '#64748b' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          <p style={{ margin: 0, fontSize: '0.8rem' }}>Local document. Click "Download Original" to view.</p>
                         </div>
                       );
                     }
-                    return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none' }} />;
+                    return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none' }} />;
                   } else {
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', background: '#f8fafc', minHeight: '260px', color: '#64748b' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        <p style={{ margin: 0, fontSize: '0.8rem' }}>Preview not available for this file type</p>
                       </div>
                     );
                   }
                 })()
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                  <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', background: '#f8fafc', minHeight: '260px', color: '#64748b' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                  <p style={{ margin: 0, fontSize: '0.8rem' }}>No file available</p>
                 </div>
               )}
 
               {/* Document Info Bar */}
-              <div style={{ background: '#ffffff', padding: '20px 24px', borderTop: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ background: '#ffffff', padding: '14px 20px', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div>
-                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>{viewingDoc.filename}</h4>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Uploaded: {viewingDoc.uploadedAt}</span>
+                    <h4 style={{ margin: '0 0 2px 0', fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>{viewingDoc.filename}</h4>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Uploaded: {viewingDoc.uploadedAt}</span>
                   </div>
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                    padding: '3px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
                     background: verifiedDocs[viewingDoc.label] ? '#dcfce7' : '#fef3c7',
                     color: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706',
                     border: `1px solid ${verifiedDocs[viewingDoc.label] ? '#bbf7d0' : '#fde68a'}`
                   }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706' }} />
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: verifiedDocs[viewingDoc.label] ? '#16a34a' : '#d97706' }} />
                     {verifiedDocs[viewingDoc.label] ? 'Verified' : 'Pending Verification'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: '#64748b' }}>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: '#64748b' }}>
                   <span><strong style={{ color: '#1e293b' }}>Holder:</strong> {viewingDoc.investorName}</span>
                 </div>
               </div>
             </div>
-            <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
@@ -1640,25 +1653,28 @@ export default function InvestorDetail() {
               {!verifiedDocs[viewingDoc.label] && (
                 <button
                   className="kfpl-btn kfpl-btn--sm"
-                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', borderColor: 'transparent', color: '#FFFFFF', fontWeight: 700, padding: '8px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}
-                  onClick={() => handleVerifyDocument(viewingDoc.label)}
+                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', borderColor: 'transparent', color: '#FFFFFF', fontWeight: 700, padding: '6px 16px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(16,185,129,0.3)', fontSize: '0.8rem' }}
+                  onClick={() => {
+                    handleVerifyDocument(viewingDoc.label);
+                    setViewingDoc(null);
+                  }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
                     Verify Document
                   </span>
                 </button>
               )}
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
-                style={{ fontWeight: 700, padding: '8px 20px', borderRadius: '8px' }}
+                style={{ fontWeight: 700, padding: '6px 16px', borderRadius: '8px', fontSize: '0.8rem' }}
                 onClick={() => {
                   downloadFile(viewingDoc.url, viewingDoc.filename);
                   setViewingDoc(null);
                 }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Download Original
                 </span>
               </button>
