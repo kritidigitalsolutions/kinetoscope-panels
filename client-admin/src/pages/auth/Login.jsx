@@ -93,7 +93,7 @@ export default function Login() {
     const isTfaEnabled = localStorage.getItem('kfpl_tfa_enabled') === 'true';
 
     try {
-      const response = await fetch(getApiUrl('/api/auth/client/login'), {
+      const response = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -105,28 +105,21 @@ export default function Login() {
           setMockOtp(generatedCode);
           setStep('otp');
           setError('');
-          alert(`[Mock 2FA Code] An OTP verification code was sent to your email: ${generatedCode}`);
+          alert(`[2FA Code] An OTP verification code was sent to your email: ${data.otp || data.code || generatedCode}`);
         } else {
-          const clientObject = data.client || data.data || data.user || {};
-          localStorage.setItem('kfpl_client_auth', JSON.stringify({ token: data.token, client: { ...clientObject, email, name: clientObject.name || 'Investor' } }));
+          const clientObject = data.client || (data.data && data.data.user ? data.data.user : data.data) || data.user || {};
+          localStorage.setItem('kfpl_client_auth', JSON.stringify({ 
+            token: data.token, 
+            client: { ...clientObject, email, name: clientObject.name || clientObject.fullName || 'Investor' } 
+          }));
           window.location.href = '/dashboard';
         }
       } else {
         setError(data.message || data.error || 'Invalid credentials.');
       }
     } catch (err) {
-      // Mock login for demo
-      if (isTfaEnabled) {
-        const generatedCode = String(Math.floor(100000 + Math.random() * 900000));
-        setMockOtp(generatedCode);
-        setStep('otp');
-        setError('');
-        alert(`[Mock 2FA Code] An OTP verification code was sent to your email: ${generatedCode}`);
-      } else {
-        const clientMock = generateClientSession(email);
-        localStorage.setItem('kfpl_client_auth', JSON.stringify({ token: 'mock-token', client: clientMock }));
-        window.location.href = '/dashboard';
-      }
+      console.error('Login error:', err);
+      setError('Network error or server unavailable.');
     } finally {
       setLoading(false);
     }
@@ -138,38 +131,26 @@ export default function Login() {
     if (!otp) { setOtpError('Please enter the verification code.'); return; }
     setLoading(true);
 
-    // If OTP matches our mock code, log in immediately
-    if (mockOtp && otp === mockOtp) {
-      const clientMock = generateClientSession(email);
-      localStorage.setItem('kfpl_client_auth', JSON.stringify({ token: 'mock-token', client: clientMock }));
-      setLoading(false);
-      window.location.href = '/dashboard';
-      return;
-    }
-
     try {
-      const response = await fetch(getApiUrl('/api/auth/client/verify-2fa'), {
+      const response = await fetch(getApiUrl('/api/auth/verify-2fa'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
       });
       const data = await response.json();
       if (response.ok) {
-        const clientObject = data.client || data.data || data.user || {};
-        localStorage.setItem('kfpl_client_auth', JSON.stringify({ token: data.token, client: { ...clientObject, email, name: clientObject.name || 'Investor' } }));
+        const clientObject = data.client || (data.data && data.data.user ? data.data.user : data.data) || data.user || {};
+        localStorage.setItem('kfpl_client_auth', JSON.stringify({ 
+          token: data.token, 
+          client: { ...clientObject, email, name: clientObject.name || clientObject.fullName || 'Investor' } 
+        }));
         window.location.href = '/dashboard';
       } else {
         setOtpError(data.message || 'Invalid OTP.');
       }
     } catch (err) {
-      // Catch blocks default to check mock OTP
-      if (otp === mockOtp || otp === '123456') {
-        const clientMock = generateClientSession(email);
-        localStorage.setItem('kfpl_client_auth', JSON.stringify({ token: 'mock-token', client: clientMock }));
-        window.location.href = '/dashboard';
-      } else {
-        setOtpError('Invalid OTP code.');
-      }
+      console.error('OTP verify error:', err);
+      setOtpError('Network error or server unavailable.');
     } finally {
       setLoading(false);
     }

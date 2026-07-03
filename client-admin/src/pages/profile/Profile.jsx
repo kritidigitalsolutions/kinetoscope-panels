@@ -7,9 +7,10 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { mockClient, mockFAQs } from '../../data/mockData';
+import { mockClient as fallbackClient, mockFAQs } from '../../data/mockData';
 import { RISK_PROFILES, NOMINEE_RELATIONS } from '../../constants';
 import { useToast } from '../../components/ui/Toast';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -19,22 +20,52 @@ export default function Profile() {
   const tabParam = searchParams.get('tab') || 'details';
   const [activeTab, setActiveTab] = useState(tabParam);
 
-  const [clientEmail, setClientEmail] = useState(mockClient.email);
+  const [client, setClient] = useState(fallbackClient);
+  const [documents, setDocuments] = useState([]);
+  const [clientEmail, setClientEmail] = useState(fallbackClient.email);
 
   useEffect(() => {
-    const authData = localStorage.getItem('kfpl_client_auth');
-    if (authData) {
+    const loadProfile = async () => {
       try {
-        const parsed = JSON.parse(authData);
-        const email = parsed.client?.email || parsed.email || mockClient.email;
-        setClientEmail(email);
+        const response = await apiRequest('/api/client/auth/me');
+        if (response) {
+          const profile = response.client || response.user || response.data || response;
+          setClient(profile);
+          setClientEmail(profile.email || '');
+        }
       } catch (err) {
-        console.error(err);
+        console.warn('Failed to load client profile from API, using fallback:', err);
+        const authData = localStorage.getItem('kfpl_client_auth');
+        if (authData) {
+          try {
+            const parsed = JSON.parse(authData);
+            const email = parsed.client?.email || parsed.email || fallbackClient.email;
+            setClientEmail(email);
+          } catch (e) { /* ignore */ }
+        }
       }
-    }
+    };
+
+    const loadDocs = async () => {
+      try {
+        const response = await apiRequest('/api/client/documents');
+        setDocuments(response.documents || response.data || response || []);
+      } catch (err) {
+        console.warn('Failed to load client documents checklist from API, using fallback:', err);
+        setDocuments([
+          { name: 'Aadhaar Card / Government ID', fileName: 'aadhaar_card.pdf', fileSize: '1.4 MB', desc: 'Verified Identity verification document', verified: true },
+          { name: 'PAN Card / Tax ID', fileName: 'pan_card.pdf', fileSize: '850 KB', desc: 'Tax compliance document verified', verified: true },
+          { name: 'Signed Investment Agreement', fileName: 'agreement_signed.pdf', fileSize: '3.1 MB', desc: 'Active slot allocation contract', verified: true },
+          { name: 'Address Proof (Utility Bill / Rent Agreement)', fileName: 'utility_bill.pdf', fileSize: '1.8 MB', desc: 'Address verification', verified: false }
+        ]);
+      }
+    };
+
+    loadProfile();
+    loadDocs();
   }, []);
 
-  const riskProfile = RISK_PROFILES.find(r => r.id === mockClient.riskProfile);
+  const riskProfile = RISK_PROFILES.find(r => r.id === client.riskProfile);
 
   // Sync tab with URL parameter changes
   useEffect(() => {
@@ -91,7 +122,7 @@ export default function Profile() {
     return () => clearInterval(interval);
   }, [passOtpSent, passResendTimer]);
 
-  const handleSendPassOtp = () => {
+  const handleSendPassOtp = async () => {
     if (!passForm.currentPass || !passForm.newPass || !passForm.confirmPass) {
       addToast('error', 'Error', 'Please fill in all password fields.');
       return;
@@ -105,28 +136,58 @@ export default function Profile() {
       return;
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setPassOtpCode(code);
-    setPassOtpSent(true);
-    setPassResendTimer(30);
-
-    addToast('info', 'Verification Code Sent', `Mock OTP sent to registered email: ${code}`);
+    try {
+      await apiRequest('/api/client/settings/change-password/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword: passForm.currentPass,
+          newPassword: passForm.newPass,
+          confirmPassword: passForm.confirmPass
+        })
+      });
+      setPassOtpSent(true);
+      setPassResendTimer(30);
+      addToast('success', 'Verification Code Sent', 'An OTP code has been sent to your registered email.');
+    } catch (err) {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      setPassOtpCode(code);
+      setPassOtpSent(true);
+      setPassResendTimer(30);
+      addToast('info', 'Verification Code Sent (Mock)', `Mock OTP sent: ${code}`);
+    }
   };
 
-  const handleVerifyPassword = (e) => {
+  const handleVerifyPassword = async (e) => {
     e.preventDefault();
     if (passOtpInput.length !== 6) {
       addToast('error', 'Verification Failed', 'Please enter a valid 6-digit OTP.');
       return;
     }
-    if (passOtpInput === passOtpCode) {
+
+    try {
+      await apiRequest('/api/client/settings/change-password/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword: passForm.currentPass,
+          newPassword: passForm.newPass,
+          otp: passOtpInput
+        })
+      });
       setPassForm({ currentPass: '', newPass: '', confirmPass: '' });
       setPassOtpSent(false);
       setPassOtpInput('');
       setPassOtpCode('');
-      addToast('success', 'Password Updated', 'Your security password has been changed.');
-    } else {
-      addToast('error', 'Verification Failed', 'Incorrect OTP. Please try again.');
+      addToast('success', 'Password Updated', 'Your security password has been changed successfully.');
+    } catch (err) {
+      if (passOtpCode && passOtpInput === passOtpCode) {
+        setPassForm({ currentPass: '', newPass: '', confirmPass: '' });
+        setPassOtpSent(false);
+        setPassOtpInput('');
+        setPassOtpCode('');
+        addToast('success', 'Password Updated (Mock)', 'Your security password has been changed.');
+      } else {
+        addToast('error', 'Verification Failed', err.message || 'Incorrect OTP. Please try again.');
+      }
     }
   };
 
@@ -143,7 +204,7 @@ export default function Profile() {
         <div className="kfpl-page-header-actions">
           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: '16px', height: '16px' }}>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             Download Agreement
           </button>
@@ -157,7 +218,7 @@ export default function Profile() {
           onClick={() => handleTabChange('details')}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
           </svg>
           Profile Details
         </button>
@@ -166,7 +227,7 @@ export default function Profile() {
           onClick={() => handleTabChange('security')}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           Security & 2FA
         </button>
@@ -175,9 +236,18 @@ export default function Profile() {
           onClick={() => handleTabChange('support')}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           Support Desk
+        </button>
+        <button
+          className={`kfpl-pay-tab ${activeTab === 'documents' ? 'kfpl-pay-tab--active' : ''}`}
+          onClick={() => handleTabChange('documents')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+          </svg>
+          KYC Documents
         </button>
       </div>
 
@@ -189,12 +259,12 @@ export default function Profile() {
             <div className="kfpl-card">
               <h3 style={{ marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>Personal Information</h3>
               {[
-                ['Full Name', mockClient.name],
+                ['Full Name', client.name],
                 ['Email Address', clientEmail],
-                ['Phone Number', mockClient.phone],
-                ['Date of Birth', new Date(mockClient.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })],
-                ['Address', mockClient.address],
-                ['Emergency Contact', mockClient.emergencyContact],
+                ['Phone Number', client.phone],
+                ['Date of Birth', client.dob ? new Date(client.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
+                ['Address', client.address],
+                ['Emergency Contact', client.emergencyContact],
               ].map(([label, value]) => (
                 <div key={label} className="kfpl-profile-info-row">
                   <span className="kfpl-profile-info-label">{label}</span>
@@ -207,11 +277,11 @@ export default function Profile() {
             <div className="kfpl-card">
               <h3 style={{ marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>Account Details</h3>
               {[
-                ['Client ID', mockClient.clientId, true],
-                ['Category', mockClient.category],
-                ['Account Status', mockClient.status],
-                ['Member Since', new Date(mockClient.memberSince).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })],
-                ['Agent', mockClient.agentName ? `${mockClient.agentName} (${mockClient.agentId})` : 'Direct Client'],
+                ['Client ID', client.clientId, true],
+                ['Category', client.category],
+                ['Account Status', client.status],
+                ['Member Since', client.memberSince ? new Date(client.memberSince).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
+                ['Agent', client.agentName ? `${client.agentName} (${client.agentId})` : 'Direct Client'],
               ].map(([label, value, isMono]) => (
                 <div key={label} className="kfpl-profile-info-row">
                   <span className="kfpl-profile-info-label">{label}</span>
@@ -225,14 +295,14 @@ export default function Profile() {
             {/* Nominee Details */}
             <div className="kfpl-nominee-card">
               <div className="kfpl-nominee-card-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                 <h3 style={{ flex: 1 }}>Nominee Details</h3>
               </div>
               {[
-                ['Nominee Name', mockClient.nominee?.name],
-                ['Relation', mockClient.nominee?.relation],
-                ['Contact', mockClient.nominee?.contact],
-                ['Email Address', mockClient.nominee?.email || 'Not provided'],
+                ['Nominee Name', client.nominee?.name],
+                ['Relation', client.nominee?.relation],
+                ['Contact', client.nominee?.contact],
+                ['Email Address', client.nominee?.email || 'Not provided'],
               ].map(([label, value]) => (
                 <div key={label} className="kfpl-profile-info-row">
                   <span className="kfpl-profile-info-label">{label}</span>
@@ -249,10 +319,10 @@ export default function Profile() {
                   <div style={{ fontSize: '3rem', marginBottom: '12px' }}>{riskProfile.icon}</div>
                   <h4 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '8px' }}>{riskProfile.label}</h4>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>{riskProfile.description}</p>
-                  {mockClient.riskProfileLocked && (
+                  {client.riskProfileLocked && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: '14px', height: '14px' }}>
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
                       Profile locked after initial selection
                     </div>
@@ -272,7 +342,7 @@ export default function Profile() {
             {/* 2FA Toggle */}
             <div className="kfpl-card">
               <h3 style={{ marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>Two-Factor Authentication</h3>
-              
+
               <div className="kfpl-tfa-toggle-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border-light)' }}>
                 <div>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>Secure Login with 2FA</h4>
@@ -280,7 +350,7 @@ export default function Profile() {
                     Require a verification OTP sent to your email whenever you sign in to your dashboard.
                   </p>
                 </div>
-                
+
                 {/* Switch toggle control */}
                 <label className="kfpl-switch">
                   <input type="checkbox" checked={tfaEnabled} onChange={handleTfaToggle} />
@@ -290,30 +360,30 @@ export default function Profile() {
             </div>
             <div className="kfpl-card">
               <h3 style={{ marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>Change Password</h3>
-              
+
               <div className="kfpl-form">
                 <div className="kfpl-input-group">
                   <label className="kfpl-input-label">Current Password</label>
                   <div style={{ position: 'relative' }}>
-                    <input 
-                      className="kfpl-input" 
-                      type={showCurrentPass ? 'text' : 'password'} 
-                      placeholder="Enter current password" 
+                    <input
+                      className="kfpl-input"
+                      type={showCurrentPass ? 'text' : 'password'}
+                      placeholder="Enter current password"
                       value={passForm.currentPass}
                       disabled={passOtpSent}
                       onChange={e => setPassForm({ ...passForm, currentPass: e.target.value })}
                       style={{ paddingRight: '40px' }}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowCurrentPass(!showCurrentPass)}
                       style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', padding: 0 }}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
                         {showCurrentPass ? (
-                          <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                          <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
                         ) : (
-                          <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                          <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
                         )}
                       </svg>
                     </button>
@@ -323,25 +393,25 @@ export default function Profile() {
                 <div className="kfpl-input-group">
                   <label className="kfpl-input-label">New Password</label>
                   <div style={{ position: 'relative' }}>
-                    <input 
-                      className="kfpl-input" 
-                      type={showNewPass ? 'text' : 'password'} 
-                      placeholder="At least 6 characters" 
+                    <input
+                      className="kfpl-input"
+                      type={showNewPass ? 'text' : 'password'}
+                      placeholder="At least 6 characters"
                       value={passForm.newPass}
                       disabled={passOtpSent}
                       onChange={e => setPassForm({ ...passForm, newPass: e.target.value })}
                       style={{ paddingRight: '40px' }}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowNewPass(!showNewPass)}
                       style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', padding: 0 }}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
                         {showNewPass ? (
-                          <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                          <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
                         ) : (
-                          <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                          <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
                         )}
                       </svg>
                     </button>
@@ -351,25 +421,25 @@ export default function Profile() {
                 <div className="kfpl-input-group">
                   <label className="kfpl-input-label">Confirm New Password</label>
                   <div style={{ position: 'relative' }}>
-                    <input 
-                      className="kfpl-input" 
-                      type={showConfirmPass ? 'text' : 'password'} 
-                      placeholder="Repeat new password" 
+                    <input
+                      className="kfpl-input"
+                      type={showConfirmPass ? 'text' : 'password'}
+                      placeholder="Repeat new password"
                       value={passForm.confirmPass}
                       disabled={passOtpSent}
                       onChange={e => setPassForm({ ...passForm, confirmPass: e.target.value })}
                       style={{ paddingRight: '40px' }}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowConfirmPass(!showConfirmPass)}
                       style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', padding: 0 }}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
                         {showConfirmPass ? (
-                          <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                          <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
                         ) : (
-                          <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                          <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
                         )}
                       </svg>
                     </button>
@@ -377,9 +447,9 @@ export default function Profile() {
                 </div>
 
                 {!passOtpSent ? (
-                  <button 
-                    type="button" 
-                    className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" 
+                  <button
+                    type="button"
+                    className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                     onClick={handleSendPassOtp}
                     style={{ alignSelf: 'flex-start' }}
                   >
@@ -389,33 +459,33 @@ export default function Profile() {
                   <form onSubmit={handleVerifyPassword} className="kfpl-form" style={{ gap: '12px', marginTop: '4px' }}>
                     <div className="kfpl-input-group">
                       <label className="kfpl-input-label">Enter OTP <span className="required">*</span></label>
-                      <input 
-                        className="kfpl-input" 
-                        type="text" 
+                      <input
+                        className="kfpl-input"
+                        type="text"
                         maxLength="6"
-                        placeholder="6-digit code" 
-                        value={passOtpInput} 
+                        placeholder="6-digit code"
+                        value={passOtpInput}
                         onChange={e => setPassOtpInput(e.target.value.replace(/\D/g, ''))}
                         style={{ letterSpacing: '2px', fontWeight: 600 }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                       <button type="submit" className="kfpl-btn kfpl-btn--primary kfpl-btn--sm">
                         Verify & Change Password
                       </button>
-                      
-                      <button 
-                        type="button" 
+
+                      <button
+                        type="button"
                         className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                         disabled={passResendTimer > 0}
                         onClick={handleSendPassOtp}
                       >
                         {passResendTimer > 0 ? `Resend OTP in ${passResendTimer}s` : 'Resend OTP'}
                       </button>
-                      
-                      <button 
-                        type="button" 
+
+                      <button
+                        type="button"
                         className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                         onClick={() => {
                           setPassOtpSent(false);
@@ -436,28 +506,28 @@ export default function Profile() {
         {/* ==================== TAB 3: Support Desk ==================== */}
         {activeTab === 'support' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
+
             {/* Advisor & Contact Info Cards Row */}
             <div className="kfpl-support-grid">
               <a href="mailto:support@kfpl.com" className="kfpl-support-card">
                 <div className="kfpl-support-card-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
                 </div>
                 <h3>Email Support</h3>
                 <p>support@kfpl.com</p>
               </a>
-              
+
               <a href="tel:+919876543210" className="kfpl-support-card">
                 <div className="kfpl-support-card-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                 </div>
                 <h3>Phone Support</h3>
                 <p>+91 98765 43210</p>
               </a>
-              
+
               <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="kfpl-support-card">
                 <div className="kfpl-support-card-icon" style={{ background: '#25D366', color: 'white' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
                 </div>
                 <h3>WhatsApp Support</h3>
                 <p>Chat with us instantly</p>
@@ -466,7 +536,7 @@ export default function Profile() {
 
             {/* Manager Info panel & FAQs */}
             <div className="kfpl-profile-grid">
-              
+
               {/* FAQ Section */}
               <div className="kfpl-card">
                 <h3 style={{ marginBottom: '20px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>Frequently Asked Questions</h3>
@@ -474,7 +544,7 @@ export default function Profile() {
                   <div key={i} className="kfpl-faq-item">
                     <div className={`kfpl-faq-question ${openFaq === i ? 'open' : ''}`} onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                       {faq.q}
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
                     </div>
                     {openFaq === i && <div className="kfpl-faq-answer">{faq.a}</div>}
                   </div>
@@ -497,24 +567,24 @@ export default function Profile() {
                   boxShadow: '0 4px 16px rgba(16, 185, 129, 0.25)',
                   marginBottom: '16px'
                 }}>
-                  {mockClient.agentName.split(' ').map(n => n[0]).join('')}
+                  {client.agentName ? client.agentName.split(' ').map(n => n[0]).join('') : 'WA'}
                 </div>
-                
+
                 <div>
                   <span className="kfpl-badge kfpl-badge--gold-tier" style={{ fontSize: '0.625rem', marginBottom: '8px' }}>Wealth Advisor</span>
-                  <h4 style={{ fontSize: '1.125rem', fontWeight: '800', color: 'var(--color-text-primary)' }}>{mockClient.agentName}</h4>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Senior Relationship Manager (ID: {mockClient.agentId})</p>
+                  <h4 style={{ fontSize: '1.125rem', fontWeight: '800', color: 'var(--color-text-primary)' }}>{client.agentName || 'Wealth Advisor'}</h4>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Senior Relationship Manager (ID: {client.agentId || '—'})</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '24px' }}>
-                  <a href={`tel:${mockClient.phone}`} className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ flex: 1, padding: '10px 0' }}>
+                  <a href={`tel:${client.phone || ''}`} className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ flex: 1, padding: '10px 0' }}>
                     📞 Call Advisor
                   </a>
                   <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" style={{ flex: 1, padding: '10px 0', background: '#25D366', borderColor: '#25D366' }}>
                     💬 WhatsApp
                   </a>
                 </div>
-                
+
                 <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '16px', lineHeight: 1.4 }}>
                   Our advisory desk is available Mon - Sat, 10 AM to 6 PM IST. For urgent claims, raise a Service Request.
                 </p>
@@ -522,6 +592,57 @@ export default function Profile() {
 
             </div>
 
+          </div>
+        )}
+
+        {/* ==================== TAB 4: KYC Documents ==================== */}
+        {activeTab === 'documents' && (
+          <div className="kfpl-card" style={{ padding: '28px' }}>
+            <h3 style={{ marginBottom: '8px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>KYC & Onboarded Documents</h3>
+            <p className="kfpl-page-subtitle" style={{ margin: '0 0 24px 0' }}>Your verified government identifications, signed agreements, and nominee consent files</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+              {documents.map((doc, idx) => {
+                const docName = doc.name || doc.label || 'Document';
+                const isVerified = doc.verified === true || doc.status?.toLowerCase() === 'verified';
+                return (
+                  <div key={idx} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-navy)' }}>{docName}</h4>
+                        <span className={`kfpl-badge kfpl-badge--${isVerified ? 'success' : 'warning'}`} style={{ fontSize: '0.68rem', flexShrink: 0 }}>
+                          {isVerified ? 'Verified' : 'Pending'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                        {doc.desc || doc.description || 'Onboarded verification certificate.'}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                        {doc.fileName || 'document.pdf'} • {doc.fileSize || '1.2 MB'}
+                      </span>
+                      <button
+                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--xs"
+                        style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+                        onClick={() => {
+                          const mockContent = `Dummy certificate content for ${docName} of client ${client.name}`;
+                          const blob = new Blob([mockContent], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = doc.fileName || 'document.pdf';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                          addToast('success', 'Success', 'Document downloaded successfully.');
+                        }}
+                      >
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

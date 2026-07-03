@@ -4,7 +4,8 @@
    ============================================================ */
 
 import { useState, useEffect } from 'react';
-import { mockInvestments, mockROIHistory, mockTotalInvested, mockDividendBonus, mockClient } from '../../data/mockData';
+import { mockInvestments as fallbackInvestments, mockROIHistory as fallbackROIHistory, mockTotalInvested, mockDividendBonus, mockClient as fallbackClient } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 import KpiCard from '../../components/ui/KpiCard';
 
 
@@ -309,6 +310,33 @@ function downloadAllClientROIPDF(roiList, client) {
 }
 
 export default function InvestmentOverview() {
+  const [client, setClient] = useState({});
+  const [investments, setInvestments] = useState([]);
+  const [roiHistory, setRoiHistory] = useState([]);
+
+  useEffect(() => {
+    const fetchInvestments = async () => {
+      try {
+        const response = await apiRequest('/api/client/investments');
+        if (response) {
+          const list = Array.isArray(response) ? response : (response.investments || response.data || []);
+          if (Array.isArray(list)) {
+            setInvestments(list);
+          }
+          if (response.client || response.user) {
+            setClient(response.client || response.user);
+          }
+          if (Array.isArray(response.roiHistory)) {
+            setRoiHistory(response.roiHistory);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch client investments via API:', err);
+      }
+    };
+    fetchInvestments();
+  }, []);
+
   const [roiFilter, setRoiFilter] = useState('All');
   const [calcPrincipal, setCalcPrincipal] = useState(6000000);
   const [calcRate, setCalcRate] = useState(1.2);
@@ -326,7 +354,7 @@ export default function InvestmentOverview() {
         try {
           const allDividends = JSON.parse(stored);
           const myDividends = allDividends.filter(
-            div => String(div.clientId).toUpperCase() === String(mockClient.clientId).toUpperCase()
+            div => String(div.clientId).toUpperCase() === String(client.clientId).toUpperCase()
           );
           setClientDividends(myDividends);
         } catch (e) {
@@ -370,7 +398,7 @@ export default function InvestmentOverview() {
         ];
         localStorage.setItem('kfpl_project_dividends', JSON.stringify(defaultDivs));
         const myDividends = defaultDivs.filter(
-          div => String(div.clientId).toUpperCase() === String(mockClient.clientId).toUpperCase()
+          div => String(div.clientId).toUpperCase() === String(client.clientId).toUpperCase()
         );
         setClientDividends(myDividends);
       }
@@ -379,13 +407,13 @@ export default function InvestmentOverview() {
     handleUpdate();
     window.addEventListener('storage', handleUpdate);
     return () => window.removeEventListener('storage', handleUpdate);
-  }, [mockClient.clientId]);
+  }, [client.clientId]);
 
-  const uniqueSegments = Array.from(new Set(mockInvestments.map(i => i.segment)));
-  const uniqueStatuses = Array.from(new Set(mockInvestments.map(i => i.status)));
-  const uniqueYears = Array.from(new Set(mockROIHistory.map(r => new Date(r.date).getFullYear().toString()))).sort();
+  const uniqueSegments = Array.from(new Set(investments.map(i => i.segment)));
+  const uniqueStatuses = Array.from(new Set(investments.map(i => i.status)));
+  const uniqueYears = Array.from(new Set(roiHistory.map(r => new Date(r.date).getFullYear().toString()))).sort();
 
-  const filteredInvestments = mockInvestments.filter(inv => {
+  const filteredInvestments = investments.filter(inv => {
     if (segmentFilter !== 'all' && inv.segment !== segmentFilter) return false;
     if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
     return true;
@@ -403,18 +431,18 @@ export default function InvestmentOverview() {
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const total = mockInvestments.reduce((sum, investment) => sum + investment.amount, 0);
+  const total = investments.reduce((sum, investment) => sum + investment.amount, 0);
   const monthlyReturn = Math.round((calcPrincipal * calcRate) / 100);
   const annualReturn = Math.round(monthlyReturn * 12);
   const weightedROI = total
-    ? mockInvestments.reduce((sum, investment) => sum + investment.amount * investment.roiAllocated, 0) / total
+    ? investments.reduce((sum, investment) => sum + investment.amount * investment.roiAllocated, 0) / total
     : 0;
-  const receivedROI = mockROIHistory.reduce((sum, roi) => sum + roi.received, 0);
-  const paidMonths = mockROIHistory.filter(roi => roi.status === 'Paid').length;
+  const receivedROI = roiHistory.reduce((sum, roi) => sum + roi.received, 0);
+  const paidMonths = roiHistory.filter(roi => roi.status === 'Paid').length;
 
   let cumulativePercent = 0;
-  const segments = mockInvestments.map((investment, index) => {
-    const percent = (investment.amount / total) * 100;
+  const segments = investments.map((investment, index) => {
+    const percent = total > 0 ? (investment.amount / total) * 100 : 0;
     const start = cumulativePercent;
     cumulativePercent += percent;
 
@@ -428,7 +456,7 @@ export default function InvestmentOverview() {
     };
   });
 
-  const filteredROI = mockROIHistory.filter(roi => {
+  const filteredROI = roiHistory.filter(roi => {
     if (roiFilter !== 'All' && roi.status !== roiFilter) return false;
     if (yearFilter !== 'all') {
       const year = new Date(roi.date).getFullYear().toString();
@@ -438,7 +466,7 @@ export default function InvestmentOverview() {
   });
   // Accrued days calculation
   const today = new Date();
-  const joinDateStr = mockClient.joinDate || mockClient.memberSince || '2024-08-15';
+  const joinDateStr = client.joinDate || client.memberSince || '2024-08-15';
   const joinDate = new Date(joinDateStr);
   
   let daysPassed = today.getDate();
@@ -462,8 +490,8 @@ export default function InvestmentOverview() {
   const summaryCards = [
     {
       label: 'Total Invested',
-      value: formatAmount(mockTotalInvested),
-      trend: `${mockInvestments.length} active segments`,
+      value: formatAmount(total),
+      trend: `${investments.length} active segments`,
       trendDirection: 'up',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -547,19 +575,19 @@ export default function InvestmentOverview() {
   ];
 
   const handleDownloadAllCSV = () => {
-    downloadAllClientROICSV(mockROIHistory, mockClient);
+    downloadAllClientROICSV(roiHistory, client);
   };
 
   const handleDownloadAllPDF = () => {
-    downloadAllClientROIPDF(mockROIHistory, mockClient);
+    downloadAllClientROIPDF(roiHistory, client);
   };
 
   const handleDownloadSingleCSV = (roi) => {
-    downloadClientROISingleCSV(roi, mockClient);
+    downloadClientROISingleCSV(roi, client);
   };
 
   const handleDownloadSinglePDF = (roi) => {
-    downloadClientROISinglePDF(roi, mockClient, mockInvestments);
+    downloadClientROISinglePDF(roi, client, investments);
   };
 
   return (

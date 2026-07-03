@@ -48,7 +48,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"newadmin@kfpl.com\",\r\n  \"password\": \"Admin@1234\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"kdsrishika@gmail.com\",\r\n  \"password\": \"Admin@1234\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -76,7 +76,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"admin@kfpl.com\",\r\n  \"otp\": \"701900\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"kdsrishika@gmail.com\",\r\n  \"otp\": \"579393\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -237,7 +237,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"is2FAEnabled\": true\r\n}",
+                  "raw": "{\r\n  \"is2FAEnabled\": false\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -431,6 +431,1214 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "client&agent",
+          "item": [
+            {
+              "name": "client",
+              "item": [
+                {
+                  "name": "Dashboard Preview",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/client-dashboard/:clientId",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "client-dashboard",
+                        ":clientId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "clientId",
+                          "value": "6a3b7e7a9fada754eec08c4b"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Investments Tab",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/:id/investments",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        ":id",
+                        "investments"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a4378d915093ba00747f9ae"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "create client",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Rajesh Kumar",
+                          "type": "text",
+                          "uuid": "0ad8a179-5eef-447c-ad52-39f41baae249"
+                        },
+                        {
+                          "key": "email",
+                          "value": "rishikakds@gmail.com",
+                          "type": "text",
+                          "uuid": "ae20954c-cd31-48c5-88a6-20d4c1610d18"
+                        },
+                        {
+                          "key": "phone",
+                          "value": "9876543210",
+                          "type": "text",
+                          "uuid": "89a110fb-23a5-45b3-b6fd-090458d6a13f"
+                        },
+                        {
+                          "key": "dob",
+                          "value": "1995-05-10",
+                          "type": "text",
+                          "uuid": "e526b2eb-43bb-4b05-a212-0d5fcbdf880a"
+                        },
+                        {
+                          "key": "address",
+                          "value": "Delhi India",
+                          "type": "text",
+                          "uuid": "381475ea-e831-4598-9885-783438b18747"
+                        },
+                        {
+                          "key": "riskProfile",
+                          "value": "conservative",
+                          "type": "text",
+                          "uuid": "694ffe06-57c7-4bb2-b8a0-c7a6d3b73125"
+                        },
+                        {
+                          "key": "residencyStatus",
+                          "value": "National (Domestic)",
+                          "type": "text",
+                          "uuid": "d87bd179-9e03-4d8f-bd52-03bac0109e85"
+                        },
+                        {
+                          "key": "monthlyRoi",
+                          "value": "1.5",
+                          "type": "text",
+                          "uuid": "a21f92da-c367-4990-b423-8f3903d2d90e"
+                        },
+                        {
+                          "key": "bankName",
+                          "value": "HDFC",
+                          "type": "text",
+                          "uuid": "446244a9-868f-434c-a728-06e63e824b75"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "12345678901",
+                          "type": "text",
+                          "uuid": "4a2a7e3f-8a24-4517-b2e1-50cb7c4e1fda"
+                        },
+                        {
+                          "key": "ifscCode",
+                          "value": "HDFC0001234",
+                          "type": "text",
+                          "uuid": "1c33f94c-2af4-49e6-8e00-e83c5c032145"
+                        },
+                        {
+                          "key": "panNumber",
+                          "value": "ABCPK1234L",
+                          "type": "text",
+                          "uuid": "dacf3662-96bf-4650-8105-72d9b99b4acd"
+                        },
+                        {
+                          "key": "aadhaarNumber",
+                          "value": "123456789012",
+                          "type": "text",
+                          "uuid": "2de0e922-11a9-47d9-89a5-a3059ba686a5"
+                        },
+                        {
+                          "key": "nomineeName",
+                          "value": "Rahul Kumar",
+                          "type": "text",
+                          "uuid": "8b5d1029-6ceb-4ac8-b384-addc93a3ac23"
+                        },
+                        {
+                          "key": "nomineeRelation",
+                          "value": "Brother",
+                          "type": "text",
+                          "uuid": "0746c293-aab0-4ef2-b7e6-099193e90683"
+                        },
+                        {
+                          "key": "nomineePhone",
+                          "value": "9876543200",
+                          "type": "text",
+                          "uuid": "9c58e201-68c6-4475-b167-229bbbc1b846"
+                        },
+                        {
+                          "key": "nomineeEmail",
+                          "value": "rahul@gmail.com",
+                          "type": "text",
+                          "uuid": "e642593a-e70d-4b1d-92e8-a6f815b6aa15"
+                        },
+                        {
+                          "key": "nomineeResidency",
+                          "value": "National (Domestic)",
+                          "type": "text",
+                          "uuid": "7825e90e-ea29-4329-b8e8-d69738462383"
+                        },
+                        {
+                          "key": "assignedAgent",
+                          "value": "Direct Client (No Agent)",
+                          "type": "text",
+                          "uuid": "b47e8a4e-21e7-4e41-a840-0f8df8bb0de9"
+                        },
+                        {
+                          "key": "tier",
+                          "value": "DIAMOND",
+                          "type": "text",
+                          "uuid": "3fec7c1a-5ba1-4f36-b560-51585bf8256a"
+                        },
+                        {
+                          "key": "portalPassword",
+                          "value": "12345678",
+                          "type": "text",
+                          "uuid": "2ca2fe39-e041-4dcb-ad6e-07772c5b3709"
+                        },
+                        {
+                          "key": "panDocument",
+                          "type": "file",
+                          "uuid": "998771d6-61ca-4bc8-aff0-da97a031efc5",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "aadhaarDocument",
+                          "type": "file",
+                          "uuid": "45257674-ec50-40b7-b2ab-5f669422229c",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "bankProofDocument",
+                          "type": "file",
+                          "uuid": "3fc23c00-6bd7-4e76-89dc-af7323f81ae4",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "nomineeProofDocument",
+                          "type": "file",
+                          "uuid": "3dee6968-aec7-45ca-b3a1-2ee496dfe29d",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "agreementDocument",
+                          "type": "file",
+                          "uuid": "df9e7729-0874-4c36-b3b6-6bbdf9706813",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get All Clients",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Rajesh Kumar",
+                          "type": "text",
+                          "uuid": "0ad8a179-5eef-447c-ad52-39f41baae249"
+                        },
+                        {
+                          "key": "phone",
+                          "value": "9876543210",
+                          "type": "text",
+                          "uuid": "89a110fb-23a5-45b3-b6fd-090458d6a13f"
+                        },
+                        {
+                          "key": "email",
+                          "value": "rajesh@gmail.com",
+                          "type": "text",
+                          "uuid": "ae20954c-cd31-48c5-88a6-20d4c1610d18"
+                        },
+                        {
+                          "key": "dob",
+                          "value": "1995-05-10",
+                          "type": "text",
+                          "uuid": "e526b2eb-43bb-4b05-a212-0d5fcbdf880a"
+                        },
+                        {
+                          "key": "address",
+                          "value": "Delhi India",
+                          "type": "text",
+                          "uuid": "381475ea-e831-4598-9885-783438b18747"
+                        },
+                        {
+                          "key": "riskProfile",
+                          "value": "conservative",
+                          "type": "text",
+                          "uuid": "694ffe06-57c7-4bb2-b8a0-c7a6d3b73125"
+                        },
+                        {
+                          "key": "panNumber",
+                          "value": "ABCPK1234L",
+                          "type": "text",
+                          "uuid": "dacf3662-96bf-4650-8105-72d9b99b4acd"
+                        },
+                        {
+                          "key": "aadhaarNumber",
+                          "value": "123456789012",
+                          "type": "text",
+                          "uuid": "2de0e922-11a9-47d9-89a5-a3059ba686a5"
+                        },
+                        {
+                          "key": "bankName",
+                          "value": "HDFC",
+                          "type": "text",
+                          "uuid": "446244a9-868f-434c-a728-06e63e824b75"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "12345678901",
+                          "type": "text",
+                          "uuid": "4a2a7e3f-8a24-4517-b2e1-50cb7c4e1fda"
+                        },
+                        {
+                          "key": "ifscCode",
+                          "value": "HDFC0001234",
+                          "type": "text",
+                          "uuid": "1c33f94c-2af4-49e6-8e00-e83c5c032145"
+                        },
+                        {
+                          "key": "nomineeName",
+                          "value": "Rahul Kumar",
+                          "type": "text",
+                          "uuid": "8b5d1029-6ceb-4ac8-b384-addc93a3ac23"
+                        },
+                        {
+                          "key": "nomineeRelation",
+                          "value": "Brother",
+                          "type": "text",
+                          "uuid": "0746c293-aab0-4ef2-b7e6-099193e90683"
+                        },
+                        {
+                          "key": "nomineePhone",
+                          "value": "9876543200",
+                          "type": "text",
+                          "uuid": "9c58e201-68c6-4475-b167-229bbbc1b846"
+                        },
+                        {
+                          "key": "nomineeEmail",
+                          "value": "rahul@gmail.com",
+                          "type": "text",
+                          "uuid": "e642593a-e70d-4b1d-92e8-a6f815b6aa15"
+                        },
+                        {
+                          "key": "panDocument",
+                          "type": "file",
+                          "uuid": "998771d6-61ca-4bc8-aff0-da97a031efc5",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "aadhaarDocument",
+                          "type": "file",
+                          "uuid": "45257674-ec50-40b7-b2ab-5f669422229c",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "bankProofDocument",
+                          "type": "file",
+                          "uuid": "3fc23c00-6bd7-4e76-89dc-af7323f81ae4",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "agreementDocument",
+                          "type": "file",
+                          "uuid": "df9e7729-0874-4c36-b3b6-6bbdf9706813",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "nomineeProofDocument",
+                          "type": "file",
+                          "uuid": "3dee6968-aec7-45ca-b3a1-2ee496dfe29d",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "ROI Tab",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/:id/roi",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        ":id",
+                        "roi"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a4378d915093ba00747f9ae"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Single Client",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Rajesh Kumar",
+                          "type": "text",
+                          "uuid": "0ad8a179-5eef-447c-ad52-39f41baae249"
+                        },
+                        {
+                          "key": "phone",
+                          "value": "9876543210",
+                          "type": "text",
+                          "uuid": "89a110fb-23a5-45b3-b6fd-090458d6a13f"
+                        },
+                        {
+                          "key": "email",
+                          "value": "rajesh@gmail.com",
+                          "type": "text",
+                          "uuid": "ae20954c-cd31-48c5-88a6-20d4c1610d18"
+                        },
+                        {
+                          "key": "dob",
+                          "value": "1995-05-10",
+                          "type": "text",
+                          "uuid": "e526b2eb-43bb-4b05-a212-0d5fcbdf880a"
+                        },
+                        {
+                          "key": "address",
+                          "value": "Delhi India",
+                          "type": "text",
+                          "uuid": "381475ea-e831-4598-9885-783438b18747"
+                        },
+                        {
+                          "key": "riskProfile",
+                          "value": "conservative",
+                          "type": "text",
+                          "uuid": "694ffe06-57c7-4bb2-b8a0-c7a6d3b73125"
+                        },
+                        {
+                          "key": "panNumber",
+                          "value": "ABCPK1234L",
+                          "type": "text",
+                          "uuid": "dacf3662-96bf-4650-8105-72d9b99b4acd"
+                        },
+                        {
+                          "key": "aadhaarNumber",
+                          "value": "123456789012",
+                          "type": "text",
+                          "uuid": "2de0e922-11a9-47d9-89a5-a3059ba686a5"
+                        },
+                        {
+                          "key": "bankName",
+                          "value": "HDFC",
+                          "type": "text",
+                          "uuid": "446244a9-868f-434c-a728-06e63e824b75"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "12345678901",
+                          "type": "text",
+                          "uuid": "4a2a7e3f-8a24-4517-b2e1-50cb7c4e1fda"
+                        },
+                        {
+                          "key": "ifscCode",
+                          "value": "HDFC0001234",
+                          "type": "text",
+                          "uuid": "1c33f94c-2af4-49e6-8e00-e83c5c032145"
+                        },
+                        {
+                          "key": "nomineeName",
+                          "value": "Rahul Kumar",
+                          "type": "text",
+                          "uuid": "8b5d1029-6ceb-4ac8-b384-addc93a3ac23"
+                        },
+                        {
+                          "key": "nomineeRelation",
+                          "value": "Brother",
+                          "type": "text",
+                          "uuid": "0746c293-aab0-4ef2-b7e6-099193e90683"
+                        },
+                        {
+                          "key": "nomineePhone",
+                          "value": "9876543200",
+                          "type": "text",
+                          "uuid": "9c58e201-68c6-4475-b167-229bbbc1b846"
+                        },
+                        {
+                          "key": "nomineeEmail",
+                          "value": "rahul@gmail.com",
+                          "type": "text",
+                          "uuid": "e642593a-e70d-4b1d-92e8-a6f815b6aa15"
+                        },
+                        {
+                          "key": "panDocument",
+                          "type": "file",
+                          "uuid": "998771d6-61ca-4bc8-aff0-da97a031efc5",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "aadhaarDocument",
+                          "type": "file",
+                          "uuid": "45257674-ec50-40b7-b2ab-5f669422229c",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "bankProofDocument",
+                          "type": "file",
+                          "uuid": "3fc23c00-6bd7-4e76-89dc-af7323f81ae4",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "agreementDocument",
+                          "type": "file",
+                          "uuid": "df9e7729-0874-4c36-b3b6-6bbdf9706813",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "nomineeProofDocument",
+                          "type": "file",
+                          "uuid": "3dee6968-aec7-45ca-b3a1-2ee496dfe29d",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/6a4378d915093ba00747f9ae",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        "6a4378d915093ba00747f9ae"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Mark ROI Paid Button",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/:id/roi/:payoutId/pay",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        ":id",
+                        "roi",
+                        ":payoutId",
+                        "pay"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a3b7a919fada754eec08c49"
+                        },
+                        {
+                          "key": "payoutId",
+                          "value": ""
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Perks Tab",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/:id/perks",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        ":id",
+                        "perks"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a4378d915093ba00747f9ae"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Edit Client Details / ROI Rate",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"fullName\": \"Rajesh Kumar Updated\",\r\n  \"monthlyRoi\": 1.5,\r\n  \"riskProfile\": \"Aggressive\",\r\n  \"status\": \"blocked\"\r\n}\r\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/:id",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        ":id"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a4378d915093ba00747f9ae"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update Portal Login Status (Active / Block / Hold)",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"status\": \"active\"\r\n}\r\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/client-portal/:id/status",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "client-portal",
+                        ":id",
+                        "status"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a437bf715093ba00747f9b0"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Delete Client Account",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"status\": \"hold\"\r\n}\r\n"
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/clients/:id",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "clients",
+                        ":id"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a4378d915093ba00747f9ae"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "agent",
+              "item": [
+                {
+                  "name": "create agent",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Vikram Patel",
+                          "description": "1",
+                          "type": "text",
+                          "uuid": "21e3ea2a-9a0c-43a2-8969-bf1c4247bdf8"
+                        },
+                        {
+                          "key": "phone",
+                          "value": "+91 99887 76650",
+                          "type": "text",
+                          "uuid": "8ea97430-47bc-4f49-8785-7ca963c9489b"
+                        },
+                        {
+                          "key": "email",
+                          "value": "rishikakds@gmail.com",
+                          "type": "text",
+                          "uuid": "64f64927-815e-4b2a-a253-7f2a280b442f"
+                        },
+                        {
+                          "key": "residencyStatus",
+                          "value": "National (Domestic)",
+                          "type": "text",
+                          "uuid": "acf4ecfd-00e8-4299-a29d-b0ccc7c8e9d7"
+                        },
+                        {
+                          "key": "panNumber",
+                          "value": "ABCVP1234T",
+                          "type": "text",
+                          "uuid": "67bd2e92-f5c6-46e6-954c-e3f95239c225"
+                        },
+                        {
+                          "key": "bankName",
+                          "value": "HDFC Bank",
+                          "type": "text",
+                          "uuid": "0c5533ee-82ba-4f1c-985d-94c102615c67"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "9876543210",
+                          "type": "text",
+                          "uuid": "64813f94-bdef-42b2-9f02-3c9956648c1c"
+                        },
+                        {
+                          "key": "ifscCode",
+                          "value": "HDFC0004321",
+                          "type": "text",
+                          "uuid": "9d0cad0f-cea8-4032-8cad-f80a7d3952ed"
+                        },
+                        {
+                          "key": "oneTimeCommission",
+                          "value": "2",
+                          "type": "text",
+                          "uuid": "05b9df21-7d2e-48e0-b8d4-cc39d505b1ec"
+                        },
+                        {
+                          "key": "monthlySlab",
+                          "value": "Slab 2 - 0.75%",
+                          "type": "text",
+                          "uuid": "0d72405f-4dd6-41a0-bf0b-2b946456c4a1"
+                        },
+                        {
+                          "key": "specialCommission",
+                          "value": "0.5",
+                          "type": "text",
+                          "uuid": "bcb1bcdf-af41-454d-baa1-bb4fab96a76c"
+                        },
+                        {
+                          "key": "nomineeName",
+                          "value": "Ramesh Patel",
+                          "type": "text",
+                          "uuid": "ae74508c-f329-4689-819b-f4c000d347d1"
+                        },
+                        {
+                          "key": "nomineeRelation",
+                          "value": "Spouse",
+                          "type": "text",
+                          "uuid": "1aabd8fb-3802-46bf-b56a-06fc949f7289"
+                        },
+                        {
+                          "key": "nomineePhone",
+                          "value": "+91 98765 43210",
+                          "type": "text",
+                          "uuid": "dbf48372-bc94-4426-a441-3a8b2ded014e"
+                        },
+                        {
+                          "key": "nomineeEmail",
+                          "value": "kdsrishika@gmail.com",
+                          "type": "text",
+                          "uuid": "40dd18ba-6485-4881-9708-c982ff0efc0b"
+                        },
+                        {
+                          "key": "nomineeResidency",
+                          "value": "National (Domestic)",
+                          "type": "text",
+                          "uuid": "0f579575-8160-4e70-b18b-bdf23b4b00c4"
+                        },
+                        {
+                          "key": "password",
+                          "value": "securePassword123",
+                          "type": "text",
+                          "uuid": "e688e293-1889-4850-aac8-aba744c4ca06"
+                        },
+                        {
+                          "key": "aadhaarNumber",
+                          "value": "123456789012",
+                          "type": "text",
+                          "uuid": "a94c78cb-aded-4c28-938f-7adfbc27f0bd"
+                        },
+                        {
+                          "key": "panDocument",
+                          "type": "file",
+                          "uuid": "615c8fe3-cfbb-4edd-b736-3210e11eae56",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "idProofDocument",
+                          "type": "file",
+                          "uuid": "d328cafb-561f-4e22-b609-60a97ad1b684",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "bankProofDocument",
+                          "type": "file",
+                          "uuid": "66abe2dc-3fe8-4b9d-99e1-957e24528a95",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "nomineeProofDocument",
+                          "type": "file",
+                          "uuid": "9374216e-27a7-4c06-9c86-6f9969cddc5c",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "get agents",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Agent Profile & Documents",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Vikram Patel",
+                          "description": "1",
+                          "type": "text",
+                          "uuid": "21e3ea2a-9a0c-43a2-8969-bf1c4247bdf8"
+                        },
+                        {
+                          "key": "phone",
+                          "value": "+91 99887 76650",
+                          "type": "text",
+                          "uuid": "8ea97430-47bc-4f49-8785-7ca963c9489b"
+                        },
+                        {
+                          "key": "email",
+                          "value": "vikram.patel@agency.com",
+                          "type": "text",
+                          "uuid": "64f64927-815e-4b2a-a253-7f2a280b442f"
+                        },
+                        {
+                          "key": "residencyStatus",
+                          "value": "National (Domestic)",
+                          "type": "text",
+                          "uuid": "acf4ecfd-00e8-4299-a29d-b0ccc7c8e9d7"
+                        },
+                        {
+                          "key": "panNumber",
+                          "value": "ABCVP1234T",
+                          "type": "text",
+                          "uuid": "67bd2e92-f5c6-46e6-954c-e3f95239c225"
+                        },
+                        {
+                          "key": "bankName",
+                          "value": "HDFC Bank",
+                          "type": "text",
+                          "uuid": "0c5533ee-82ba-4f1c-985d-94c102615c67"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "9876543210",
+                          "type": "text",
+                          "uuid": "64813f94-bdef-42b2-9f02-3c9956648c1c"
+                        },
+                        {
+                          "key": "ifscCode",
+                          "value": "HDFC0004321",
+                          "type": "text",
+                          "uuid": "9d0cad0f-cea8-4032-8cad-f80a7d3952ed"
+                        },
+                        {
+                          "key": "oneTimeCommission",
+                          "value": "2",
+                          "type": "text",
+                          "uuid": "05b9df21-7d2e-48e0-b8d4-cc39d505b1ec"
+                        },
+                        {
+                          "key": "monthlySlab",
+                          "value": "Slab 2 - 0.75%",
+                          "type": "text",
+                          "uuid": "0d72405f-4dd6-41a0-bf0b-2b946456c4a1"
+                        },
+                        {
+                          "key": "specialCommission",
+                          "value": "0.5",
+                          "type": "text",
+                          "uuid": "bcb1bcdf-af41-454d-baa1-bb4fab96a76c"
+                        },
+                        {
+                          "key": "nomineeName",
+                          "value": "Ramesh Patel",
+                          "type": "text",
+                          "uuid": "ae74508c-f329-4689-819b-f4c000d347d1"
+                        },
+                        {
+                          "key": "nomineeRelation",
+                          "value": "Spouse",
+                          "type": "text",
+                          "uuid": "1aabd8fb-3802-46bf-b56a-06fc949f7289"
+                        },
+                        {
+                          "key": "nomineePhone",
+                          "value": "+91 98765 43210",
+                          "type": "text",
+                          "uuid": "dbf48372-bc94-4426-a441-3a8b2ded014e"
+                        },
+                        {
+                          "key": "nomineeEmail",
+                          "value": "ramesh@email.com",
+                          "type": "text",
+                          "uuid": "40dd18ba-6485-4881-9708-c982ff0efc0b"
+                        },
+                        {
+                          "key": "nomineeResidency",
+                          "value": "National (Domestic)",
+                          "type": "text",
+                          "uuid": "0f579575-8160-4e70-b18b-bdf23b4b00c4"
+                        },
+                        {
+                          "key": "password",
+                          "value": "securePassword123",
+                          "type": "text",
+                          "uuid": "e688e293-1889-4850-aac8-aba744c4ca06"
+                        },
+                        {
+                          "key": "panDocument",
+                          "type": "file",
+                          "uuid": "615c8fe3-cfbb-4edd-b736-3210e11eae56",
+                          "src": "postman-cloud:///1f13a2b9-f00a-43a0-94c5-8027fdc785f9"
+                        },
+                        {
+                          "key": "idProofDocument",
+                          "type": "file",
+                          "uuid": "d328cafb-561f-4e22-b609-60a97ad1b684",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "bankProofDocument",
+                          "type": "file",
+                          "uuid": "66abe2dc-3fe8-4b9d-99e1-957e24528a95",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        },
+                        {
+                          "key": "nomineeProofDocument",
+                          "type": "file",
+                          "uuid": "9374216e-27a7-4c06-9c86-6f9969cddc5c",
+                          "src": "postman-cloud:///1f13a2b9-58a7-4580-abb9-d00b7fbbe8ca"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents/6a44cef1ead9ab4dfee9fb60",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents",
+                        "6a44cef1ead9ab4dfee9fb60"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Agent's Client List",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents/6a44cef1ead9ab4dfee9fb60/clients",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents",
+                        "6a44cef1ead9ab4dfee9fb60",
+                        "clients"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Agent's Commission History",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents/6a44ddc8ead9ab4dfee9fb6b/commissions",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents",
+                        "6a44ddc8ead9ab4dfee9fb6b",
+                        "commissions"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update Agent status",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"status\": \"blocked\"\r\n}\r\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents/6a44cef1ead9ab4dfee9fb60/status",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents",
+                        "6a44cef1ead9ab4dfee9fb60",
+                        "status"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Edit Agent Profile",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Vikram Patel",
+                          "type": "text",
+                          "uuid": "aa6a567e-5be6-40f6-a0a0-bd1cedb9b9b4"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "XXXX9876",
+                          "type": "text",
+                          "uuid": "b8d5ff3d-4581-46e2-8d81-50d7aa2eddd6"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents/6a44cef1ead9ab4dfee9fb60",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents",
+                        "6a44cef1ead9ab4dfee9fb60"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Delete Agent",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "fullName",
+                          "value": "Vikram Patel",
+                          "type": "text",
+                          "uuid": "aa6a567e-5be6-40f6-a0a0-bd1cedb9b9b4"
+                        },
+                        {
+                          "key": "accountNumber",
+                          "value": "XXXX9876",
+                          "type": "text",
+                          "uuid": "b8d5ff3d-4581-46e2-8d81-50d7aa2eddd6"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{url}}/api/super-admin/agents/6a44cef1ead9ab4dfee9fb60",
+                      "host": [
+                        "{{url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "super-admin",
+                        "agents",
+                        "6a44cef1ead9ab4dfee9fb60"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            }
+          ]
         }
       ],
       "auth": {
@@ -438,7 +1646,523 @@
         "bearer": [
           {
             "key": "token",
-            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMzExY2IwODU1NjE2YmFiMmE0ZGI4MyIsInJvbGUiOiJzdXBlci1hZG1pbiIsImlhdCI6MTc4MTYwMzU1MiwiZXhwIjoxNzg0MTk1NTUyfQ.tH25fH2MPhKTtNaBCjVV_yOJAlBH8z5J6H2TgQ4T7-g",
+            "value": "{{auth_secret_08do}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "client",
+      "item": [
+        {
+          "name": "SETTINGS",
+          "item": [
+            {
+              "name": "Request OTP",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"currentPassword\": \"12345678\",\r\n  \"newPassword\": \"1234567890\",\r\n  \"confirmPassword\": \"1234567890\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/client/settings/change-password/send-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "settings",
+                    "change-password",
+                    "send-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "New Request",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"otp\": \"333873\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/client/settings/change-password/verify-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "settings",
+                    "change-password",
+                    "verify-otp"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "auth",
+          "item": [
+            {
+              "name": "Client Login",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"rishikakds@gmail.com\",\r\n  \"password\": \"12345678\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/client/auth/login",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Client Investments & ROI List",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/client/investments",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "investments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Client Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"phone\": \"9999999999\",\r\n  \"address\": \"New Delhi\",\r\n  \"nomineePhone\": \"8888888888\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/client/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Client Dashboard",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/client/dashboard",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "dashboard"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Client Documents",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/client/documents",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "documents"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Client Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/client/auth/me",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "client",
+                    "auth",
+                    "me"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{supabase_service_role_api_key_0xpq}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent",
+      "item": [
+        {
+          "name": "settings",
+          "item": [
+            {
+              "name": "send otp change password",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"currentPassword\": \"securePassword123\",\r\n  \"newPassword\": \"12345678\",\r\n  \"confirmPassword\": \"12345678\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/agent/settings/change-password/send-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "settings",
+                    "change-password",
+                    "send-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify OTP & Change Password",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"otp\": \"880813\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/agent/settings/change-password/verify-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "settings",
+                    "change-password",
+                    "verify-otp"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "AUTH",
+          "item": [
+            {
+              "name": "agent login",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"rishikakds@gmail.com\",\r\n  \"password\": \"securePassword123\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/agent/auth/login",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Agent Logout",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/auth/logout",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Agent Profile Info",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Authenticated Agent Session",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/auth/me",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "auth",
+                    "me"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Agent's Commissions List",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/commissions",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "commissions"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Agent Onboarded Documents checklist",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/documents",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "documents"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Agent Personalized Dashboard",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/dashboard",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Agent's Client Directory",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/agent/clients",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{auth_secret_135k}}",
             "type": "string"
           }
         ]
@@ -486,13 +2210,57 @@
       "response": []
     }
   ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
   "variable": [
     {
-      "key": "supabase_service_role_api_key_1da1",
+      "key": "json_web_token_00yb",
       "secret": true
     },
     {
-      "key": "supabase_service_role_api_key_0m1k",
+      "key": "supabase_service_role_api_key_0lqu",
+      "secret": true
+    },
+    {
+      "key": "auth_secret_08do",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_070e",
+      "secret": true
+    },
+    {
+      "key": "supabase_service_role_api_key_0vrm",
+      "secret": true
+    },
+    {
+      "key": "auth_secret_135k",
+      "secret": true
+    },
+    {
+      "key": "supabase_service_role_api_key_0xpq",
       "secret": true
     }
   ]

@@ -17,6 +17,13 @@ import './styles/forms.css';
 import './styles/pages.css';
 import './styles/responsive.css';
 
+
+if (import.meta.env.PROD) {
+  console.log = () => {};
+  console.debug = () => {};
+  console.warn = () => {};
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

@@ -118,7 +118,7 @@ export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileC
     const token = authData ? JSON.parse(authData)?.token : null;
     if (token) {
       try {
-        await fetch(getApiUrl('/api/auth/logout'), {
+        await fetch(getApiUrl('/api/client/auth/logout'), {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });

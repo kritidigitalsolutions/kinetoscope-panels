@@ -9,10 +9,10 @@ import { useNavigate } from 'react-router-dom';
 import { JOURNEY_STEPS, PERK_TIERS } from '../../constants';
 import {
   mockJourney,
-  mockStats,
-  mockClient,
-  mockInvestments,
-  mockROIHistory,
+  mockStats as fallbackStats,
+  mockClient as fallbackClient,
+  mockInvestments as fallbackInvestments,
+  mockROIHistory as fallbackROIHistory,
   mockPortfolioProjects,
   formatCurrency,
   formatNumber
@@ -21,10 +21,17 @@ import DonutChart from '../../components/charts/DonutChart';
 import LineChart from '../../components/charts/LineChart';
 import Modal from '../../components/ui/Modal';
 import KpiCard from '../../components/ui/KpiCard';
+import { apiRequest } from '../../config/apiHelper';
 
 
 export default function DashboardHome() {
   const navigate = useNavigate();
+
+  const [client, setClient] = useState(fallbackClient);
+  const [stats, setStats] = useState(fallbackStats);
+  const [investments, setInvestments] = useState(fallbackInvestments);
+  const [roiHistory, setRoiHistory] = useState(fallbackROIHistory);
+  const [journey, setJourney] = useState(mockJourney);
 
   const [statusHistory, setStatusHistory] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -32,6 +39,34 @@ export default function DashboardHome() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [historySegmentFilter, setHistorySegmentFilter] = useState('all');
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const response = await apiRequest('/api/client/dashboard');
+        if (response) {
+          if (response.client || response.user) {
+            setClient(response.client || response.user);
+          }
+          if (response.stats) {
+            setStats(response.stats);
+          }
+          if (response.investments) {
+            setInvestments(response.investments);
+          }
+          if (response.roiHistory) {
+            setRoiHistory(response.roiHistory);
+          }
+          if (response.journey) {
+            setJourney(response.journey);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load client dashboard via API, falling back to mocks:', err);
+      }
+    };
+    fetchDashboard();
+  }, []);
 
   const SEGMENT_COLORS = {
     'Film Making': '#10B981', Distribution: '#1565C0', Music: '#7C3AED',
@@ -94,22 +129,22 @@ export default function DashboardHome() {
   };
 
   // Calculate journey progress
-  const completedSteps = JOURNEY_STEPS.filter(step => mockJourney[step.key]).length;
+  const completedSteps = JOURNEY_STEPS.filter(step => journey[step.key]).length;
   const progress = Math.round((completedSteps / JOURNEY_STEPS.length) * 100);
   const fillPercent = completedSteps > 0 ? ((completedSteps - 1) / (JOURNEY_STEPS.length - 1)) * 100 : 0;
 
-  const showOnboardingBanner = !mockClient.onboardingComplete;
+  const showOnboardingBanner = !client.onboardingComplete;
 
   // Prepare Donut Chart data dynamically
-  const totalInvestedAmount = mockInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-  const segmentAllocation = mockInvestments.map(inv => ({
+  const totalInvestedAmount = investments.reduce((sum, inv) => sum + inv.amount, 0);
+  const segmentAllocation = investments.map(inv => ({
     segment: inv.segment,
-    value: Math.round((inv.amount / totalInvestedAmount) * 100)
+    value: totalInvestedAmount > 0 ? Math.round((inv.amount / totalInvestedAmount) * 100) : 0
   }));
 
   // Prepare Line Chart data dynamically
-  const lineChartData = mockROIHistory.map(roi => ({
-    month: roi.month.split(' ')[0],
+  const lineChartData = roiHistory.map(roi => ({
+    month: roi.month ? roi.month.split(' ')[0] : '—',
     amount: roi.received > 0 ? roi.received : roi.expected
   }));
 
@@ -118,23 +153,23 @@ export default function DashboardHome() {
 
   // Quick Action Config
   const quickActionItems = [
-    { label: 'Raise Query', subtitle: 'Service request', route: '/service-requests/new', color: '#7B1FA2', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-    { label: 'Add Funds', subtitle: 'Invest in slots', route: '/projects', color: '#10B981', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> },
-    { label: 'Request Payout', subtitle: 'Withdraw request', route: '/payments', color: '#C62828', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
-    { label: 'View Portfolio', subtitle: 'Active portfolio', route: '/portfolio', color: '#1565C0', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> },
-    { label: 'Support Details', subtitle: 'Contact desk', route: '/profile?tab=support', color: '#0E7490', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
+    { label: 'Raise Query', subtitle: 'Service request', route: '/service-requests/new', color: '#7B1FA2', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg> },
+    { label: 'Add Funds', subtitle: 'Invest in slots', route: '/projects', color: '#10B981', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg> },
+    { label: 'Request Payout', subtitle: 'Withdraw request', route: '/payments', color: '#C62828', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
+    { label: 'View Portfolio', subtitle: 'Active portfolio', route: '/portfolio', color: '#1565C0', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg> },
+    { label: 'Support Details', subtitle: 'Contact desk', route: '/profile?tab=support', color: '#0E7490', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> },
   ];
 
   return (
     <div className="kfpl-page" id="client-dashboard-page">
-      
+
       {/* ═══════════════ WELCOME HERO BANNER ═══════════════ */}
       <div className="kfpl-welcome-banner">
         <div className="kfpl-welcome-content">
           <div className="kfpl-welcome-text">
             <div className="kfpl-welcome-eyebrow">Client investment portal</div>
             <h1 className="kfpl-welcome-title">
-              Welcome back, <span className="kfpl-welcome-name">{mockClient.name}</span>
+              Welcome back, <span className="kfpl-welcome-name">{client.name}</span>
             </h1>
             <p className="kfpl-welcome-subtitle">
               {dateStr} — Here's your portal and investment overview.
@@ -143,13 +178,13 @@ export default function DashboardHome() {
           <div className="kfpl-welcome-stats">
             <div className="kfpl-stat-pill">
               <span className="kfpl-stat-pill-value">
-                {formatCurrency(mockStats.totalInvested)}
+                {formatCurrency(stats.totalInvested)}
               </span>
               <span className="kfpl-stat-pill-label">Total Invested</span>
             </div>
             <div className="kfpl-stat-pill">
               <span className="kfpl-stat-pill-value">
-                {formatCurrency(mockStats.monthlyROI)}
+                {formatCurrency(stats.monthlyROI)}
               </span>
               <span className="kfpl-stat-pill-label">Monthly ROI</span>
             </div>
@@ -167,7 +202,7 @@ export default function DashboardHome() {
       <div className="kfpl-section-header" style={{ marginTop: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 className="kfpl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width: 18, height: 18, color: 'var(--color-success)' }}>
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           Live Portfolio & Segment Updates
         </h3>
@@ -177,7 +212,7 @@ export default function DashboardHome() {
           style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
           </svg>
           View Full History Log
         </button>
@@ -308,11 +343,11 @@ export default function DashboardHome() {
                               <div className="kfpl-progress-fill" style={{ width: `${update.progress}%`, background: accent }}></div>
                             </div>
                           </div>
-                          
+
                           {(update.media || []).length > 0 && (
                             <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
-                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                               </svg>
                               {update.media.length} File(s)
                             </span>
@@ -347,7 +382,7 @@ export default function DashboardHome() {
       {showOnboardingBanner && (
         <div className="kfpl-onboarding-banner" onClick={() => navigate('/onboarding/details')} style={{ cursor: 'pointer', marginBottom: '24px' }}>
           <div className="kfpl-onboarding-banner-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
           </div>
           <div className="kfpl-onboarding-banner-text">
             <h4>Complete Your Profile</h4>
@@ -374,14 +409,14 @@ export default function DashboardHome() {
             <div className="kfpl-journey-line-fill" style={{ width: `${fillPercent}%` }}></div>
           </div>
           {JOURNEY_STEPS.map((step, i) => {
-            const isCompleted = mockJourney[step.key];
-            const isCurrent = !isCompleted && (i === 0 || mockJourney[JOURNEY_STEPS[i - 1]?.key]);
+            const isCompleted = journey[step.key];
+            const isCurrent = !isCompleted && (i === 0 || journey[JOURNEY_STEPS[i - 1]?.key]);
             const stepState = isCompleted ? 'completed' : isCurrent ? 'current' : 'pending';
             return (
               <div key={step.id} className={`kfpl-journey-step ${stepState}`}>
                 <div className={`kfpl-journey-dot ${stepState}`}>
                   {isCompleted ? (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
                   ) : step.id}
                 </div>
                 <div className="kfpl-journey-step-copy">
@@ -398,10 +433,10 @@ export default function DashboardHome() {
       <div className="kfpl-dashboard-kpis">
         <KpiCard
           title="Total Invested"
-          value={formatCurrency(mockStats.totalInvested)}
+          value={formatCurrency(stats.totalInvested)}
           trend="Active capital across selected projects"
           trendDirection="up"
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>}
           iconColor="gold"
           className="kfpl-kpi-card--total"
           variant="gold"
@@ -410,10 +445,10 @@ export default function DashboardHome() {
 
         <KpiCard
           title="Monthly ROI"
-          value={formatCurrency(mockStats.monthlyROI)}
+          value={formatCurrency(stats.monthlyROI)}
           trend="Expected monthly payout"
           trendDirection="up"
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>}
           iconColor="success"
           className="kfpl-kpi-card--roi"
           delay={80}
@@ -421,10 +456,10 @@ export default function DashboardHome() {
 
         <KpiCard
           title="ROI Rate"
-          value={`${mockStats.roiRate}%`}
+          value={`${stats.roiRate}%`}
           trend="Annual"
           trendDirection="up"
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
           iconColor="info"
           className="kfpl-kpi-card--rate"
           delay={160}
@@ -432,10 +467,10 @@ export default function DashboardHome() {
 
         <KpiCard
           title="Perk Tier"
-          value={`${PERK_TIERS[mockStats.perkTier]?.icon || '🏅'} ${mockStats.perkTier}`}
+          value={`${PERK_TIERS[stats.perkTier]?.icon || '🏅'} ${stats.perkTier}`}
           trend="Recognition benefits enabled"
           trendDirection="up"
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>}
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></svg>}
           iconColor="warning"
           className="kfpl-kpi-card--perk"
           style={{ cursor: 'pointer' }}
@@ -445,10 +480,10 @@ export default function DashboardHome() {
 
         <KpiCard
           title="Next ROI Date"
-          value={mockStats.nextROIDate && mockStats.nextROIDate !== '—' ? new Date(mockStats.nextROIDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+          value={stats.nextROIDate && stats.nextROIDate !== '—' ? new Date(stats.nextROIDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
           trend="Upcoming payout schedule"
           trendDirection="up"
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
           iconColor="navy"
           className="kfpl-kpi-card--date"
           delay={320}
@@ -456,10 +491,10 @@ export default function DashboardHome() {
 
         <KpiCard
           title="Active Projects"
-          value={mockInvestments.length}
+          value={investments.length}
           trend="Diversified portfolio segments"
           trendDirection="up"
-          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>}
           iconColor="info"
           className="kfpl-kpi-card--projects"
           delay={400}
@@ -478,7 +513,7 @@ export default function DashboardHome() {
             <span className="kfpl-badge kfpl-badge--active">Allocated</span>
           </div>
           <div className="kfpl-chart-body">
-            <DonutChart data={segmentAllocation} defaultValue={mockInvestments.length} defaultLabel="Segments" />
+            <DonutChart data={segmentAllocation} defaultValue={investments.length} defaultLabel="Segments" />
           </div>
           <div className="kfpl-chart-legend">
             {segmentAllocation.map((seg, i) => (
@@ -510,7 +545,7 @@ export default function DashboardHome() {
       <div className="kfpl-quick-actions-section">
         <div className="kfpl-section-header">
           <h3 className="kfpl-section-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 18, height: 18, color: 'var(--color-gold)' }}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 18, height: 18, color: 'var(--color-gold)' }}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
             Quick Portal Actions
           </h3>
           <span className="kfpl-section-subtitle">One-click actions to manage your investment</span>
@@ -538,7 +573,7 @@ export default function DashboardHome() {
 
       {/* ═══════════════ BOTTOM WIDGETS ═══════════════ */}
       <div className="kfpl-dashboard-widgets" style={{ marginBottom: '24px' }}>
-        
+
         {/* Widget 1: Recent Payouts */}
         <div className="kfpl-chart-card">
           <div className="kfpl-chart-header">
@@ -550,7 +585,7 @@ export default function DashboardHome() {
           </div>
           <div className="kfpl-chart-body" style={{ padding: '8px 24px 24px' }}>
             <div className="kfpl-widget-list">
-              {mockROIHistory.slice(0, 5).map((roi, idx) => (
+              {roiHistory.slice(0, 5).map((roi, idx) => (
                 <div className="kfpl-widget-item" key={idx}>
                   <div className="kfpl-widget-rank silver">
                     {idx + 1}
@@ -626,14 +661,14 @@ export default function DashboardHome() {
                 fontWeight: '800',
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
               }}>
-                {mockClient.agentName.split(' ').map(n => n[0]).join('')}
+                {client.agentName ? client.agentName.split(' ').map(n => n[0]).join('') : 'WA'}
               </div>
               <div>
-                <h4 style={{ fontSize: '1rem', fontWeight: '700' }}>{mockClient.agentName}</h4>
-                <p className="text-muted text-sm" style={{ marginTop: '2px' }}>ID: {mockClient.agentId} • Senior Wealth Manager</p>
+                <h4 style={{ fontSize: '1rem', fontWeight: '700' }}>{client.agentName || 'Wealth Advisor'}</h4>
+                <p className="text-muted text-sm" style={{ marginTop: '2px' }}>ID: {client.agentId || 'AGT-007'} • Senior Wealth Manager</p>
               </div>
               <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '8px' }}>
-                <a href={`tel:${mockClient.phone}`} className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ flex: 1 }}>
+                <a href={`tel:${client.phone || ''}`} className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ flex: 1 }}>
                   📞 Call
                 </a>
                 <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="kfpl-btn kfpl-btn--primary kfpl-btn--sm" style={{ flex: 1, background: '#25D366', borderColor: '#25D366' }}>
@@ -647,138 +682,138 @@ export default function DashboardHome() {
           </div>
         </div>
 
-      {/* ═══════ Selected Update Detail Modal ═══════ */}
-      <Modal
-        isOpen={!!selectedUpdate}
-        onClose={() => setSelectedUpdate(null)}
-        title={selectedUpdate ? (selectedUpdate.type === 'segment' || !selectedUpdate.project ? `${selectedUpdate.segment} Segment Update` : selectedUpdate.project) : 'Update Details'}
-        size={selectedUpdate?.media?.length > 0 ? 'lg' : 'md'}
-        footer={
-          <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setSelectedUpdate(null)}>Close</button>
-        }
-      >
-        {selectedUpdate && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="kfpl-badge" style={{ background: `${SEGMENT_COLORS[selectedUpdate.segment] || '#10B981'}15`, color: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981', border: `1px solid ${SEGMENT_COLORS[selectedUpdate.segment] || '#10B981'}40` }}>
-                {selectedUpdate.segment}
-              </span>
-              <span className="text-xs text-muted" style={{ fontWeight: 600 }}>{selectedUpdate.date}</span>
-            </div>
-
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
-              <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--color-text)', fontStyle: 'italic' }}>
-                "{selectedUpdate.note}"
-              </p>
-            </div>
-
-            {/* Progress */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
-                <span className="text-muted">Milestone Completion</span>
-                <span style={{ color: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981' }}>{selectedUpdate.progress}%</span>
+        {/* ═══════ Selected Update Detail Modal ═══════ */}
+        <Modal
+          isOpen={!!selectedUpdate}
+          onClose={() => setSelectedUpdate(null)}
+          title={selectedUpdate ? (selectedUpdate.type === 'segment' || !selectedUpdate.project ? `${selectedUpdate.segment} Segment Update` : selectedUpdate.project) : 'Update Details'}
+          size={selectedUpdate?.media?.length > 0 ? 'lg' : 'md'}
+          footer={
+            <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setSelectedUpdate(null)}>Close</button>
+          }
+        >
+          {selectedUpdate && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="kfpl-badge" style={{ background: `${SEGMENT_COLORS[selectedUpdate.segment] || '#10B981'}15`, color: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981', border: `1px solid ${SEGMENT_COLORS[selectedUpdate.segment] || '#10B981'}40` }}>
+                  {selectedUpdate.segment}
+                </span>
+                <span className="text-xs text-muted" style={{ fontWeight: 600 }}>{selectedUpdate.date}</span>
               </div>
-              <div className="kfpl-progress" style={{ height: '8px', margin: 0 }}>
-                <div className="kfpl-progress-fill" style={{ width: `${selectedUpdate.progress}%`, background: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981' }}></div>
-              </div>
-            </div>
 
-            {/* Attached Files */}
-            {(selectedUpdate.media || []).length > 0 && (
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
+                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--color-text)', fontStyle: 'italic' }}>
+                  "{selectedUpdate.note}"
+                </p>
+              </div>
+
+              {/* Progress */}
               <div>
-                <h5 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px', color: 'var(--color-text)' }}>Attached Files</h5>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
-                  {selectedUpdate.media.map(m => (
-                    <div key={m.id} style={{
-                      border: '1px solid var(--color-border-light)',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      alignItems: 'center',
-                      textAlign: 'center'
-                    }}>
-                      {m.type?.startsWith('image/') ? (
-                        <img src={m.dataUrl} alt={m.name} style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '4px' }} />
-                      ) : (
-                        <div style={{
-                          height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'var(--color-surface)', width: '100%', borderRadius: '4px',
-                          fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-secondary)'
-                        }}>
-                          {m.name?.split('.').pop()?.toUpperCase() || 'FILE'}
-                        </div>
-                      )}
-                      <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
-                        {m.name}
-                      </span>
-                      <a
-                        href={m.dataUrl}
-                        download={m.name}
-                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--xs"
-                        style={{ width: '100%', textDecoration: 'none', textAlign: 'center', display: 'block', padding: '4px' }}
-                      >
-                        Download
-                      </a>
-                    </div>
-                  ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
+                  <span className="text-muted">Milestone Completion</span>
+                  <span style={{ color: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981' }}>{selectedUpdate.progress}%</span>
+                </div>
+                <div className="kfpl-progress" style={{ height: '8px', margin: 0 }}>
+                  <div className="kfpl-progress-fill" style={{ width: `${selectedUpdate.progress}%`, background: SEGMENT_COLORS[selectedUpdate.segment] || '#10B981' }}></div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </Modal>
 
-      {/* ═══════ History Log Modal ═══════ */}
-      <Modal
-        isOpen={showHistoryModal}
-        onClose={() => setShowHistoryModal(false)}
-        title="Investment Status History"
-        size="lg"
-        footer={
-          <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowHistoryModal(false)}>Close</button>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <input
-              type="text"
-              className="kfpl-input"
-              placeholder="Search history by project or note..."
-              value={historySearch}
-              onChange={e => setHistorySearch(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <select
-              className="kfpl-select"
-              value={historySegmentFilter}
-              onChange={e => setHistorySegmentFilter(e.target.value)}
-              style={{ width: '180px' }}
-            >
-              <option value="all">All Segments</option>
-              {Object.keys(SEGMENT_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
+              {/* Attached Files */}
+              {(selectedUpdate.media || []).length > 0 && (
+                <div>
+                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px', color: 'var(--color-text)' }}>Attached Files</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                    {selectedUpdate.media.map(m => (
+                      <div key={m.id} style={{
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        alignItems: 'center',
+                        textAlign: 'center'
+                      }}>
+                        {m.type?.startsWith('image/') ? (
+                          <img src={m.dataUrl} alt={m.name} style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '4px' }} />
+                        ) : (
+                          <div style={{
+                            height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'var(--color-surface)', width: '100%', borderRadius: '4px',
+                            fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-secondary)'
+                          }}>
+                            {m.name?.split('.').pop()?.toUpperCase() || 'FILE'}
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                          {m.name}
+                        </span>
+                        <a
+                          href={m.dataUrl}
+                          download={m.name}
+                          className="kfpl-btn kfpl-btn--ghost kfpl-btn--xs"
+                          style={{ width: '100%', textDecoration: 'none', textAlign: 'center', display: 'block', padding: '4px' }}
+                        >
+                          Download
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal>
 
-          {/* List of historical records */}
-          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
-            {statusHistory
-              .filter(log => {
-                const matchesSearch =
-                  (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
-                  (log.note || '').toLowerCase().includes(historySearch.toLowerCase());
-                const matchesSegment =
-                  historySegmentFilter === 'all' || log.segment === historySegmentFilter;
-                return matchesSearch && matchesSegment;
-              })
-              .length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px' }}>
-                No update history found matching your filters.
-              </div>
-            ) : statusHistory
+        {/* ═══════ History Log Modal ═══════ */}
+        <Modal
+          isOpen={showHistoryModal}
+          onClose={() => setShowHistoryModal(false)}
+          title="Investment Status History"
+          size="lg"
+          footer={
+            <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowHistoryModal(false)}>Close</button>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <input
+                type="text"
+                className="kfpl-input"
+                placeholder="Search history by project or note..."
+                value={historySearch}
+                onChange={e => setHistorySearch(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <select
+                className="kfpl-select"
+                value={historySegmentFilter}
+                onChange={e => setHistorySegmentFilter(e.target.value)}
+                style={{ width: '180px' }}
+              >
+                <option value="all">All Segments</option>
+                {Object.keys(SEGMENT_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            {/* List of historical records */}
+            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+              {statusHistory
+                .filter(log => {
+                  const matchesSearch =
+                    (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
+                    (log.note || '').toLowerCase().includes(historySearch.toLowerCase());
+                  const matchesSegment =
+                    historySegmentFilter === 'all' || log.segment === historySegmentFilter;
+                  return matchesSearch && matchesSegment;
+                })
+                .length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px' }}>
+                  No update history found matching your filters.
+                </div>
+              ) : statusHistory
                 .filter(log => {
                   const matchesSearch =
                     (log.project || '').toLowerCase().includes(historySearch.toLowerCase()) ||
@@ -800,7 +835,7 @@ export default function DashboardHome() {
                       gap: '8px',
                       cursor: 'pointer'
                     }}
-                    onClick={() => { setShowHistoryModal(false); setSelectedUpdate(log); }}
+                      onClick={() => { setShowHistoryModal(false); setSelectedUpdate(log); }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -811,17 +846,17 @@ export default function DashboardHome() {
                         </div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>{log.date}</span>
                       </div>
-                      
+
                       <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0, fontStyle: 'italic' }}>
                         "{log.note || 'No notes posted.'}"
                       </p>
-                      
+
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border-light)', paddingTop: '6px', marginTop: '2px' }}>
                         <span>Status: <strong>{log.status}</strong> • Progress: <strong>{log.progress}%</strong></span>
                         {(log.media || []).length > 0 && (
                           <span style={{ color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}>
-                              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                             </svg>
                             {log.media.length} File(s)
                           </span>
@@ -830,9 +865,9 @@ export default function DashboardHome() {
                     </div>
                   );
                 })}
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
       </div>
     </div>
   );
