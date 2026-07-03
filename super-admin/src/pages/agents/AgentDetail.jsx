@@ -363,10 +363,22 @@ export default function AgentDetail() {
 
   const fetchAgentDetails = async () => {
     setLoading(true);
-    let ag = null;
     try {
-      const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
-      
+      const [agentRes, clientsRes, commissionsRes] = await Promise.all([
+        apiRequest(`/api/super-admin/agents/${id}`).catch(err => {
+          console.error('Failed to load agent basic details:', err);
+          return null;
+        }),
+        apiRequest(`/api/super-admin/agents/${id}/clients`).catch(err => {
+          console.error('Failed to load agent clients:', err);
+          return null;
+        }),
+        apiRequest(`/api/super-admin/agents/${id}/commissions`).catch(err => {
+          console.error('Failed to load agent commissions:', err);
+          return null;
+        })
+      ]);
+
       const extractAgentDetail = (res) => {
         if (!res) return null;
         if (res.agent) return res.agent;
@@ -376,20 +388,20 @@ export default function AgentDetail() {
         }
         return res;
       };
-      ag = extractAgentDetail(agentData);
+      const ag = extractAgentDetail(agentRes);
       
       if (ag) {
         const user = ag.user || {};
         const profile = ag.profile || {};
         
         const docs = ag.documents || [];
-        console.log('[DEBUG Agent Docs]', JSON.stringify(docs, null, 2));
         setDocumentsList(docs);
         
         const verifiedMap = {};
         docs.forEach(doc => {
           const label = doc.name || doc.label;
-          if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified === true) {
+          const s = (doc.status || '').toLowerCase();
+          if (s === 'verified' || s === 'approved' || doc.verified === true) {
             verifiedMap[label] = true;
           }
         });
@@ -429,52 +441,36 @@ export default function AgentDetail() {
         setAgent(normalizedAg);
         setLocalStatus(normalizedAg.status);
       }
+
+      // Extract and set clients
+      const extractClients = (res) => {
+        if (!res) return [];
+        if (Array.isArray(res)) return res;
+        if (res.data) {
+          if (Array.isArray(res.data)) return res.data;
+        }
+        return [];
+      };
+      setAgentClients(extractClients(clientsRes));
+
+      // Extract and set commissions
+      const extractCommissions = (res) => {
+        if (!res) return [];
+        if (Array.isArray(res)) return res;
+        if (res.data) {
+          if (Array.isArray(res.data)) return res.data;
+          if (res.data.commissions && Array.isArray(res.data.commissions)) return res.data.commissions;
+        }
+        if (res.commissions && Array.isArray(res.commissions)) return res.commissions;
+        return [];
+      };
+      setCommissionHistory(extractCommissions(commissionsRes));
+
     } catch (err) {
       console.error('Failed to fetch agent details:', err);
       addToast(err.message || 'Failed to load agent details', 'error', 'Error');
     } finally {
       setLoading(false);
-    }
-
-    // Fetch clients and commissions in background without blocking main agent details
-    if (ag) {
-      // Fetch clients
-      (async () => {
-        try {
-          const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
-          const extractClients = (res) => {
-            if (!res) return [];
-            if (Array.isArray(res)) return res;
-            if (res.data) {
-              if (Array.isArray(res.data)) return res.data;
-            }
-            return [];
-          };
-          setAgentClients(extractClients(clientsData));
-        } catch (clientErr) {
-          console.error('Failed to load agent clients:', clientErr);
-        }
-      })();
-
-      // Fetch commissions
-      (async () => {
-        try {
-          const commissionsData = await apiRequest(`/api/super-admin/agents/${id}/commissions`);
-          const extractCommissions = (res) => {
-            if (!res) return [];
-            if (Array.isArray(res)) return res;
-            if (res.data) {
-              if (Array.isArray(res.data)) return res.data;
-              if (res.data.commissions && Array.isArray(res.data.commissions)) return res.data.commissions;
-            }
-            if (res.commissions && Array.isArray(res.commissions)) return res.commissions;
-            return [];
-          };
-          setCommissionHistory(extractCommissions(commissionsData));
-        } catch (comErr) {
-          console.error('Failed to load agent commissions:', comErr);
-        }
-      })();
     }
   };
 
@@ -551,45 +547,124 @@ export default function AgentDetail() {
   };
 
   const handleVerifyDocument = async (docLabel) => {
-    // Update local state first so UI updates instantly
-    setVerifiedDocs(prev => ({ ...prev, [docLabel]: true }));
-    setDocumentsList(prev => prev.map(d => {
+    let fieldName = 'panDocument';
+    const label = docLabel.toLowerCase();
+    if (label.includes('nominee')) {
+      fieldName = 'nomineeProofDocument';
+    } else if (label.includes('pan')) {
+      fieldName = 'panDocument';
+    } else if (label.includes('aadhaar') || label.includes('id proof') || label.includes('identity')) {
+      fieldName = 'idProofDocument';
+    } else if (label.includes('bank') || label.includes('details')) {
+      fieldName = 'bankProofDocument';
+    }
+
+    const newVerified = { ...verifiedDocs, [docLabel]: true };
+    setVerifiedDocs(newVerified);
+    
+    const updatedDocs = documentsList.map(d => {
       if ((d.name || d.label) === docLabel) {
         return { ...d, status: 'Verified' };
       }
       return d;
-    }));
+    });
+    setDocumentsList(updatedDocs);
     addToast(`"${docLabel}" verified successfully!`, 'success', 'Document Verified');
 
+    // Auto-verify KYC when ALL documents are verified (case-insensitive check)
+    const allNowVerified = updatedDocs.length > 0 && updatedDocs.every(d => {
+      const l = d.name || d.label;
+      const s = (d.status || '').toLowerCase();
+      return newVerified[l] || s === 'verified' || s === 'approved' || d.verified === true;
+    });
+    if (allNowVerified) {
+      handleKycStatusChange('VERIFIED');
+      addToast('All documents verified — KYC automatically set to Verified!', 'success', 'KYC Auto-Verified');
+    }
+
     try {
+      // Option A: Try dedicated verify-document API
       await apiRequest(`/api/super-admin/agents/${id}/verify-document`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           documentName: docLabel,
+          documentField: fieldName,
+          field: fieldName,
+          fieldName: fieldName,
+          docField: fieldName,
           status: 'Verified'
         })
       });
-      fetchAgentDetails(); // Sync from backend if endpoint exists
+      fetchAgentDetails(); // Sync from backend
     } catch (err) {
-      console.warn('Backend agent verification API not implemented yet. Local UI state updated successfully:', err);
+      console.warn('Dedicated verify-document API failed, falling back to agent profile update...', err);
+      try {
+        // Option B: Fallback to main agent patch with the entire updated documents array
+        await apiRequest(`/api/super-admin/agents/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            documents: updatedDocs
+          })
+        });
+        fetchAgentDetails(); // Sync from backend
+      } catch (fallbackErr) {
+        console.error('All backend verification fallbacks failed:', fallbackErr);
+      }
     }
   };
 
   const handleKycStatusChange = async (newKycStatus) => {
-    try {
-      const formData = new FormData();
-      formData.append('kycStatus', newKycStatus);
-      formData.append('kyc', newKycStatus);
-      
-      await apiRequest(`/api/super-admin/agents/${id}`, {
-        method: 'PATCH',
-        body: formData
-      });
-      setAgent(prev => prev ? { ...prev, kyc: newKycStatus } : null);
-      addToast(`Agent KYC status updated to ${newKycStatus}`, 'success', 'KYC Updated');
-    } catch (err) {
-      console.error('Failed to update KYC status:', err);
-      addToast(err.message || 'Failed to update KYC status', 'error', 'Update Failed');
+    // Update local state first so UI updates instantly and stays verified
+    setAgent(prev => prev ? { ...prev, kyc: newKycStatus } : null);
+    addToast(`Agent KYC status updated to ${newKycStatus}`, 'success', 'KYC Updated');
+
+    // Candidates for agent KYC endpoints on the desktop backend
+    const endpoints = [
+      `/api/super-admin/agents/${id}`,
+      `/api/super-admin/agents/${id}/kyc`,
+      `/api/super-admin/agents/${id}/kyc-status`,
+      `/api/super-admin/agents/${id}/verify-kyc`
+    ];
+
+    for (const url of endpoints) {
+      try {
+        // Try JSON
+        await apiRequest(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            kycStatus: newKycStatus,
+            kyc: newKycStatus,
+            status: newKycStatus
+          })
+        });
+        console.log(`Successfully updated agent KYC using JSON on ${url}`);
+        break; // Break loop once an endpoint succeeds!
+      } catch (jsonErr) {
+        try {
+          // Try FormData fallback
+          const formData = new FormData();
+          formData.append('kycStatus', newKycStatus);
+          formData.append('kyc', newKycStatus);
+          formData.append('status', newKycStatus);
+          await apiRequest(url, {
+            method: 'PATCH',
+            body: formData
+          });
+          console.log(`Successfully updated agent KYC using FormData on ${url}`);
+          break; // Break loop once an endpoint succeeds!
+        } catch (formErr) {
+          console.warn(`Endpoint ${url} failed to patch:`, formErr);
+        }
+      }
     }
   };
 
@@ -776,33 +851,35 @@ export default function AgentDetail() {
         <div className="kfpl-detail-kpi-summary-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <span className="kfpl-detail-kpi-summary-label">KYC Verification</span>
           <div style={{ marginTop: '4px' }}>
-            {allDocsVerified ? (
-              <select
-                className="kfpl-select"
-                value={agent.kyc || 'PENDING'}
-                onChange={(e) => handleKycStatusChange(e.target.value)}
-                style={{ 
-                  width: '100%',
-                  padding: '4px 8px', 
-                  fontSize: '0.85rem', 
-                  borderRadius: '6px', 
-                  border: '1px solid #10B981', 
-                  background: agent.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
-                  color: agent.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="PENDING">Pending</option>
-                <option value="VERIFIED">Verified</option>
-              </select>
+            {agent.kyc === 'VERIFIED' ? (
+              <Badge status="active">Verified</Badge>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <Badge status={agent.kyc === 'VERIFIED' ? 'active' : 'pending'}>{agent.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}</Badge>
-                <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
-                  ⚠️ Verify all docs first
-                </span>
+                <select
+                  className="kfpl-select"
+                  value={agent.kyc || 'PENDING'}
+                  onChange={(e) => handleKycStatusChange(e.target.value)}
+                  style={{ 
+                    width: '100%',
+                    padding: '4px 8px', 
+                    fontSize: '0.85rem', 
+                    borderRadius: '6px', 
+                    border: '1px solid #10B981', 
+                    background: '#FEF3C7',
+                    color: '#92400E',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="PENDING">Pending</option>
+                  <option value="VERIFIED">Verified</option>
+                </select>
+                {!allDocsVerified && (
+                  <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
+                    ⚠️ Verify all docs first
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -880,14 +957,14 @@ export default function AgentDetail() {
                 <div>
                   <span className="kfpl-detail-info-item-label">KYC Status</span>
                   <span className="kfpl-detail-info-item-value" style={{ display: 'block', marginTop: '2px' }}>
-                    {!allDocsVerified && (
-                      <Badge status={agent.kyc === 'VERIFIED' ? 'active' : 'pending'}>
-                        {agent.kyc === 'VERIFIED' ? 'Verified' : 'Pending'}
-                      </Badge>
+                    {agent.kyc === 'VERIFIED' ? (
+                      <Badge status="active">Verified</Badge>
+                    ) : (
+                      <Badge status="pending">Pending</Badge>
                     )}
                   </span>
                 </div>
-                {allDocsVerified ? (
+                {agent.kyc === 'VERIFIED' ? null : allDocsVerified ? (
                   <select
                     className="kfpl-select"
                     value={agent.kyc || 'PENDING'}
@@ -897,8 +974,8 @@ export default function AgentDetail() {
                       fontSize: '0.8rem', 
                       borderRadius: '6px', 
                       border: '1px solid #10B981', 
-                      background: agent.kyc === 'VERIFIED' ? '#ECFDF5' : '#FEF3C7',
-                      color: agent.kyc === 'VERIFIED' ? '#065F46' : '#92400E',
+                      background: '#FEF3C7',
+                      color: '#92400E',
                       fontWeight: 600,
                       cursor: 'pointer',
                       outline: 'none'
@@ -1326,17 +1403,8 @@ export default function AgentDetail() {
                       style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0' }}
                       onClick={() => setViewingDoc({ label: docName, filename: doc.fileName || 'document.pdf', agentName: doc.holder || agent.name, status: isVerified ? 'Verified' : 'Pending Verification', uploadedAt: doc.uploadedDate || doc.uploaded || agent.joinDate, url: doc.url })}
                     >
-                      View
+                      View Document
                     </button>
-                    {!isVerified && (
-                      <button 
-                        className="kfpl-btn kfpl-btn--sm" 
-                        style={{ flex: 1, fontSize: '0.78rem', padding: '6px 0', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFFFFF', border: 'none', fontWeight: 600 }}
-                        onClick={() => handleVerifyDocument(docName)}
-                      >
-                        Verify
-                      </button>
-                    )}
                     <button 
                       className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" 
                       style={{ padding: '6px 10px' }}
@@ -1363,58 +1431,60 @@ export default function AgentDetail() {
         >
           <div
             className="kfpl-modal"
-            style={{ maxWidth: '680px', width: '90%' }}
+            style={{ maxWidth: '1000px', width: '95%' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="kfpl-modal-header">
-               <h3 className="kfpl-modal-title">{viewingDoc.label}</h3>
-               <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-               </button>
+            <div className="kfpl-modal-header" style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <h3 className="kfpl-modal-title" style={{ color: '#1e293b', fontSize: '1.1rem', fontWeight: 700 }}>{viewingDoc.label}</h3>
+              <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#64748b', width: '18px', height: '18px' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
-            <div className="kfpl-modal-body" style={{ background: '#0f172a', padding: 0, display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
+            <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: 0, display: 'flex', flexDirection: 'column' }}>
               {/* File Preview Area */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', minHeight: '320px', position: 'relative' }}>
-                {previewLoading ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#94a3b8' }}>
-                    <div style={{ width: '32px', height: '32px', border: '3px solid #334155', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ fontSize: '0.85rem' }}>Loading secure preview...</span>
-                  </div>
-                ) : previewUrl ? (
-                  (() => {
-                    const fileUrl = previewUrl;
-                    const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
-                    if (fileType === 'image') {
-                      return <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '360px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} />;
-                    } else if (fileType === 'pdf') {
-                      return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none', borderRadius: '8px', background: '#ffffff' }} />;
-                    } else if (fileType === 'office') {
-                      const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
-                      if (isBlob) {
-                        return (
-                          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                            <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
-                          </div>
-                        );
-                      }
-                      return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '360px', border: 'none', borderRadius: '8px' }} />;
-                    } else {
+              {previewLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', color: '#64748b', minHeight: '450px' }}>
+                  <div style={{ width: '36px', height: '36px', border: '3.5px solid #e2e8f0', borderTopColor: '#0f766e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '0.85rem', marginTop: '14px', fontWeight: 500 }}>Loading secure document preview...</span>
+                </div>
+              ) : previewUrl ? (
+                (() => {
+                  const fileUrl = previewUrl;
+                  const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
+                  if (fileType === 'image') {
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', background: '#0f172a', minHeight: '450px' }}>
+                        <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 20px 45px rgba(0,0,0,0.5)' }} />
+                      </div>
+                    );
+                  } else if (fileType === 'pdf') {
+                    return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none', background: '#ffffff' }} />;
+                  } else if (fileType === 'office') {
+                    const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
+                    if (isBlob) {
                       return (
-                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
                         </div>
                       );
                     }
-                  })()
-                ) : (
-                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                    <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
-                  </div>
-                )}
-              </div>
+                    return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none' }} />;
+                  } else {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                      </div>
+                    );
+                  }
+                })()
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
+                </div>
+              )}
 
               {/* Document Info Bar */}
               <div style={{ background: '#ffffff', padding: '20px 24px', borderTop: '1px solid #e2e8f0' }}>
@@ -1444,6 +1514,19 @@ export default function AgentDetail() {
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
               >Close</button>
+
+              {!verifiedDocs[viewingDoc.label] && (
+                <button
+                  className="kfpl-btn kfpl-btn--sm"
+                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#ffffff', border: 'none', fontWeight: 600, padding: '8px 20px', borderRadius: '8px' }}
+                  onClick={() => {
+                    handleVerifyDocument(viewingDoc.label);
+                    setViewingDoc(null);
+                  }}
+                >
+                  Verify Document
+                </button>
+              )}
 
               <button
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"

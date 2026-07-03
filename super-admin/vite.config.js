@@ -26,6 +26,9 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     plugins: [react()],
+    esbuild: mode === 'production' ? {
+      drop: ['console', 'debugger']
+    } : {},
     server: {
       proxy: {
         '/api': {

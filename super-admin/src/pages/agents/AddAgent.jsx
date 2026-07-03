@@ -25,6 +25,7 @@ export default function AddAgent() {
   const [portalEmail, setPortalEmail] = useState('');
   const [portalPassword, setPortalPassword] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // File Upload states
   const [panDocFile, setPanDocFile] = useState(null);
@@ -104,6 +105,7 @@ export default function AddAgent() {
     }
 
     setSubmitLoading(true);
+    setIsSubmitting(true);
 
     try {
       const formData = new FormData();
@@ -149,6 +151,7 @@ export default function AddAgent() {
       addToast(err.message || 'Failed to register agent', 'error', 'Error');
     } finally {
       setSubmitLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -331,9 +334,9 @@ export default function AddAgent() {
           </div>
 
           <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" disabled={submitLoading} onClick={() => navigate('/agents')}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={submitLoading}>
-              {submitLoading ? 'Registering...' : 'Create Agent'}
+            <button type="button" className="kfpl-btn kfpl-btn--ghost" disabled={submitLoading || isSubmitting} onClick={() => navigate('/agents')}>Cancel</button>
+            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Registering...' : 'Create Agent'}
             </button>
           </div>
         </div>

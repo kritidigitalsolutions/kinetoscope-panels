@@ -58,10 +58,17 @@ export default function EditInvestor() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch Agents list
+        const [agentsRes, clientRes] = await Promise.all([
+          apiRequest('/api/super-admin/agents').catch(e => {
+            console.error('Failed to load agents in edit page:', e);
+            return null;
+          }),
+          apiRequest(`/api/super-admin/clients/${id}`)
+        ]);
+
+        // Process Agents list
         let agentsList = [];
-        try {
-          const agentsRes = await apiRequest('/api/super-admin/agents');
+        if (agentsRes) {
           const extractAgents = (res) => {
             if (!res) return [];
             if (Array.isArray(res)) return res;
@@ -74,12 +81,9 @@ export default function EditInvestor() {
           };
           agentsList = extractAgents(agentsRes);
           setDbAgents(agentsList);
-        } catch (e) {
-          console.error('Failed to load agents in edit page:', e);
         }
 
-        // Fetch client details
-        const clientRes = await apiRequest(`/api/super-admin/clients/${id}`);
+        // Process client details
         const data = clientRes.data || clientRes;
         const profile = data.profile || data;
         const header = data.header || {};

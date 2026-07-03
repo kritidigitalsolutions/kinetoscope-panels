@@ -22,30 +22,43 @@ export default function AgentClientsView() {
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const agentData = await apiRequest(`/api/super-admin/agents/${id}`);
-        const extractAgentDetail = (res) => {
-          if (!res) return null;
-          if (res.agent) return res.agent;
-          if (res.data) {
-            if (res.data.agent) return res.data.agent;
-            return res.data;
-          }
-          return res;
-        };
-        setAgent(extractAgentDetail(agentData));
+        const [agentData, clientsData] = await Promise.all([
+          apiRequest(`/api/super-admin/agents/${id}`).catch(err => {
+            console.error('Failed to load agent detail:', err);
+            return null;
+          }),
+          apiRequest(`/api/super-admin/agents/${id}/clients`).catch(err => {
+            console.error('Failed to load agent clients list:', err);
+            return null;
+          })
+        ]);
 
-        const clientsData = await apiRequest(`/api/super-admin/agents/${id}/clients`);
-        const extractClients = (res) => {
-          if (!res) return [];
-          if (Array.isArray(res)) return res;
-          if (res.data) {
-            if (Array.isArray(res.data)) return res.data;
-            if (res.data.clients && Array.isArray(res.data.clients)) return res.data.clients;
-          }
-          if (res.clients && Array.isArray(res.clients)) return res.clients;
-          return [];
-        };
-        setClientsList(extractClients(clientsData));
+        if (agentData) {
+          const extractAgentDetail = (res) => {
+            if (!res) return null;
+            if (res.agent) return res.agent;
+            if (res.data) {
+              if (res.data.agent) return res.data.agent;
+              return res.data;
+            }
+            return res;
+          };
+          setAgent(extractAgentDetail(agentData));
+        }
+
+        if (clientsData) {
+          const extractClients = (res) => {
+            if (!res) return [];
+            if (Array.isArray(res)) return res;
+            if (res.data) {
+              if (Array.isArray(res.data)) return res.data;
+              if (res.data.clients && Array.isArray(res.data.clients)) return res.data.clients;
+            }
+            if (res.clients && Array.isArray(res.clients)) return res.clients;
+            return [];
+          };
+          setClientsList(extractClients(clientsData));
+        }
       } catch (err) {
         console.error('Failed to load agent clients view:', err);
       } finally {

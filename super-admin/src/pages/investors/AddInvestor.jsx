@@ -16,6 +16,7 @@ export default function AddInvestor() {
   const addToast = useToast();
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', dob: '', address: '',
     pan: '', bankName: '', accountNo: '', confirmAccountNo: '', ifsc: '',
@@ -148,6 +149,7 @@ export default function AddInvestor() {
     }
 
     setLoading(true);
+    setIsSubmitting(true);
 
     try {
       const authData = localStorage.getItem('kfpl_auth');
@@ -269,6 +271,7 @@ export default function AddInvestor() {
       addToast('Network error or server unavailable.', 'danger', 'Submission Error');
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -556,11 +559,10 @@ export default function AddInvestor() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="kfpl-form-actions">
-            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/investors')} disabled={loading}>Cancel</button>
-            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Investor'}
+            <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/investors')} disabled={loading || isSubmitting}>Cancel</button>
+            <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Investor'}
             </button>
           </div>
         </div>

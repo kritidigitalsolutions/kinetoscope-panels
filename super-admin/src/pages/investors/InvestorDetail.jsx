@@ -458,79 +458,129 @@ export default function InvestorDetail() {
     };
   }, [viewingDoc]);
 
-  // ── API 2: Fetch client details on mount ─────
+  // ── API 2: Fetch client details & tab data on mount concurrently ─────
   useEffect(() => {
-    const fetchClient = async () => {
+    const fetchAllClientData = async () => {
       setLoading(true);
       try {
-        const res = await apiRequest(`/api/super-admin/clients/${id}`);
-        const data = res.data || res;
-        console.log('Client detail raw:', data);
+        const [clientRes, investmentsRes, roiRes, perksRes, docsRes] = await Promise.all([
+          apiRequest(`/api/super-admin/clients/${id}`).catch(err => {
+            console.error('Failed to fetch client profile details:', err);
+            return null;
+          }),
+          apiRequest(`/api/super-admin/clients/${id}/investments`).catch(err => {
+            console.error('Failed to fetch investments:', err);
+            return null;
+          }),
+          apiRequest(`/api/super-admin/clients/${id}/roi`).catch(err => {
+            console.error('Failed to fetch ROI:', err);
+            return null;
+          }),
+          apiRequest(`/api/super-admin/clients/${id}/perks`).catch(err => {
+            console.error('Failed to fetch perks:', err);
+            return null;
+          }),
+          apiRequest(`/api/super-admin/clients/${id}/documents`).catch(err => {
+            console.error('Failed to fetch documents:', err);
+            return null;
+          })
+        ]);
 
-        const profile = data.profile || data;
-        const header = data.header || {};
-        const summary = data.summaryCards || {};
+        if (clientRes) {
+          const data = clientRes.data || clientRes;
+          const profile = data.profile || data;
+          const header = data.header || {};
+          const summary = data.summaryCards || {};
 
-        // Normalize into a flat investor object for the UI
-        const inv = {
-          _id: id,
-          name: header.clientName || profile.fullName || profile.name || '',
-          clientId: header.clientCode || profile.clientCode || profile.clientId || '',
-          email: profile.email || '',
-          phone: profile.phone || '',
-          dob: profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN') : '—',
-          address: profile.address || '—',
-          joinDate: (profile.contractStartDate || profile.joinDate) ? new Date(profile.contractStartDate || profile.joinDate).toLocaleDateString('en-IN') : '—',
-          contractEndDate: profile.contractEndDate ? new Date(profile.contractEndDate).toLocaleDateString('en-IN') : '—',
-          category: (header.tier || profile.tier || 'silver').toLowerCase(),
-          status: (header.status || profile.status || 'active').toLowerCase(),
-          kyc: (header.kycStatus || summary.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
-          riskProfile: header.riskProfile || profile.riskProfile || 'Conservative',
-          totalInvestment: summary.totalInvestment || profile.totalPortfolioValue || 0,
-          roiPercentage: summary.monthlyRoi || profile.monthlyRoi || 1.2,
-          activeSegments: summary.activeInvestments || 0,
-          pan: profile.panNumber || profile.pan || '—',
-          aadhaar: profile.aadhaarNumber || profile.aadhaar || '—',
-          residencyStatus: profile.residencyStatus || 'National (Domestic)',
-          bankName: profile.bankName || '—',
-          accountNo: profile.accountNumber || profile.accountNo || '—',
-          ifsc: profile.ifscCode || profile.ifsc || '—',
-          nominee: {
-            name: profile.nomineeName || '',
-            relation: profile.nomineeRelation || '',
-            phone: profile.nomineePhone || '',
-            email: profile.nomineeEmail || '',
-          },
-          // These will be loaded lazily per tab
-          investments: [],
-          roiHistory: [],
-          perks: [],
-        };
+          // Normalize into a flat investor object for the UI
+          const inv = {
+            _id: id,
+            name: header.clientName || profile.fullName || profile.name || '',
+            clientId: header.clientCode || profile.clientCode || profile.clientId || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+            dob: profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN') : '—',
+            address: profile.address || '—',
+            joinDate: (profile.contractStartDate || profile.joinDate) ? new Date(profile.contractStartDate || profile.joinDate).toLocaleDateString('en-IN') : '—',
+            contractEndDate: profile.contractEndDate ? new Date(profile.contractEndDate).toLocaleDateString('en-IN') : '—',
+            category: (header.tier || profile.tier || 'silver').toLowerCase(),
+            status: (header.status || profile.status || 'active').toLowerCase(),
+            kyc: (header.kycStatus || summary.kycStatus || profile.kycStatus || 'PENDING').toUpperCase(),
+            riskProfile: header.riskProfile || profile.riskProfile || 'Conservative',
+            totalInvestment: summary.totalInvestment || profile.totalPortfolioValue || 0,
+            roiPercentage: summary.monthlyRoi || profile.monthlyRoi || 1.2,
+            activeSegments: summary.activeInvestments || 0,
+            pan: profile.panNumber || profile.pan || '—',
+            aadhaar: profile.aadhaarNumber || profile.aadhaar || '—',
+            residencyStatus: profile.residencyStatus || 'National (Domestic)',
+            bankName: profile.bankName || '—',
+            accountNo: profile.accountNumber || profile.accountNo || '—',
+            ifsc: profile.ifscCode || profile.ifsc || '—',
+            nominee: {
+              name: profile.nomineeName || '',
+              relation: profile.nomineeRelation || '',
+              phone: profile.nomineePhone || '',
+              email: profile.nomineeEmail || '',
+            },
+            investments: [],
+            roiHistory: [],
+            perks: [],
+          };
 
-        setInvestor(inv);
-        setLocalRiskProfile(inv.riskProfile);
-        setLocalStatus(inv.status);
-        setLocalRoiPercentage(inv.roiPercentage);
-        setRoiInputVal(String(inv.roiPercentage));
+          setInvestor(inv);
+          setLocalRiskProfile(inv.riskProfile);
+          setLocalStatus(inv.status);
+          setLocalRoiPercentage(inv.roiPercentage);
+          setRoiInputVal(String(inv.roiPercentage));
+        }
+
+        if (investmentsRes) {
+          setInvestmentsData(investmentsRes.data || investmentsRes);
+        } else {
+          setInvestmentsData({ investments: [] });
+        }
+
+        if (roiRes) {
+          setRoiData(roiRes.data || roiRes);
+        } else {
+          setRoiData({ roiHistory: [], totalRoiPaid: 0, totalRoiPending: 0 });
+        }
+
+        if (perksRes) {
+          setPerksData(perksRes.data || perksRes);
+        } else {
+          setPerksData({ perks: [] });
+        }
+
+        if (docsRes) {
+          const data = docsRes.data || docsRes;
+          setDocsData(data);
+
+          const docs = data.documents || [];
+          const verifiedMap = {};
+          docs.forEach(doc => {
+            const label = doc.name || doc.label;
+            const s = (doc.status || '').toLowerCase();
+            if (s === 'verified' || s === 'approved' || doc.verified === true) {
+              verifiedMap[label] = true;
+            }
+          });
+          setVerifiedDocs(verifiedMap);
+        } else {
+          setDocsData({ documents: [] });
+        }
+
       } catch (err) {
-        console.error('Failed to fetch client:', err);
+        console.error('Failed to fetch client data:', err);
         addToast(err.message || 'Failed to load client data', 'error', 'Error');
       } finally {
         setLoading(false);
       }
     };
-    fetchClient();
+    fetchAllClientData();
   }, [id]);
 
-  // ── Fetch tab data on tab change ─────────────
-  useEffect(() => {
-    if (activeTab === 'investments' && !investmentsData) fetchInvestments();
-    else if (activeTab === 'roi' && !roiData) fetchRoi();
-    else if (activeTab === 'perks' && !perksData) fetchPerks();
-    else if (activeTab === 'documents' && !docsData) fetchDocuments();
-  }, [activeTab]);
-
-  // API 3: Investments
+  // Keep fetch wrappers simple if any tab actions trigger manual re-fetches
   const fetchInvestments = async () => {
     setTabLoading(true);
     try {
@@ -543,7 +593,6 @@ export default function InvestorDetail() {
     } finally { setTabLoading(false); }
   };
 
-  // API 4: ROI
   const fetchRoi = async () => {
     setTabLoading(true);
     try {
@@ -556,7 +605,6 @@ export default function InvestorDetail() {
     } finally { setTabLoading(false); }
   };
 
-  // API 5: Perks
   const fetchPerks = async () => {
     setTabLoading(true);
     try {
@@ -569,7 +617,6 @@ export default function InvestorDetail() {
     } finally { setTabLoading(false); }
   };
 
-  // API 6: Documents
   const fetchDocuments = async () => {
     setTabLoading(true);
     try {
@@ -578,11 +625,11 @@ export default function InvestorDetail() {
       setDocsData(data);
 
       const docs = data.documents || [];
-      console.log('[DEBUG Client Docs]', JSON.stringify(docs, null, 2));
       const verifiedMap = {};
       docs.forEach(doc => {
         const label = doc.name || doc.label;
-        if (doc.status === 'Verified' || doc.status === 'Approved' || doc.verified === true) {
+        const s = (doc.status || '').toLowerCase();
+        if (s === 'verified' || s === 'approved' || doc.verified === true) {
           verifiedMap[label] = true;
         }
       });
@@ -956,33 +1003,33 @@ export default function InvestorDetail() {
           <div style={{ marginTop: '4px' }}>
             {investor.kyc === 'VERIFIED' ? (
               <Badge status="active">Verified</Badge>
-            ) : allDocsVerified ? (
-              <select
-                className="kfpl-select"
-                value={investor.kyc || 'PENDING'}
-                onChange={(e) => handleKycStatusChange(e.target.value)}
-                style={{ 
-                  width: '100%',
-                  padding: '4px 8px', 
-                  fontSize: '0.85rem', 
-                  borderRadius: '6px', 
-                  border: '1px solid #10B981', 
-                  background: '#FEF3C7',
-                  color: '#92400E',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="PENDING">Pending</option>
-                <option value="VERIFIED">Verified</option>
-              </select>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <Badge status="pending">Pending</Badge>
-                <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
-                  ⚠️ Verify all docs first
-                </span>
+                <select
+                  className="kfpl-select"
+                  value={investor.kyc || 'PENDING'}
+                  onChange={(e) => handleKycStatusChange(e.target.value)}
+                  style={{ 
+                    width: '100%',
+                    padding: '4px 8px', 
+                    fontSize: '0.85rem', 
+                    borderRadius: '6px', 
+                    border: '1px solid #10B981', 
+                    background: '#FEF3C7',
+                    color: '#92400E',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="PENDING">Pending</option>
+                  <option value="VERIFIED">Verified</option>
+                </select>
+                {!allDocsVerified && (
+                  <span style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: 500 }}>
+                    ⚠️ Verify all docs first
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -1507,58 +1554,60 @@ export default function InvestorDetail() {
         >
           <div
             className="kfpl-modal"
-            style={{ maxWidth: '680px', width: '90%' }}
+            style={{ maxWidth: '1000px', width: '95%' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="kfpl-modal-header">
-              <h3 className="kfpl-modal-title">{viewingDoc.label}</h3>
+            <div className="kfpl-modal-header" style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <h3 className="kfpl-modal-title" style={{ color: '#1e293b', fontSize: '1.1rem', fontWeight: 700 }}>{viewingDoc.label}</h3>
               <button className="kfpl-modal-close" onClick={() => setViewingDoc(null)} aria-label="Close modal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#64748b', width: '18px', height: '18px' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div className="kfpl-modal-body" style={{ background: '#0f172a', padding: 0, display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
+            <div className="kfpl-modal-body" style={{ background: '#f8fafc', padding: 0, display: 'flex', flexDirection: 'column' }}>
               {/* File Preview Area */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', minHeight: '320px', position: 'relative' }}>
-                {previewLoading ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#94a3b8' }}>
-                    <div style={{ width: '32px', height: '32px', border: '3px solid #334155', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ fontSize: '0.85rem' }}>Loading secure preview...</span>
-                  </div>
-                ) : previewUrl ? (
-                  (() => {
-                    const fileUrl = previewUrl;
-                    const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
-                    if (fileType === 'image') {
-                      return <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '360px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} />;
-                    } else if (fileType === 'pdf') {
-                      return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '450px', border: 'none', borderRadius: '8px', background: '#ffffff' }} />;
-                    } else if (fileType === 'office') {
-                      const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
-                      if (isBlob) {
-                        return (
-                          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                            <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
-                          </div>
-                        );
-                      }
-                      return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '360px', border: 'none', borderRadius: '8px' }} />;
-                    } else {
+              {previewLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', color: '#64748b', minHeight: '450px' }}>
+                  <div style={{ width: '36px', height: '36px', border: '3.5px solid #e2e8f0', borderTopColor: '#0f766e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '0.85rem', marginTop: '14px', fontWeight: 500 }}>Loading secure document preview...</span>
+                </div>
+              ) : previewUrl ? (
+                (() => {
+                  const fileUrl = previewUrl;
+                  const fileType = getFileType(viewingDoc.url, viewingDoc.filename);
+                  if (fileType === 'image') {
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', background: '#0f172a', minHeight: '450px' }}>
+                        <img src={fileUrl} alt={viewingDoc.label} style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 20px 45px rgba(0,0,0,0.5)' }} />
+                      </div>
+                    );
+                  } else if (fileType === 'pdf') {
+                    return <iframe src={fileUrl} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none', background: '#ffffff' }} />;
+                  } else if (fileType === 'office') {
+                    const isBlob = fileUrl.startsWith('blob:') || fileUrl.startsWith('data:');
+                    if (isBlob) {
                       return (
-                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>Local document. Click "Download Original" to view.</p>
                         </div>
                       );
                     }
-                  })()
-                ) : (
-                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '12px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                    <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
-                  </div>
-                )}
-              </div>
+                    return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`} title={viewingDoc.label} style={{ width: '100%', height: '650px', border: 'none' }} />;
+                  } else {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Preview not available for this file type</p>
+                      </div>
+                    );
+                  }
+                })()
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', background: '#0f172a', minHeight: '450px', color: '#94a3b8' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="56" height="56" style={{ marginBottom: '14px', opacity: 0.6 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>No file available</p>
+                </div>
+              )}
 
               {/* Document Info Bar */}
               <div style={{ background: '#ffffff', padding: '20px 24px', borderTop: '1px solid #e2e8f0' }}>
