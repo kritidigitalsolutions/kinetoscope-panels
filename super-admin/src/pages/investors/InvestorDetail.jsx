@@ -12,6 +12,19 @@ import { formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../config/apiHelper';
 import { getApiUrl } from '../../config/apiUrl';
+const formatClientID = (rawId) => {
+  if (!rawId || rawId === '—') return '—';
+  if (rawId.startsWith('KFPL-CL-')) return rawId;
+  const digits = rawId.match(/\d+/);
+  if (digits) {
+    let val = parseInt(digits[0], 10);
+    if (val < 1000) {
+      val = 1000 + val;
+    }
+    return `KFPL-CL-${val}`;
+  }
+  return 'KFPL-CL-1001';
+};
 
 /* ── helpers for downloading statements ─────────────────────── */
 function downloadClientROISingleCSV(roi, client) {
@@ -519,13 +532,15 @@ export default function InvestorDetail() {
           const inv = {
             _id: id,
             name: header.clientName || profile.fullName || profile.name || '',
-            clientId: header.clientCode || profile.clientCode || profile.clientId || '',
+            clientId: formatClientID(header.clientCode || profile.clientCode || profile.clientId || ''),
             email: profile.email || '',
             phone: profile.phone || '',
             dob: profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN') : '—',
             address: profile.address || '—',
-            joinDate: (profile.contractStartDate || profile.joinDate) ? new Date(profile.contractStartDate || profile.joinDate).toLocaleDateString('en-IN') : '—',
-            contractEndDate: profile.contractEndDate ? new Date(profile.contractEndDate).toLocaleDateString('en-IN') : '—',
+            joinDate: (data.joinDate || profile.joinDate) ? new Date(data.joinDate || profile.joinDate).toLocaleDateString('en-IN') : '—',
+            contractStartDate: (data.contractStartDate || profile.contractStartDate) ? new Date(data.contractStartDate || profile.contractStartDate).toLocaleDateString('en-IN') : '—',
+            contractEndDate: (data.contractEndDate || profile.contractEndDate) ? new Date(data.contractEndDate || profile.contractEndDate).toLocaleDateString('en-IN') : '—',
+            extendContractDate: (data.extendContractDate || profile.extendContractDate || data.contractExtendedDate || profile.contractExtendedDate) ? new Date(data.extendContractDate || profile.extendContractDate || data.contractExtendedDate || profile.contractExtendedDate).toLocaleDateString('en-IN') : '—',
             category: (header.tier || profile.tier || 'silver').toLowerCase(),
             status: (header.status || profile.status || 'active').toLowerCase(),
             kyc: kycStatus,
@@ -1110,6 +1125,27 @@ export default function InvestorDetail() {
                 <span className="kfpl-detail-info-item-value">{investor.joinDate}</span>
               </div>
             </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.calendar}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Contract Start Date</span>
+                <span className="kfpl-detail-info-item-value">{investor.contractStartDate}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.calendar}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Contract End Date</span>
+                <span className="kfpl-detail-info-item-value">{investor.contractEndDate}</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.calendar}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Contract Extended Date</span>
+                <span className="kfpl-detail-info-item-value">{investor.extendContractDate}</span>
+              </div>
+            </div>
           </div>
 
           <div className="kfpl-detail-info-card">
@@ -1647,11 +1683,13 @@ export default function InvestorDetail() {
             </div>
             <div className="kfpl-modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
+                type="button"
                 className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
                 onClick={() => setViewingDoc(null)}
               >Close</button>
               {!verifiedDocs[viewingDoc.label] && (
                 <button
+                  type="button"
                   className="kfpl-btn kfpl-btn--sm"
                   style={{ background: 'linear-gradient(135deg, #10B981, #059669)', borderColor: 'transparent', color: '#FFFFFF', fontWeight: 700, padding: '6px 16px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(16,185,129,0.3)', fontSize: '0.8rem' }}
                   onClick={() => {
@@ -1666,6 +1704,7 @@ export default function InvestorDetail() {
                 </button>
               )}
               <button
+                type="button"
                 className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                 style={{ fontWeight: 700, padding: '6px 16px', borderRadius: '8px', fontSize: '0.8rem' }}
                 onClick={() => {

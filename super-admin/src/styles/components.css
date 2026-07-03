@@ -419,6 +419,17 @@
   transition: var(--transition-fast);
 }
 
+/* Hide spinner arrows for number inputs */
+.kfpl-input::-webkit-outer-spin-button,
+.kfpl-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.kfpl-input[type=number] {
+  -moz-appearance: textfield;
+}
+
 .kfpl-input::placeholder {
   color: var(--color-text-muted);
 }

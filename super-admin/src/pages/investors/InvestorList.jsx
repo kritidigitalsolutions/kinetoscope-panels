@@ -17,6 +17,20 @@ export default function InvestorList() {
   const [residencyFilter, setResidencyFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
 
+  const formatClientID = (rawId) => {
+    if (!rawId || rawId === '—') return '—';
+    if (rawId.startsWith('KFPL-CL-')) return rawId;
+    const digits = rawId.match(/\d+/);
+    if (digits) {
+      let val = parseInt(digits[0], 10);
+      if (val < 1000) {
+        val = 1000 + val;
+      }
+      return `KFPL-CL-${val}`;
+    }
+    return 'KFPL-CL-1001';
+  };
+
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,13 +54,6 @@ export default function InvestorList() {
             return name.trim() !== '' || email.trim() !== '';
           });
 
-          cleanRawList.sort((a, b) => {
-            const profileA = a.profile || {};
-            const profileB = b.profile || {};
-            const dateA = new Date(a.createdAt || a.joinDate || profileA.joinDate || 0);
-            const dateB = new Date(b.createdAt || b.joinDate || profileB.joinDate || 0);
-            return dateA - dateB;
-          });
 
           const normalized = cleanRawList.map((c, index) => {
             const profile = c.profile || {};
@@ -62,26 +69,45 @@ export default function InvestorList() {
 
             const userId = c._id || user._id || profile.userId || c.id;
 
+            let agentIdVal = '';
+            let agentNameVal = c.assignedAgentName || header.assignedAgentName || profile.assignedAgentName || '';
+            const rawAgent = c.assignedAgent || profile.assignedAgent || null;
+            if (rawAgent && typeof rawAgent === 'object') {
+              agentIdVal = rawAgent._id || rawAgent.id || '';
+              const agUser = rawAgent.user || {};
+              const agProfile = rawAgent.profile || {};
+              agentNameVal = agentNameVal || agProfile.fullName || agUser.name || rawAgent.fullName || rawAgent.name || '';
+            } else if (rawAgent) {
+              agentIdVal = String(rawAgent);
+            }
+
             return {
               _id: userId,
-              clientCode: user.clientCode || c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode,
+              clientCode: formatClientID(user.clientCode || c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode),
               fullName: profile.fullName || user.name || user.fullName || c.fullName || header.clientName || c.name || profile.name || '',
               email: profile.email || user.email || c.email || '',
               phone: profile.phone || c.phone || '',
               dob: profile.dob || c.dob || '',
-              joinDate: c.contractStartDate || profile.contractStartDate || c.joinDate || profile.joinDate || c.createdAt || profile.createdAt || '',
+              joinDate: c.joinDate || profile.joinDate || c.createdAt || profile.createdAt || '',
+              contractStartDate: c.contractStartDate || profile.contractStartDate || c.joinDate || profile.joinDate || '',
               contractEndDate: c.contractEndDate || profile.contractEndDate || '',
+              extendContractDate: c.extendContractDate || profile.extendContractDate || c.contractExtendedDate || profile.contractExtendedDate || '',
               totalInvestment: c.totalInvestment || summary.totalInvestment || profile.totalPortfolioValue || 0,
               monthlyRoi: c.monthlyRoi || summary.monthlyRoi || profile.monthlyRoi || c.roiPercentage || profile.roiPercentage || 1.2,
               tier: c.tier || header.tier || profile.tier || c.category || profile.category || 'silver',
               status: c.status || header.status || profile.status || 'active',
-              assignedAgent: c.assignedAgent || profile.assignedAgent || '',
-              assignedAgentName: c.assignedAgentName || header.assignedAgentName || profile.assignedAgentName || '',
+              assignedAgent: agentIdVal,
+              assignedAgentName: agentNameVal,
               agentCommissionMonthly: c.agentCommissionMonthly || profile.agentCommissionMonthly || '',
               residencyStatus: c.residencyStatus || profile.residencyStatus || c.citizenship || profile.citizenship || '',
               riskProfile: c.riskProfile || header.riskProfile || profile.riskProfile || 'Conservative',
             };
           });
+          
+          normalized.sort((a, b) => {
+            return a.clientCode.localeCompare(b.clientCode, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
           setClients(normalized);
         } else {
           setClients([]);
@@ -100,32 +126,11 @@ export default function InvestorList() {
     return getCategoryFromAmount(amount);
   };
 
-  // Calculate contract end date (joinDate + longest contract period, default 24 months)
-  const getContractEndDate = (row) => {
-    if (row.contractEndDate) {
-      const d = new Date(row.contractEndDate);
-      if (!isNaN(d.getTime())) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const mon = String(d.getMonth() + 1).padStart(2, '0');
-        return `${day}/${mon}/${d.getFullYear()}`;
-      }
-      return row.contractEndDate;
-    }
-    const rawDate = row.joinDate || row.createdAt;
-    if (rawDate) {
-      const d = new Date(rawDate);
-      d.setMonth(d.getMonth() + 24);
-      const day = String(d.getDate()).padStart(2, '0');
-      const mon = String(d.getMonth() + 1).padStart(2, '0');
-      return `${day}/${mon}/${d.getFullYear()}`;
-    }
-    return '—';
-  };
-
-  const formatJoinDate = (row) => {
-    const rawDate = row.joinDate || row.createdAt;
-    if (!rawDate) return '—';
-    const d = new Date(rawDate);
+  // Formats date to DD/MM/YYYY
+  const formatDateDMY = (dateStr) => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr || '—';
     const day = String(d.getDate()).padStart(2, '0');
     const mon = String(d.getMonth() + 1).padStart(2, '0');
     return `${day}/${mon}/${d.getFullYear()}`;
@@ -158,11 +163,19 @@ export default function InvestorList() {
     },
     {
       header: 'Join Date',
-      render: (row) => <span>{formatJoinDate(row)}</span>,
+      render: (row) => <span>{formatDateDMY(row.joinDate)}</span>,
     },
     {
-      header: 'Contract End',
-      render: (row) => <span>{getContractEndDate(row)}</span>,
+      header: 'Contract Start Date',
+      render: (row) => <span>{formatDateDMY(row.contractStartDate)}</span>,
+    },
+    {
+      header: 'Contract End Date',
+      render: (row) => <span>{formatDateDMY(row.contractEndDate)}</span>,
+    },
+    {
+      header: 'Contract Extended Date',
+      render: (row) => <span>{formatDateDMY(row.extendContractDate)}</span>,
     },
     {
       header: 'Client Name',
@@ -180,7 +193,7 @@ export default function InvestorList() {
     {
       header: 'Perks',
       render: (row) => {
-        const perk = getPerkTier(row.totalInvestment || 0);
+        const perk = row.tier || 'silver';
         return <Badge status={perk}>{perk.toUpperCase()}</Badge>;
       },
     },

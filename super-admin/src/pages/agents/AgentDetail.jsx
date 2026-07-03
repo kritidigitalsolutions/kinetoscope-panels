@@ -12,6 +12,33 @@ import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../config/apiHelper';
 import { getApiUrl } from '../../config/apiUrl';
 import Modal from '../../components/ui/Modal';
+const formatAgentID = (rawId) => {
+  if (!rawId || rawId === '—') return '—';
+  if (rawId.startsWith('KFPL-AGT-')) return rawId;
+  const digits = rawId.match(/\d+/);
+  if (digits) {
+    let val = parseInt(digits[0], 10);
+    if (val < 1000) {
+      val = 1000 + val;
+    }
+    return `KFPL-AGT-${val}`;
+  }
+  return 'KFPL-AGT-1001';
+};
+
+const formatClientID = (rawId) => {
+  if (!rawId || rawId === '—') return '—';
+  if (rawId.startsWith('KFPL-CL-')) return rawId;
+  const digits = rawId.match(/\d+/);
+  if (digits) {
+    let val = parseInt(digits[0], 10);
+    if (val < 1000) {
+      val = 1000 + val;
+    }
+    return `KFPL-CL-${val}`;
+  }
+  return 'KFPL-CL-1001';
+};
 
 /* ── helpers ─────────────────────── */
 function formatDateDMY(dateStr) {
@@ -427,7 +454,7 @@ export default function AgentDetail() {
           email: profile.email || user.email || '—',
           phone: profile.phone || '—',
           pan: profile.panNumber || '—',
-          agentId: ag.header?.agentCode || user.clientCode || profile.agentId || '—',
+          agentId: formatAgentID(ag.header?.agentCode || user.clientCode || profile.agentId || '—'),
           joinDate: profile.joinDate || (user.createdAt 
             ? new Date(user.createdAt).toLocaleDateString('en-IN') 
             : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—')),
@@ -459,13 +486,43 @@ export default function AgentDetail() {
       const extractClients = (res) => {
         if (!res) return [];
         if (Array.isArray(res)) return res;
+        if (res.clients && Array.isArray(res.clients)) return res.clients;
         if (res.data) {
           if (Array.isArray(res.data)) return res.data;
+          if (res.data.clients && Array.isArray(res.data.clients)) return res.data.clients;
         }
         return [];
       };
-      const clientsList = extractClients(clientsRes);
-      setAgentClients(clientsList);
+      const rawClients = extractClients(clientsRes);
+      
+      const normalizedClients = rawClients.map((c, index) => {
+        const user = c.user || {};
+        const profile = c.profile || {};
+        const header = c.header || {};
+        const summary = c.summaryCards || {};
+        
+        const padIndex = String(index + 1).padStart(3, '0');
+        const fallbackCode = `C-${padIndex}`;
+        const userId = c._id || user._id || profile.userId || c.id;
+        
+        return {
+          id: userId,
+          clientId: formatClientID(user.clientCode || c.clientCode || header.clientCode || profile.clientCode || c.clientId || profile.clientId || fallbackCode),
+          name: profile.fullName || user.name || user.fullName || c.fullName || header.clientName || c.name || profile.name || '—',
+          email: profile.email || user.email || c.email || '—',
+          phone: profile.phone || c.phone || '—',
+          joinDate: formatDateDMY(c.joinDate || profile.joinDate || c.contractStartDate || profile.contractStartDate || c.createdAt || profile.createdAt || ''),
+          totalInvestment: c.totalInvestment || summary.totalInvestment || profile.totalPortfolioValue || 0,
+          roiPercentage: c.monthlyRoi || summary.monthlyRoi || profile.monthlyRoi || c.roiPercentage || profile.roiPercentage || 1.2,
+          status: c.status || header.status || profile.status || 'active',
+        };
+      });
+
+      normalizedClients.sort((a, b) => {
+        return a.clientId.localeCompare(b.clientId, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      setAgentClients(normalizedClients);
 
       // Extract and set commissions
       const extractCommissions = (res) => {
@@ -489,7 +546,7 @@ export default function AgentDetail() {
           if (!com) return false;
           if (com.isMock) return false;
           // Business safety rule: Newly registered agents (with 0 clients) cannot have commissions!
-          if (clientsList.length === 0) return false;
+          if (normalizedClients.length === 0) return false;
           if (com.amount === 16250 || com.amount === 33750 || com.amount === 900000) return false;
           const dateVal = com.date || com.paidAt;
           if (!dateVal || isNaN(new Date(dateVal).getTime())) return false;

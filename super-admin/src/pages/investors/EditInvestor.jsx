@@ -20,6 +20,20 @@ const COMMISSION_PRESETS = [
   { id: 'custom', name: 'Custom Rates...', oneTime: '', monthly: '' },
 ];
 
+const formatAgentID = (rawId) => {
+  if (!rawId || rawId === '—') return '—';
+  if (rawId.startsWith('KFPL-AGT-')) return rawId;
+  const digits = rawId.match(/\d+/);
+  if (digits) {
+    let val = parseInt(digits[0], 10);
+    if (val < 1000) {
+      val = 1000 + val;
+    }
+    return `KFPL-AGT-${val}`;
+  }
+  return 'KFPL-AGT-1001';
+};
+
 const formatDateToInputVal = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -114,6 +128,7 @@ export default function EditInvestor() {
           roiPercentage: String(summary.monthlyRoi || profile.monthlyRoi || '1.2'),
           contractStartDate: formatDateToInputVal(profile.contractStartDate || profile.joinDate || profile.createdAt),
           contractEndDate: formatDateToInputVal(profile.contractEndDate),
+          extendContractDate: formatDateToInputVal(profile.extendContractDate || profile.contractExtendedDate),
         });
 
         // Set selected agent ID
@@ -172,7 +187,9 @@ export default function EditInvestor() {
         monthlyRoi: parseFloat(form.roiPercentage) || 1.2,
         assignedAgent: selectedAgentId || 'Direct Client (No Agent)',
         contractStartDate: form.contractStartDate,
-        contractEndDate: form.extendContractDate || form.contractEndDate,
+        contractEndDate: form.contractEndDate,
+        extendContractDate: form.extendContractDate || '',
+        contractExtendedDate: form.extendContractDate || '',
         joinDate: form.contractStartDate,
         nomineeName: form.nomineeName,
         nomineeRelation: form.nomineeRelation,
@@ -306,9 +323,18 @@ export default function EditInvestor() {
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)' }}
                 >
                   <option value="Direct Client (No Agent)">Direct Client (No Agent)</option>
-                  {dbAgents.map(a => (
-                    <option key={a._id || a.id} value={a._id || a.id}>{a.fullName || a.name}</option>
-                  ))}
+                  {dbAgents.map(a => {
+                    const user = a.user || {};
+                    const profile = a.profile || {};
+                    const agentName = profile.fullName || user.name || a.fullName || a.name || 'Agent';
+                    const rawCode = user.clientCode || profile.agentId || a.agentId || a.code || '';
+                    const formattedId = formatAgentID(rawCode);
+                    return (
+                      <option key={a._id || a.id} value={a._id || a.id}>
+                        {agentName} ({formattedId})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>

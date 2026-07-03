@@ -17,6 +17,20 @@ export default function AgentList() {
   const [agentsList, setAgentsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const formatAgentID = (rawId) => {
+    if (!rawId || rawId === '—') return '—';
+    if (rawId.startsWith('KFPL-AGT-')) return rawId;
+    const digits = rawId.match(/\d+/);
+    if (digits) {
+      let val = parseInt(digits[0], 10);
+      if (val < 1000) {
+        val = 1000 + val;
+      }
+      return `KFPL-AGT-${val}`;
+    }
+    return 'KFPL-AGT-1001';
+  };
+
   useEffect(() => {
     const fetchAgents = async () => {
       setLoading(true);
@@ -47,7 +61,7 @@ export default function AgentList() {
                 name: profile.fullName || user.name || '—',
                 email: profile.email || user.email || '—',
                 phone: profile.phone || '—',
-                agentId: user.clientCode || profile.agentId || '—',
+                agentId: formatAgentID(user.clientCode || profile.agentId || '—'),
                 joinDate: user.createdAt 
                   ? new Date(user.createdAt).toLocaleDateString('en-IN') 
                   : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—'),
@@ -56,6 +70,11 @@ export default function AgentList() {
                 status: profile.status || (user.isActive ? 'active' : 'inactive') || 'active',
               };
             });
+          
+          normalized.sort((a, b) => {
+            return a.agentId.localeCompare(b.agentId, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
           setAgentsList(normalized);
         } else {
           setAgentsList([]);

@@ -11,6 +11,20 @@ import FileDropzone from '../../components/ui/FileDropzone';
 import { investors, agents } from '../../data/mockData';
 import { getApiUrl } from '../../config/apiUrl';
 
+const formatAgentID = (rawId) => {
+  if (!rawId || rawId === '—') return '—';
+  if (rawId.startsWith('KFPL-AGT-')) return rawId;
+  const digits = rawId.match(/\d+/);
+  if (digits) {
+    let val = parseInt(digits[0], 10);
+    if (val < 1000) {
+      val = 1000 + val;
+    }
+    return `KFPL-AGT-${val}`;
+  }
+  return 'KFPL-AGT-1001';
+};
+
 export default function AddInvestor() {
   const navigate = useNavigate();
   const addToast = useToast();
@@ -351,11 +365,18 @@ export default function AddInvestor() {
                 >
                   <option value="">Direct Client (No Agent)</option>
                   {dbAgents.length > 0 ? (
-                    dbAgents.map(a => (
-                      <option key={a._id || a.id} value={a._id || a.id}>
-                        {a.name} ({a.agentId || a.code || 'Agent'})
-                      </option>
-                    ))
+                    dbAgents.map(a => {
+                      const user = a.user || {};
+                      const profile = a.profile || {};
+                      const agentName = profile.fullName || user.name || a.fullName || a.name || 'Agent';
+                      const rawCode = user.clientCode || profile.agentId || a.agentId || a.code || '';
+                      const formattedId = formatAgentID(rawCode);
+                      return (
+                        <option key={a._id || a.id} value={a._id || a.id}>
+                          {agentName} ({formattedId})
+                        </option>
+                      );
+                    })
                   ) : (
                     agents.map(a => (
                       <option key={a.id} value={a.id}>{a.name} ({a.agentId})</option>
