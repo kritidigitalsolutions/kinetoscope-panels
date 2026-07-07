@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SEGMENTS } from '../../constants';
 import { mockPortfolioProjects } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 const PROJECT_META = {
   1: {
@@ -98,14 +99,61 @@ export default function Portfolio() {
   const [activeTab, setActiveTab] = useState('All');
   const [drawerProject, setDrawerProject] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Helper parser for projects
+  const extractProjects = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.projects && Array.isArray(res.projects)) return res.projects;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.projects && Array.isArray(res.data.projects)) return res.data.projects;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) {
+        return res[key];
+      }
+    }
+    return [];
+  };
 
   useEffect(() => {
-    const stored = localStorage.getItem('kfpl_portfolio_projects');
-    if (stored) {
-      setProjects(JSON.parse(stored));
-    } else {
-      setProjects(mockPortfolioProjects);
-    }
+    const fetchProjects = async () => {
+      setLoading(true);
+      try {
+        const data = await apiRequest('/api/client/projects');
+        const raw = extractProjects(data);
+        const filteredRaw = raw.filter(p => p.name !== '__KFPL_DUMMY__');
+        const mapped = filteredRaw.map(p => ({
+          id: p._id || p.id,
+          name: p.name || '',
+          segment: p.segment || '',
+          status: p.status || 'Planning',
+          value: p.portfolioValue || p.value || '₹0 Cr',
+          milestone: p.milestoneProgress !== undefined ? p.milestoneProgress : (p.milestone !== undefined ? p.milestone : 0),
+          summary: p.summary || '',
+          risk: p.riskLevel || p.risk || 'Medium',
+          horizon: p.horizon || '',
+          roi: p.monthlyRoi || p.roi || '',
+          health: p.health || 'On Track',
+          media: p.media || [],
+          bannerImg: p.bannerImage || p.bannerImg || '',
+        }));
+        setProjects(mapped);
+      } catch (err) {
+        console.error('Failed to load portfolio projects, using fallback:', err);
+        const stored = localStorage.getItem('kfpl_portfolio_projects');
+        if (stored) {
+          setProjects(JSON.parse(stored));
+        } else {
+          setProjects(mockPortfolioProjects);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProjects();
   }, []);
 
   useEffect(() => {
@@ -120,13 +168,27 @@ export default function Portfolio() {
   }, [drawerProject]);
 
   const enrichedProjects = useMemo(() => {
-    return projects.map(project => ({
-      ...project,
-      ...PROJECT_META[project.id],
-      valueLabel: cleanValue(project.value || '₹0 Cr'),
-      valueCr: parseCroreValue(project.value || '₹0 Cr'),
-      initials: SEGMENT_ABBR[project.segment] || project.name.slice(0, 2).toUpperCase(),
-    }));
+    return projects.map(project => {
+      // Find matching meta by matching summary or id keys
+      const matchedMeta = Object.entries(PROJECT_META).find(([k, v]) => {
+        return String(k) === String(project.id) || v.summary === project.summary;
+      })?.[1] || {};
+
+      return {
+        ...project,
+        summary: project.summary || matchedMeta.summary || '',
+        risk: project.risk || matchedMeta.risk || 'Medium',
+        horizon: project.horizon || matchedMeta.horizon || '12 month cycle',
+        roi: project.roi || matchedMeta.roi || '1.0%',
+        health: project.health || matchedMeta.health || 'On Track',
+        update: project.update || matchedMeta.update || 'Project under active tracking.',
+        allocation: project.allocation || matchedMeta.allocation || 'General project operational capital.',
+        accent: project.accent || matchedMeta.accent || '#10B981',
+        valueLabel: cleanValue(project.value || '₹0 Cr'),
+        valueCr: parseCroreValue(project.value || '₹0 Cr'),
+        initials: SEGMENT_ABBR[project.segment] || project.name.slice(0, 2).toUpperCase(),
+      };
+    });
   }, [projects]);
 
   const filteredProjects = activeTab === 'All'
@@ -290,57 +352,68 @@ export default function Portfolio() {
       </section>
 
       <section className="kfpl-portfolio-grid" aria-label="Portfolio projects">
-        {filteredProjects.map(project => (
-          <button
-            key={project.id}
-            type="button"
-            className="kfpl-portfolio-card"
-            style={{ '--portfolio-accent': project.accent }}
-            onClick={() => setDrawerProject(project)}
-          >
-            <div className="kfpl-portfolio-card-media" style={{
-              backgroundImage: project.bannerImg ? `linear-gradient(rgba(6, 29, 19, 0.5), rgba(6, 29, 19, 0.8)), url(${project.bannerImg})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}>
-              <span className="kfpl-portfolio-card-initials">{project.initials}</span>
-              <span className="kfpl-portfolio-card-status">{project.health}</span>
-            </div>
-
-            <div className="kfpl-portfolio-card-body">
-              <div className="kfpl-portfolio-card-topline">
-                <span className="kfpl-portfolio-segment">{project.segment}</span>
-                <strong>{project.valueLabel}</strong>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', gridColumn: '1 / -1' }}>
+            <span className="kfpl-spinner" style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid rgba(0,0,0,0.1)', borderTopColor: 'var(--color-gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Loading portfolio data...</p>
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', gridColumn: '1 / -1' }}>
+            No projects found in this segment
+          </div>
+        ) : (
+          filteredProjects.map(project => (
+            <button
+              key={project.id}
+              type="button"
+              className="kfpl-portfolio-card"
+              style={{ '--portfolio-accent': project.accent }}
+              onClick={() => setDrawerProject(project)}
+            >
+              <div className="kfpl-portfolio-card-media" style={{
+                backgroundImage: project.bannerImg ? `linear-gradient(rgba(6, 29, 19, 0.5), rgba(6, 29, 19, 0.8)), url(${project.bannerImg})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}>
+                <span className="kfpl-portfolio-card-initials">{project.initials}</span>
+                <span className="kfpl-portfolio-card-status">{project.health}</span>
               </div>
 
-              <h2>{project.name}</h2>
-              <p>{project.summary}</p>
-
-              <div className="kfpl-portfolio-metrics">
-                <div>
-                  <span>Status</span>
-                  <strong>{project.status}</strong>
+              <div className="kfpl-portfolio-card-body">
+                <div className="kfpl-portfolio-card-topline">
+                  <span className="kfpl-portfolio-segment">{project.segment}</span>
+                  <strong>{project.valueLabel}</strong>
                 </div>
-                <div>
-                  <span>Monthly ROI</span>
-                  <strong>{project.roi}</strong>
-                </div>
-                <div>
-                  <span>Risk</span>
-                  <strong>{project.risk}</strong>
-                </div>
-              </div>
 
-              <div className="kfpl-portfolio-progress-row">
-                <span>Milestone Progress</span>
-                <strong>{project.milestone}%</strong>
+                <h2>{project.name}</h2>
+                <p>{project.summary}</p>
+
+                <div className="kfpl-portfolio-metrics">
+                  <div>
+                    <span>Status</span>
+                    <strong>{project.status}</strong>
+                  </div>
+                  <div>
+                    <span>Monthly ROI</span>
+                    <strong>{project.roi}</strong>
+                  </div>
+                  <div>
+                    <span>Risk</span>
+                    <strong>{project.risk}</strong>
+                  </div>
+                </div>
+
+                <div className="kfpl-portfolio-progress-row">
+                  <span>Milestone Progress</span>
+                  <strong>{project.milestone}%</strong>
+                </div>
+                <div className="kfpl-progress">
+                  <div className="kfpl-progress-fill" style={{ width: `${project.milestone}%` }}></div>
+                </div>
               </div>
-              <div className="kfpl-progress">
-                <div className="kfpl-progress-fill" style={{ width: `${project.milestone}%` }}></div>
-              </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          ))
+        )}
       </section>
 
       {drawer}

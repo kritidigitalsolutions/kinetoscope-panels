@@ -497,87 +497,14 @@ export function getCategoryFromAmount(amount) {
 }
 
 // ── News & Media Articles ───────────────────────
-const DEFAULT_NEWS_MEDIA = [
-  {
-    id: 1,
-    title: 'KFPL Announces Record Q1 Returns for Investors',
-    category: 'Company News',
-    date: '2025-06-01',
-    author: 'KFPL Communications',
-    status: 'Published',
-    excerpt: 'Kross Film Productions Ltd. has announced record quarterly returns for its investor portfolio, with an average ROI of 14.2% across all segments.',
-    content: 'Kross Film Productions Ltd. has announced record quarterly returns for its investor portfolio, with an average ROI of 14.2% across all segments. This marks a significant milestone for the company as it continues to deliver consistent value to its stakeholders.\n\nThe impressive performance was driven by strong revenue from theatrical releases, OTT licensing deals, and music streaming royalties.',
-    imageUrl: '',
-    quote: 'We are thrilled to share these results with our investors. Our diversified approach to entertainment investments continues to pay dividends, and we remain committed to delivering superior returns while managing risk effectively.',
-    quoteAuthor: 'Chief Executive Officer, KFPL Group',
-  },
-  {
-    id: 2,
-    title: 'Project Vanguard Enters Post-Production Phase',
-    category: 'Project Updates',
-    date: '2025-05-25',
-    author: 'Production Desk',
-    status: 'Published',
-    excerpt: 'The flagship film making project has completed principal photography and entered the post-production phase.',
-    content: 'The flagship film Project Vanguard has completed principal photography and officially entered the post-production phase. The project remains on track for its anticipated Q4 2025 theatrical release.\n\nPrincipal photography wrapped after an intensive 65-day shoot across multiple locations.',
-    imageUrl: '',
-  },
-  {
-    id: 3,
-    title: 'Understanding Film Investment Risk Profiles',
-    category: 'Industry News',
-    date: '2025-05-15',
-    author: 'Research Team',
-    status: 'Published',
-    excerpt: 'A comprehensive guide to understanding different risk profiles in entertainment industry investments.',
-    content: 'Investing in the entertainment industry requires a nuanced understanding of risk profiles and how they interact with potential returns. This guide breaks down the key concepts every investor should know.',
-    imageUrl: '',
-  },
-  {
-    id: 4,
-    title: 'New Distribution Partnership with StreamGlobal',
-    category: 'Press Release',
-    date: '2025-05-10',
-    author: 'Corporate Affairs',
-    status: 'Published',
-    excerpt: 'KFPL has signed a strategic distribution partnership with StreamGlobal.',
-    content: 'KFPL has signed a landmark strategic distribution partnership with StreamGlobal, one of the world\'s fastest-growing OTT platforms. This partnership opens significant new revenue streams for investors.',
-    imageUrl: '',
-  },
-  {
-    id: 5,
-    title: 'Upcoming Feature: Investor Mobile App Launch',
-    category: 'Company News',
-    date: '2025-06-15',
-    author: 'Product Team',
-    status: 'Draft',
-    excerpt: 'KFPL is preparing to launch a dedicated mobile application for investors.',
-    content: 'KFPL is preparing to launch a dedicated mobile application that will give investors real-time access to their portfolio, returns tracking, and service requests on the go.',
-    imageUrl: '',
-  },
-];
+const DEFAULT_NEWS_MEDIA = [];
 
 let initialNewsMedia = DEFAULT_NEWS_MEDIA;
 if (typeof window !== 'undefined') {
   try {
     const stored = localStorage.getItem('kfpl_news_media');
     if (stored) {
-      const parsed = JSON.parse(stored);
-      let updated = false;
-      const mapped = parsed.map(a => {
-        const defaultItem = DEFAULT_NEWS_MEDIA.find(m => m.id === a.id);
-        if (defaultItem && defaultItem.quote && !a.quote) {
-          updated = true;
-          return { ...a, quote: defaultItem.quote, quoteAuthor: defaultItem.quoteAuthor };
-        }
-        return a;
-      });
-      if (updated) {
-        localStorage.setItem('kfpl_news_media', JSON.stringify(mapped));
-        initialNewsMedia = mapped;
-      } else {
-        initialNewsMedia = parsed;
-      }
+      initialNewsMedia = JSON.parse(stored);
     } else {
       localStorage.setItem('kfpl_news_media', JSON.stringify(DEFAULT_NEWS_MEDIA));
     }

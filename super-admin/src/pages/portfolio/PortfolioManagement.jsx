@@ -11,16 +11,10 @@ import Badge from '../../components/ui/Badge';
 import DataTable from '../../components/ui/DataTable';
 import { INVESTMENT_SEGMENTS, formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
+import { apiRequest } from '../../config/apiHelper';
 
 // ── Default project data ────────────────────────
-const DEFAULT_PROJECTS = [
-  { id: 1, name: 'Project Astra', segment: 'Film Making', status: 'In Production', value: '₹2.5 Cr', milestone: 65, summary: 'Flagship feature slate moving through production with cast-led marketing upside.', risk: 'Medium', horizon: 'Q4 2025', roi: '1.25%', health: 'On Track', media: [], totalDividendPool: 1000000, dividendsDistributed: 270000 },
-  { id: 2, name: 'Rhythm Series', segment: 'Music', status: 'Recording', value: '₹1.8 Cr', milestone: 40, summary: 'Music catalogue and album pipeline with recurring streaming revenue potential.', risk: 'Low', horizon: 'Released catalogue', roi: '0.83%', health: 'On Track', media: [], totalDividendPool: 500000, dividendsDistributed: 50000 },
-  { id: 3, name: 'Meridian Release', segment: 'Distribution', status: 'Active', value: '₹3.2 Cr', milestone: 80, summary: 'Distribution portfolio across domestic and digital channels.', risk: 'Medium', horizon: '18 month cycle', roi: '1.0%', health: 'Performing', media: [], totalDividendPool: 0, dividendsDistributed: 0 },
-  { id: 4, name: 'Archive Digitization', segment: 'Content IP Bank', status: 'Ongoing', value: '₹1.4 Cr', milestone: 55, summary: 'Curated content IP vault focused on long-term licensing.', risk: 'Low', horizon: '24 month cycle', roi: '1.17%', health: 'Building', media: [], totalDividendPool: 0, dividendsDistributed: 0 },
-  { id: 5, name: 'Content Deal Q2', segment: 'Trading & Syndication', status: 'Negotiation', value: '₹2.1 Cr', milestone: 30, summary: 'Trade and syndication desk for packaging content deal flow.', risk: 'Medium', horizon: '12 month cycle', roi: '1.08%', health: 'Active', media: [], totalDividendPool: 0, dividendsDistributed: 0 },
-  { id: 6, name: 'Screen Network', segment: 'Film Exhibition', status: 'Planning', value: '₹4.0 Cr', milestone: 15, summary: 'Cinema exhibition rollout across priority micro-markets.', risk: 'Medium High', horizon: 'Planning phase', roi: '0.92%', health: 'Planned', media: [], totalDividendPool: 0, dividendsDistributed: 0 },
-];
+const DEFAULT_PROJECTS = [];
 
 const SEGMENT_ABBR = {
   'Film Making': 'FM', Distribution: 'DS', Music: 'MS',
@@ -49,6 +43,13 @@ export default function PortfolioManagement() {
   const [activePage, setActivePage] = useState('projects'); // 'projects' or 'dividends'
   const [dividends, setDividends] = useState([]);
   const [investorList, setInvestorList] = useState([]);
+  const [dividendStats, setDividendStats] = useState({
+    totalPoolAmount: 0,
+    totalAllottedAmount: 0,
+    remainingBalance: 0
+  });
+  const [showAddPoolModal, setShowAddPoolModal] = useState(false);
+  const [poolForm, setPoolForm] = useState({ name: '', poolAmount: '', remarks: '' });
 
   // Segment & Statuses configurations state
   const [segmentsConfig, setSegmentsConfig] = useState([]);
@@ -66,187 +67,177 @@ export default function PortfolioManagement() {
     summary: '', risk: 'Medium', horizon: '', roi: '', health: 'On Track', bannerImg: '',
   });
 
-  // ── Load from localStorage ────────────────────
-  useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY);
-    if (stored) {
-      try {
-        let parsed = JSON.parse(stored);
-        let migrated = false;
-        parsed = parsed.map(p => {
-          const rawRoi = p.roi || '';
-          const numRoi = parseFloat(rawRoi.replace(/[^0-9.]/g, ''));
-          // If the ROI value is stored as annual (typically > 3), migrate to monthly format
-          if (!isNaN(numRoi) && numRoi > 3) {
-            p.roi = `${(numRoi / 12).toFixed(2)}%`;
-            migrated = true;
-          }
-          if (p.totalDividendPool === undefined) {
-            if (p.id === 1) {
-              p.totalDividendPool = 1000000;
-              p.dividendsDistributed = 270000;
-            } else if (p.id === 2) {
-              p.totalDividendPool = 500000;
-              p.dividendsDistributed = 50000;
-            } else {
-              p.totalDividendPool = 0;
-              p.dividendsDistributed = 0;
-            }
-            migrated = true;
-          }
-          return p;
-        });
-        if (migrated) {
-          localStorage.setItem(LS_KEY, JSON.stringify(parsed));
-        }
-        setProjects(parsed);
-      } catch (e) {
-        console.error('Error parsing projects:', e);
+  const [loading, setLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Helper parser for projects
+  const extractProjects = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.projects && Array.isArray(res.projects)) return res.projects;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.projects && Array.isArray(res.data.projects)) return res.data.projects;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) {
+        return res[key];
+      }
+    }
+    return [];
+  };
+
+  // Helper parser for segments
+  const extractSegments = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.segments && Array.isArray(res.segments)) return res.segments;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.segments && Array.isArray(res.data.segments)) return res.data.segments;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) {
+        return res[key];
+      }
+    }
+    return [];
+  };
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    
+    // 1. Fetch projects
+    try {
+      const data = await apiRequest('/api/super-admin/projects');
+      const raw = extractProjects(data);
+      const filteredRaw = raw.filter(p => p.name !== '__KFPL_DUMMY__');
+      const mapped = filteredRaw.map(p => ({
+        id: p._id || p.id,
+        name: p.name || '',
+        segment: p.segment || '',
+        status: p.status || 'Planning',
+        value: p.portfolioValue || p.value || '₹0 Cr',
+        milestone: p.milestoneProgress !== undefined ? p.milestoneProgress : (p.milestone !== undefined ? p.milestone : 0),
+        summary: p.summary || '',
+        risk: p.riskLevel || p.risk || 'Medium',
+        horizon: p.horizon || '',
+        roi: p.monthlyRoi || p.roi || '',
+        health: p.health || 'On Track',
+        media: p.media || [],
+        bannerImg: p.bannerImage || p.bannerImg || '',
+        totalDividendPool: p.totalDividendPool || 0,
+        dividendsDistributed: p.dividendsDistributed || 0,
+      }));
+      setProjects(mapped);
+    } catch (err) {
+      console.error('Failed to fetch projects, using defaults:', err);
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) {
+        setProjects(JSON.parse(stored));
+      } else {
         setProjects(DEFAULT_PROJECTS);
       }
-    } else {
-      setProjects(DEFAULT_PROJECTS);
-      localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT_PROJECTS));
     }
 
-    // Load and migrate investors
-    const storedInvestors = localStorage.getItem('kfpl_investors');
-    if (storedInvestors) {
-      try {
-        let parsed = JSON.parse(storedInvestors);
-        let updated = false;
-        parsed = parsed.map(inv => {
-          if (inv.investments) {
-            inv.investments = inv.investments.map(subInv => {
-              if (!subInv.projectId) {
-                if (subInv.segment === 'Film Making') {
-                  subInv.projectId = 1;
-                  subInv.projectName = 'Project Astra';
-                  updated = true;
-                } else if (subInv.segment === 'Music') {
-                  subInv.projectId = 2;
-                  subInv.projectName = 'Rhythm Series';
-                  updated = true;
-                } else if (subInv.segment === 'Distribution') {
-                  subInv.projectId = 3;
-                  subInv.projectName = 'Meridian Release';
-                  updated = true;
-                } else if (subInv.segment === 'Content IP Bank') {
-                  subInv.projectId = 4;
-                  subInv.projectName = 'Archive Digitization';
-                  updated = true;
-                } else if (subInv.segment === 'Trading & Syndication') {
-                  subInv.projectId = 5;
-                  subInv.projectName = 'Content Deal Q2';
-                  updated = true;
-                } else if (subInv.segment === 'Film Exhibition') {
-                  subInv.projectId = 6;
-                  subInv.projectName = 'Screen Network';
-                  updated = true;
-                }
-              }
-              return subInv;
-            });
-          }
-          return inv;
+    // 2. Fetch segments
+    try {
+      const segData = await apiRequest('/api/super-admin/segments');
+      const rawSeg = extractSegments(segData);
+      const mappedSeg = rawSeg.map(s => ({
+        id: s._id || s.id,
+        name: s.name || '',
+        statuses: s.statuses || []
+      }));
+      setSegmentsConfig(mappedSeg);
+    } catch (err) {
+      console.error('Failed to fetch segments, using defaults:', err);
+      const storedConfig = localStorage.getItem('kfpl_portfolio_segments_config');
+      if (storedConfig) {
+        setSegmentsConfig(JSON.parse(storedConfig));
+      } else {
+        const defaultConfig = [
+          { name: 'Film Making', statuses: ['Planning', 'In Production', 'Active', 'Ongoing', 'Completed'] },
+          { name: 'Distribution', statuses: ['Planning', 'Active', 'Ongoing', 'Negotiation', 'Completed'] },
+          { name: 'Music', statuses: ['Planning', 'Recording', 'Active', 'Ongoing', 'Completed', 'Released'] },
+          { name: 'Trading & Syndication', statuses: ['Planning', 'Negotiation', 'Active', 'Ongoing', 'Completed'] },
+          { name: 'Content IP Bank', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
+          { name: 'Film Exhibition', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
+        ];
+        setSegmentsConfig(defaultConfig);
+      }
+    }
+
+    // 3. Load Dividend stats, allotments and investors from APIs
+    try {
+      const [divStatsRes, allotmentsRes, clientsRes] = await Promise.all([
+        apiRequest('/api/super-admin/dividends/stats'),
+        apiRequest('/api/super-admin/dividends/allotments'),
+        apiRequest('/api/super-admin/clients')
+      ]);
+
+      // Extract dividend stats
+      if (divStatsRes) {
+        setDividendStats({
+          totalPoolAmount: divStatsRes.totalPoolAmount || 0,
+          totalAllottedAmount: divStatsRes.totalAllottedAmount || 0,
+          remainingBalance: divStatsRes.remainingBalance || 0
         });
-        if (updated) {
-          localStorage.setItem('kfpl_investors', JSON.stringify(parsed));
-        }
-        setInvestorList(parsed);
-      } catch (e) {
-        console.error('Error migrating investors:', e);
       }
+
+      // Extract allotments
+      const rawAllotments = allotmentsRes.allotments || allotmentsRes.data?.allotments || allotmentsRes.data || allotmentsRes || [];
+      const mappedAllotments = (Array.isArray(rawAllotments) ? rawAllotments : []).map(al => {
+        const clientObj = al.client || al.clientId || {};
+        const projectObj = al.project || al.projectId || {};
+        return {
+          id: al._id || al.id,
+          projectName: projectObj.name || al.projectName || 'Unknown Project',
+          segment: projectObj.segment || al.segment || '—',
+          clientName: clientObj.fullName || clientObj.name || al.clientName || 'Unknown Client',
+          clientId: clientObj.clientId || al.clientId || '—',
+          amount: al.allottedAmount || al.amount || 0,
+          creditDate: al.creditDate || al.createdAt || new Date().toISOString(),
+          adminNote: al.remarks || al.adminNote || '—'
+        };
+      });
+      setDividends(mappedAllotments);
+
+      // Extract active clients list
+      const rawClients = clientsRes.clients || clientsRes.data?.clients || clientsRes.data || clientsRes || [];
+      const mappedClients = (Array.isArray(rawClients) ? rawClients : []).map((c, index) => {
+        const profile = c.profile || {};
+        const user = (c.userId && typeof c.userId === 'object' ? c.userId : null) || 
+                     (c.user && typeof c.user === 'object' ? c.user : null) || {};
+        const name = profile.fullName || user.name || user.fullName || c.fullName || c.name || 'Client';
+        const clientId = c.clientId || profile.clientId || `KFPL-CL-${1000 + index}`;
+        
+        const investments = (c.investments || profile.investments || []).map(inv => ({
+          projectId: inv.projectId || inv.project || '',
+          amount: inv.amount || inv.allottedAmount || 0
+        }));
+
+        return {
+          id: String(c._id || c.id),
+          name,
+          clientId,
+          investments,
+          category: c.category || profile.riskProfile || 'Silver',
+          status: c.status || 'Active'
+        };
+      });
+      setInvestorList(mappedClients);
+
+    } catch (err) {
+      console.error('Failed to load dividend stats/allotments/clients:', err);
     }
 
-    // Load dividends
-    const storedDivs = localStorage.getItem('kfpl_project_dividends');
-    if (storedDivs) {
-      try {
-        setDividends(JSON.parse(storedDivs));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const defaultDivs = [
-        {
-          id: 1,
-          projectId: 1,
-          projectName: 'Project Astra',
-          segment: 'Film Making',
-          clientId: 'KFPL-1001',
-          clientName: 'Rajesh Kumar',
-          amount: 150000,
-          creditDate: '2025-04-15T00:00:00.000Z',
-          adminNote: 'Annual performance bonus for exceptional project returns.'
-        },
-        {
-          id: 2,
-          projectId: 1,
-          projectName: 'Project Astra',
-          segment: 'Film Making',
-          clientId: 'KFPL-1002',
-          clientName: 'Priya Sharma',
-          amount: 120000,
-          creditDate: '2025-04-15T00:00:00.000Z',
-          adminNote: 'Annual performance bonus for exceptional project returns.'
-        },
-        {
-          id: 3,
-          projectId: 2,
-          projectName: 'Rhythm Series',
-          segment: 'Music',
-          clientId: 'KFPL-1004',
-          clientName: 'Suresh Patel',
-          amount: 50000,
-          creditDate: '2025-05-10T00:00:00.000Z',
-          adminNote: 'Streaming milestone bonus for Rhythm catalogue.'
-        }
-      ];
-      setDividends(defaultDivs);
-      localStorage.setItem('kfpl_project_dividends', JSON.stringify(defaultDivs));
-    }
+    setLoading(false);
+  };
 
-    // Load segments and statuses configuration
-    const storedConfig = localStorage.getItem('kfpl_portfolio_segments_config');
-    let config = [];
-    if (storedConfig) {
-      config = JSON.parse(storedConfig);
-    } else {
-      config = [
-        { name: 'Film Making', statuses: ['Planning', 'In Production', 'Active', 'Ongoing', 'Completed'] },
-        { name: 'Distribution', statuses: ['Planning', 'Active', 'Ongoing', 'Negotiation', 'Completed'] },
-        { name: 'Music', statuses: ['Planning', 'Recording', 'Active', 'Ongoing', 'Completed', 'Released'] },
-        { name: 'Trading & Syndication', statuses: ['Planning', 'Negotiation', 'Active', 'Ongoing', 'Completed'] },
-        { name: 'Content IP Bank', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
-        { name: 'Film Exhibition', statuses: ['Planning', 'Ongoing', 'Active', 'Completed'] },
-      ];
-      localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(config));
-    }
-
-    // Migrate any legacy custom segments
-    const storedSegs = localStorage.getItem('kfpl_custom_segments');
-    if (storedSegs) {
-      try {
-        const parsedCustom = JSON.parse(storedSegs);
-        let migrated = false;
-        parsedCustom.forEach(segName => {
-          if (segName && !config.some(c => c.name.toLowerCase() === segName.toLowerCase())) {
-            config.push({
-              name: segName,
-              statuses: ['Planning', 'Active', 'Ongoing', 'Completed']
-            });
-            migrated = true;
-          }
-        });
-        if (migrated) {
-          localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(config));
-        }
-      } catch (e) {
-        console.error('Error migrating custom segments:', e);
-      }
-    }
-    setSegmentsConfig(config);
+  useEffect(() => {
+    loadDashboardData();
   }, []);
 
   const persist = (updated) => {
@@ -264,6 +255,7 @@ export default function PortfolioManagement() {
   const resetForm = () => {
     setFormData({ name: '', segment: '', status: '', value: '', milestone: 0, summary: '', risk: 'Medium', horizon: '', roi: '', health: 'On Track', bannerImg: '' });
     setCustomSegmentText('');
+    setSelectedFile(null);
   };
 
   const openAddModal = () => {
@@ -290,7 +282,7 @@ export default function PortfolioManagement() {
     setShowAddModal(true);
   };
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
     let finalSegment = formData.segment;
 
     if (formData.segment === '__NEW__') {
@@ -300,21 +292,18 @@ export default function PortfolioManagement() {
         return;
       }
       finalSegment = segText;
-      if (!segmentsConfig.some(s => s.name.toLowerCase() === segText.toLowerCase())) {
-        const defaultStatuses = ['Planning', 'Active', 'Ongoing', 'Completed'];
-        const updatedConfig = [
-          ...segmentsConfig,
-          { name: segText, statuses: defaultStatuses }
-        ];
-        setSegmentsConfig(updatedConfig);
-        localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
 
-        // Sync to legacy custom segments key for cross-page compatibility
-        const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
-        const customSegNames = updatedConfig
-          .map(c => c.name)
-          .filter(n => !defaultSegmentNames.includes(n));
-        localStorage.setItem('kfpl_custom_segments', JSON.stringify(customSegNames));
+      // Create segment on the backend first!
+      try {
+        await apiRequest('/api/super-admin/segments', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: segText,
+            statuses: ['Planning', 'Active', 'Ongoing', 'Completed']
+          })
+        });
+      } catch (err) {
+        console.warn('Segment creation failed or already exists:', err);
       }
     }
 
@@ -323,34 +312,98 @@ export default function PortfolioManagement() {
       return;
     }
 
-    const payload = {
-      ...formData,
-      segment: finalSegment
-    };
+    setSubmitting(true);
+    try {
+      if (editingProject) {
+        const id = editingProject.id;
+        if (selectedFile) {
+          const formDataToSend = new FormData();
+          formDataToSend.append('name', formData.name.trim());
+          formDataToSend.append('segment', finalSegment);
+          formDataToSend.append('status', formData.status || 'Planning');
+          formDataToSend.append('portfolioValue', formData.value || '₹0 Cr');
+          formDataToSend.append('monthlyRoi', formData.roi || '0%');
+          formDataToSend.append('riskLevel', formData.risk || 'Medium');
+          formDataToSend.append('milestoneProgress', String(parseInt(formData.milestone) || 0));
+          formDataToSend.append('health', formData.health || 'On Track');
+          formDataToSend.append('summary', formData.summary || '');
+          formDataToSend.append('bannerImage', selectedFile);
 
-    if (editingProject) {
-      // Update
-      const updated = projects.map(p =>
-        p.id === editingProject.id ? { ...p, ...payload } : p
-      );
-      persist(updated);
-      addToast(`${formData.name} updated successfully`, 'success', 'Project Updated');
-    } else {
-      // Create
-      const newProject = {
-        ...payload,
-        id: Date.now(),
-        milestone: parseInt(formData.milestone) || 0,
-        media: [],
-      };
-      const updated = [...projects, newProject];
-      persist(updated);
-      addToast(`${formData.name} added successfully`, 'success', 'Project Created');
+          await apiRequest(`/api/super-admin/projects/${id}`, {
+            method: 'PATCH',
+            body: formDataToSend,
+          });
+        } else {
+          const payload = {
+            name: formData.name.trim(),
+            segment: finalSegment,
+            status: formData.status || 'Planning',
+            portfolioValue: formData.value || '₹0 Cr',
+            monthlyRoi: formData.roi || '0%',
+            riskLevel: formData.risk || 'Medium',
+            milestoneProgress: parseInt(formData.milestone) || 0,
+            health: formData.health || 'On Track',
+            summary: formData.summary || '',
+          };
+          if (!formData.bannerImg) {
+            payload.bannerImage = '';
+          }
+
+          await apiRequest(`/api/super-admin/projects/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+          });
+        }
+        addToast(`${formData.name} updated successfully`, 'success', 'Project Updated');
+      } else {
+        if (selectedFile) {
+          const formDataToSend = new FormData();
+          formDataToSend.append('name', formData.name.trim());
+          formDataToSend.append('segment', finalSegment);
+          formDataToSend.append('status', formData.status || 'Planning');
+          formDataToSend.append('portfolioValue', formData.value || '₹0 Cr');
+          formDataToSend.append('monthlyRoi', formData.roi || '0%');
+          formDataToSend.append('riskLevel', formData.risk || 'Medium');
+          formDataToSend.append('milestoneProgress', String(parseInt(formData.milestone) || 0));
+          formDataToSend.append('health', formData.health || 'On Track');
+          formDataToSend.append('summary', formData.summary || '');
+          formDataToSend.append('bannerImage', selectedFile);
+
+          await apiRequest('/api/super-admin/projects', {
+            method: 'POST',
+            body: formDataToSend,
+          });
+        } else {
+          const payload = {
+            name: formData.name.trim(),
+            segment: finalSegment,
+            status: formData.status || 'Planning',
+            portfolioValue: formData.value || '₹0 Cr',
+            monthlyRoi: formData.roi || '0%',
+            riskLevel: formData.risk || 'Medium',
+            milestoneProgress: parseInt(formData.milestone) || 0,
+            health: formData.health || 'On Track',
+            summary: formData.summary || '',
+          };
+
+          await apiRequest('/api/super-admin/projects', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+        }
+        addToast(`${formData.name} added successfully`, 'success', 'Project Created');
+      }
+
+      await loadDashboardData();
+      setShowAddModal(false);
+      setEditingProject(null);
+      resetForm();
+    } catch (err) {
+      console.error('Failed to save project:', err);
+      addToast(err.message || 'Failed to save project', 'error', 'Error');
+    } finally {
+      setSubmitting(false);
     }
-
-    setShowAddModal(false);
-    setEditingProject(null);
-    resetForm();
   };
 
   // ── Segment & Status Configuration Manager Handlers ──
@@ -386,7 +439,7 @@ export default function PortfolioManagement() {
     setSegmentFormStatuses(segmentFormStatuses.filter(s => s !== statusToRemove));
   };
 
-  const handleSaveSegmentConfig = () => {
+  const handleSaveSegmentConfig = async () => {
     const name = segmentFormName.trim();
     if (!name) {
       addToast('Please enter a segment name', 'error', 'Validation Error');
@@ -398,92 +451,152 @@ export default function PortfolioManagement() {
       return;
     }
 
-    let updatedConfig = [...segmentsConfig];
+    setSubmitting(true);
+    try {
+      if (editingSegmentIndex !== null) {
+        const targetSeg = segmentsConfig[editingSegmentIndex];
+        const id = targetSeg.id;
 
-    if (editingSegmentIndex !== null) {
-      const duplicate = segmentsConfig.some((s, idx) => idx !== editingSegmentIndex && s.name.toLowerCase() === name.toLowerCase());
-      if (duplicate) {
-        addToast('A segment with this name already exists', 'error', 'Duplicate Name');
-        return;
+        if (id) {
+          await apiRequest(`/api/super-admin/segments/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name,
+              statuses: segmentFormStatuses
+            })
+          });
+        } else {
+          await apiRequest('/api/super-admin/segments', {
+            method: 'POST',
+            body: JSON.stringify({
+              name,
+              statuses: segmentFormStatuses
+            })
+          });
+        }
+        addToast(`Segment "${name}" updated successfully`, 'success', 'Segment Updated');
+      } else {
+        await apiRequest('/api/super-admin/segments', {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            statuses: segmentFormStatuses
+          })
+        });
+        addToast(`Segment "${name}" created successfully`, 'success', 'Segment Created');
       }
 
-      const oldName = segmentsConfig[editingSegmentIndex].name;
-      updatedConfig[editingSegmentIndex] = {
-        name,
-        statuses: segmentFormStatuses
-      };
-
-      // Rename segment in projects if renamed
-      if (oldName !== name) {
-        const updatedProjects = projects.map(p => 
-          p.segment === oldName ? { ...p, segment: name } : p
-        );
-        persist(updatedProjects);
-      }
-
-      addToast(`Segment "${name}" updated successfully`, 'success', 'Segment Updated');
-    } else {
-      const duplicate = segmentsConfig.some(s => s.name.toLowerCase() === name.toLowerCase());
-      if (duplicate) {
-        addToast('A segment with this name already exists', 'error', 'Duplicate Name');
-        return;
-      }
-
-      updatedConfig.push({
-        name,
-        statuses: segmentFormStatuses
-      });
-      addToast(`Segment "${name}" created successfully`, 'success', 'Segment Created');
-    }
-
-    setSegmentsConfig(updatedConfig);
-    localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
-
-    // Sync to legacy custom segments key
-    const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
-    const customSegNames = updatedConfig
-      .map(c => c.name)
-      .filter(n => !defaultSegmentNames.includes(n));
-    localStorage.setItem('kfpl_custom_segments', JSON.stringify(customSegNames));
-
-    // Reset form
-    setEditingSegmentIndex(null);
-    setSegmentFormName('');
-    setSegmentFormStatuses([]);
-    setNewStatusText('');
-  };
-
-  const confirmDeleteSegment = () => {
-    if (deleteSegConfirmIdx === null) return;
-    const segmentToDelete = segmentsConfig[deleteSegConfirmIdx].name;
-    const updatedConfig = segmentsConfig.filter((_, idx) => idx !== deleteSegConfirmIdx);
-
-    setSegmentsConfig(updatedConfig);
-    localStorage.setItem('kfpl_portfolio_segments_config', JSON.stringify(updatedConfig));
-
-    // Sync to legacy custom segments key
-    const defaultSegmentNames = ['Film Making', 'Distribution', 'Music', 'Trading & Syndication', 'Content IP Bank', 'Film Exhibition'];
-    const customSegNames = updatedConfig
-      .map(c => c.name)
-      .filter(n => !defaultSegmentNames.includes(n));
-    localStorage.setItem('kfpl_custom_segments', JSON.stringify(customSegNames));
-
-    addToast(`Segment "${segmentToDelete}" deleted`, 'success', 'Segment Deleted');
-    
-    if (editingSegmentIndex === deleteSegConfirmIdx) {
+      await loadDashboardData();
       setEditingSegmentIndex(null);
       setSegmentFormName('');
       setSegmentFormStatuses([]);
       setNewStatusText('');
+    } catch (err) {
+      console.error('Failed to save segment:', err);
+      addToast(err.message || 'Failed to save segment', 'error', 'Error');
+    } finally {
+      setSubmitting(false);
     }
-    setDeleteSegConfirmIdx(null);
   };
 
-  const handleDeleteProject = (id) => {
-    const updated = projects.filter(p => p.id !== id);
-    persist(updated);
-    addToast('Project deleted', 'success', 'Deleted');
-    setDeleteConfirm(null);
+  const handleSavePool = async () => {
+    const name = poolForm.name.trim();
+    const amount = parseFloat(poolForm.poolAmount);
+    if (!name || isNaN(amount) || amount <= 0) {
+      addToast('Please enter a valid pool name and positive amount', 'error', 'Error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await apiRequest('/api/super-admin/dividends/pools', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          poolAmount: amount,
+          remarks: poolForm.remarks.trim()
+        })
+      });
+      addToast('Dividend pool configured successfully', 'success', 'Success');
+      await loadDashboardData();
+      setShowAddPoolModal(false);
+      setPoolForm({ name: '', poolAmount: '', remarks: '' });
+    } catch (err) {
+      console.error('Failed to create pool:', err);
+      addToast(err.message || 'Failed to configure dividend pool', 'error', 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const confirmDeleteSegment = async () => {
+    if (deleteSegConfirmIdx === null) return;
+    const targetSeg = segmentsConfig[deleteSegConfirmIdx];
+    const id = targetSeg.id;
+    const segmentToDelete = targetSeg.name;
+
+    setSubmitting(true);
+    try {
+      if (id) {
+        await apiRequest(`/api/super-admin/segments/${id}`, {
+          method: 'DELETE',
+        });
+      }
+      addToast(`Segment "${segmentToDelete}" deleted`, 'success', 'Segment Deleted');
+      await loadDashboardData();
+      
+      if (editingSegmentIndex === deleteSegConfirmIdx) {
+        setEditingSegmentIndex(null);
+        setSegmentFormName('');
+        setSegmentFormStatuses([]);
+        setNewStatusText('');
+      }
+      setDeleteSegConfirmIdx(null);
+    } catch (err) {
+      console.error('Failed to delete segment:', err);
+      addToast(err.message || 'Failed to delete segment', 'error', 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteProject = async (id) => {
+    setSubmitting(true);
+    try {
+      const nonDummyProjects = projects.filter(p => p.name !== '__KFPL_DUMMY__');
+      const isDeletingLast = nonDummyProjects.length === 1 && nonDummyProjects[0].id === id;
+
+      await apiRequest(`/api/super-admin/projects/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (isDeletingLast) {
+        const payload = {
+          name: '__KFPL_DUMMY__',
+          segment: 'Film Making',
+          status: 'Planning',
+          portfolioValue: '₹0 Cr',
+          monthlyRoi: '0%',
+          riskLevel: 'Low',
+          milestoneProgress: 0,
+          health: 'Planned',
+          summary: 'Internal system placeholder. Do not delete.',
+        };
+        await apiRequest('/api/super-admin/projects', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+
+      addToast('Project deleted successfully', 'success', 'Deleted');
+      await loadDashboardData();
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      addToast(err.message || 'Failed to delete project', 'error', 'Error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── Media upload ──────────────────────────
@@ -726,23 +839,32 @@ export default function PortfolioManagement() {
                   type="button"
                   className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                   style={{ height: '36px', minWidth: '80px' }}
-                  onClick={() => {
+                  onClick={async () => {
                     const input = document.getElementById('div-pool-input');
                     const amt = parseFloat(input?.value);
                     if (isNaN(amt) || amt <= 0) {
                       addToast('Please enter a valid positive pool amount', 'error', 'Error');
                       return;
                     }
-                    const updatedProjects = projects.map(p => {
-                      if (p.id === drawerProject.id) {
-                        return { ...p, totalDividendPool: amt };
-                      }
-                      return p;
-                    });
-                    persist(updatedProjects);
-                    setDrawerProject({ ...drawerProject, totalDividendPool: amt });
-                    addToast(`Dividend pool set to ${formatCurrency(amt)} for ${drawerProject.name}`, 'success', 'Success');
-                    if (input) input.value = '';
+                    
+                    setSubmitting(true);
+                    try {
+                      await apiRequest(`/api/super-admin/projects/${drawerProject.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                          totalDividendPool: amt
+                        })
+                      });
+                      await loadDashboardData();
+                      setDrawerProject({ ...drawerProject, totalDividendPool: amt });
+                      addToast(`Dividend pool set to ${formatCurrency(amt)} for ${drawerProject.name}`, 'success', 'Success');
+                      if (input) input.value = '';
+                    } catch (err) {
+                      console.error('Failed to set project dividend pool:', err);
+                      addToast(err.message || 'Failed to update dividend pool', 'error', 'Error');
+                    } finally {
+                      setSubmitting(false);
+                    }
                   }}
                 >
                   Set Pool
@@ -793,7 +915,8 @@ export default function PortfolioManagement() {
                       type="button"
                       className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
                       style={{ marginTop: '6px' }}
-                      onClick={() => {
+                      disabled={submitting}
+                      onClick={async () => {
                         const clientSelect = document.getElementById('div-client-select');
                         const amtInput = document.getElementById('div-allot-amount');
                         const noteInput = document.getElementById('div-allot-note');
@@ -811,57 +934,49 @@ export default function PortfolioManagement() {
                           return;
                         }
 
-                        const remainingPool = (drawerProject.totalDividendPool || 0) - (drawerProject.dividendsDistributed || 0);
-                        if (allotAmt > remainingPool) {
-                          addToast(`Allotment exceeds remaining pool of ${formatCurrency(remainingPool)}`, 'error', 'Error');
+                        const selectedInv = investorList.find(inv => inv.clientId === selectedClientId);
+                        if (!selectedInv) {
+                          addToast('Selected client not found', 'error', 'Error');
                           return;
                         }
 
-                        const selectedInv = investorList.find(inv => inv.clientId === selectedClientId);
+                        setSubmitting(true);
+                        try {
+                          await apiRequest('/api/super-admin/dividends/allotments', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                              clientId: selectedInv.id,
+                              projectId: drawerProject.id,
+                              allottedAmount: allotAmt,
+                              remarks: note || 'Project dividend distribution'
+                            })
+                          });
+                          addToast(`Dividend of ${formatCurrency(allotAmt)} allotted successfully to ${selectedInv.name}`, 'success', 'Allotment Success');
+                          
+                          await loadDashboardData();
+                          
+                          // Refresh drawer metrics
+                          setDrawerProject(prev => {
+                            if (!prev) return null;
+                            const currentDist = Number(prev.dividendsDistributed) || 0;
+                            return {
+                              ...prev,
+                              dividendsDistributed: currentDist + allotAmt
+                            };
+                          });
 
-                        const newAllotment = {
-                          id: Date.now(),
-                          projectId: drawerProject.id,
-                          projectName: drawerProject.name,
-                          segment: drawerProject.segment,
-                          clientId: selectedClientId,
-                          clientName: selectedInv?.name || 'Investor',
-                          amount: allotAmt,
-                          creditDate: new Date().toISOString(),
-                          adminNote: note || 'Project dividend distribution'
-                        };
-
-                        const storedDivs = localStorage.getItem('kfpl_project_dividends');
-                        let parsedDivs = [];
-                        if (storedDivs) {
-                          try { parsedDivs = JSON.parse(storedDivs); } catch (e) { console.error(e); }
+                          if (amtInput) amtInput.value = '';
+                          if (noteInput) noteInput.value = '';
+                          if (clientSelect) clientSelect.value = '';
+                        } catch (err) {
+                          console.error('Failed to allot dividend:', err);
+                          addToast(err.message || 'Failed to allot dividend', 'error', 'Error');
+                        } finally {
+                          setSubmitting(false);
                         }
-                        const updatedDivs = [newAllotment, ...parsedDivs];
-                        localStorage.setItem('kfpl_project_dividends', JSON.stringify(updatedDivs));
-                        setDividends(updatedDivs);
-
-                        const updatedProjects = projects.map(p => {
-                          if (p.id === drawerProject.id) {
-                            const currentDist = Number(p.dividendsDistributed) || 0;
-                            return { ...p, dividendsDistributed: currentDist + allotAmt };
-                          }
-                          return p;
-                        });
-                        persist(updatedProjects);
-                        
-                        setDrawerProject({
-                          ...drawerProject,
-                          dividendsDistributed: (Number(drawerProject.dividendsDistributed) || 0) + allotAmt
-                        });
-
-                        addToast(`Dividend of ${formatCurrency(allotAmt)} allotted successfully to ${selectedInv?.name}`, 'success', 'Allotment Success');
-                        
-                        if (amtInput) amtInput.value = '';
-                        if (noteInput) noteInput.value = '';
-                        if (clientSelect) clientSelect.value = '';
                       }}
                     >
-                      Allot Dividend
+                      {submitting ? 'Allotting...' : 'Allot Dividend'}
                     </button>
                   </div>
                 )}
@@ -941,7 +1056,12 @@ export default function PortfolioManagement() {
         </button>
       </div>
 
-      {activePage === 'projects' ? (
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px' }}>
+          <span className="kfpl-spinner" style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid rgba(0,0,0,0.1)', borderTopColor: 'var(--color-gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Loading portfolio data...</p>
+        </div>
+      ) : activePage === 'projects' ? (
         <>
           {/* Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -992,7 +1112,11 @@ export default function PortfolioManagement() {
                 <div className="kfpl-portfolio-card" key={project.id} style={{ '--portfolio-accent': accent, cursor: 'pointer' }}
                   onClick={() => setDrawerProject(project)}
                 >
-                  <div className="kfpl-portfolio-card-media">
+                  <div className="kfpl-portfolio-card-media" style={{
+                    backgroundImage: project.bannerImg ? `linear-gradient(rgba(6, 29, 19, 0.4), rgba(6, 29, 19, 0.8)), url(${project.bannerImg})` : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}>
                     <span className="kfpl-portfolio-card-initials">{initials}</span>
                     <span className="kfpl-portfolio-card-status">{project.health || 'On Track'}</span>
                   </div>
@@ -1056,22 +1180,19 @@ export default function PortfolioManagement() {
             <div className="kfpl-card" style={{ padding: '20px' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Total Pools Configured</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-gold-dark)' }}>
-                {formatCurrency(projects.reduce((sum, p) => sum + (Number(p.totalDividendPool) || 0), 0))}
+                {formatCurrency(dividendStats.totalPoolAmount)}
               </div>
             </div>
             <div className="kfpl-card" style={{ padding: '20px' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Dividends Distributed</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-success)' }}>
-                {formatCurrency(projects.reduce((sum, p) => sum + (Number(p.dividendsDistributed) || 0), 0))}
+                {formatCurrency(dividendStats.totalAllottedAmount)}
               </div>
             </div>
             <div className="kfpl-card" style={{ padding: '20px' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Remaining Pools Balance</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-                {formatCurrency(
-                  projects.reduce((sum, p) => sum + (Number(p.totalDividendPool) || 0), 0) -
-                  projects.reduce((sum, p) => sum + (Number(p.dividendsDistributed) || 0), 0)
-                )}
+                {formatCurrency(dividendStats.remainingBalance)}
               </div>
             </div>
           </div>
@@ -1080,6 +1201,13 @@ export default function PortfolioManagement() {
           <div className="kfpl-card" style={{ padding: '20px' }}>
             <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Allotment Ledger</h3>
+              <button
+                type="button"
+                className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
+                onClick={() => setShowAddPoolModal(true)}
+              >
+                + Configure Pool
+              </button>
             </div>
             <DataTable
               columns={[
@@ -1148,8 +1276,10 @@ export default function PortfolioManagement() {
         size="lg"
         footer={
           <>
-            <button className="kfpl-btn kfpl-btn--ghost" onClick={() => { setShowAddModal(false); setEditingProject(null); resetForm(); }}>Cancel</button>
-            <button className="kfpl-btn kfpl-btn--primary" onClick={handleSaveProject}>{editingProject ? 'Update Project' : 'Add Project'}</button>
+            <button className="kfpl-btn kfpl-btn--ghost" disabled={submitting} onClick={() => { setShowAddModal(false); setEditingProject(null); resetForm(); }}>Cancel</button>
+            <button className="kfpl-btn kfpl-btn--primary" disabled={submitting} onClick={handleSaveProject}>
+              {submitting ? 'Saving...' : (editingProject ? 'Update Project' : 'Add Project')}
+            </button>
           </>
         }
       >
@@ -1248,10 +1378,11 @@ export default function PortfolioManagement() {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files[0];
+                    setSelectedFile(file);
                     if (file) {
                       const reader = new FileReader();
                       reader.onload = (ev) => {
-                        setFormData({ ...formData, bannerImg: ev.target.result });
+                        setFormData(prev => ({ ...prev, bannerImg: ev.target.result }));
                       };
                       reader.readAsDataURL(file);
                     }
@@ -1268,7 +1399,10 @@ export default function PortfolioManagement() {
                     />
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, bannerImg: '' })}
+                      onClick={() => {
+                        setFormData({ ...formData, bannerImg: '' });
+                        setSelectedFile(null);
+                      }}
                       style={{
                         position: 'absolute', top: -6, right: -6, background: 'var(--color-danger)',
                         color: '#fff', borderRadius: '50%', width: 16, height: 16, display: 'flex',
@@ -1503,8 +1637,8 @@ export default function PortfolioManagement() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                  <button type="button" className="kfpl-btn kfpl-btn--primary" onClick={handleSaveSegmentConfig}>
-                    {editingSegmentIndex !== null ? 'Save Changes' : 'Create Segment'}
+                  <button type="button" className="kfpl-btn kfpl-btn--primary" disabled={submitting} onClick={handleSaveSegmentConfig}>
+                    {submitting ? 'Saving...' : (editingSegmentIndex !== null ? 'Save Changes' : 'Create Segment')}
                   </button>
                   {editingSegmentIndex !== null && (
                     <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => {
@@ -1520,6 +1654,54 @@ export default function PortfolioManagement() {
               </div>
             </div>
 
+          </div>
+        </div>
+      </Modal>
+
+      {/* ═══════ Configure Dividend Pool Modal ═══════ */}
+      <Modal
+        isOpen={showAddPoolModal}
+        onClose={() => { setShowAddPoolModal(false); setPoolForm({ name: '', poolAmount: '', remarks: '' }); }}
+        title="Configure Dividend Pool"
+        footer={
+          <>
+            <button className="kfpl-btn kfpl-btn--ghost" disabled={submitting} onClick={() => { setShowAddPoolModal(false); setPoolForm({ name: '', poolAmount: '', remarks: '' }); }}>Cancel</button>
+            <button className="kfpl-btn kfpl-btn--primary" disabled={submitting} onClick={handleSavePool}>
+              {submitting ? 'Configuring...' : 'Configure Pool'}
+            </button>
+          </>
+        }
+      >
+        <div className="kfpl-form" style={{ gap: '16px' }}>
+          <div className="kfpl-input-group">
+            <label className="kfpl-input-label">Pool Name <span className="required">*</span></label>
+            <input
+              type="text"
+              className="kfpl-input"
+              value={poolForm.name}
+              onChange={e => setPoolForm({ ...poolForm, name: e.target.value })}
+              placeholder="e.g. Q3 Milestone Pool"
+            />
+          </div>
+          <div className="kfpl-input-group">
+            <label className="kfpl-input-label">Pool Amount (₹) <span className="required">*</span></label>
+            <input
+              type="number"
+              className="kfpl-input"
+              value={poolForm.poolAmount}
+              onChange={e => setPoolForm({ ...poolForm, poolAmount: e.target.value })}
+              placeholder="e.g. 500000"
+            />
+          </div>
+          <div className="kfpl-input-group">
+            <label className="kfpl-input-label">Remarks / Description</label>
+            <textarea
+              className="kfpl-textarea"
+              value={poolForm.remarks}
+              onChange={e => setPoolForm({ ...poolForm, remarks: e.target.value })}
+              placeholder="Enter remarks..."
+              rows="3"
+            />
           </div>
         </div>
       </Modal>

@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { NEWS_CATEGORIES } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 export default function NewsMediaForm() {
   const { id } = useParams();
@@ -48,31 +49,42 @@ export default function NewsMediaForm() {
   });
 
   const [imagePreview, setImagePreview] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     if (isEditing) {
-      try {
-        const stored = localStorage.getItem('kfpl_news_media');
-        if (stored) {
-          const articles = JSON.parse(stored);
-          const article = articles.find(a => a.id === parseInt(id));
+      const fetchArticle = async () => {
+        try {
+          const data = await apiRequest(`/api/super-admin/articles/${id}`);
+          const article = data.article || data.data || data;
           if (article) {
+            let formattedDate = '';
+            if (article.publishDate || article.date) {
+              try {
+                formattedDate = new Date(article.publishDate || article.date).toISOString().split('T')[0];
+              } catch (e) {
+                formattedDate = article.date || '';
+              }
+            }
+
             setForm({
               title: article.title || '',
               category: article.category || NEWS_CATEGORIES[0],
               author: article.author || '',
-              date: article.date || '',
+              date: formattedDate,
               status: article.status || 'Draft',
               excerpt: article.excerpt || '',
               content: article.content || '',
-              imageUrl: article.imageUrl || '',
-              quote: article.quote || '',
-              quoteAuthor: article.quoteAuthor || '',
-              advisory: article.advisory || '',
+              imageUrl: article.imageUrl || article.featuredImage || '',
+              quote: article.specialQuote || article.quote || '',
+              quoteAuthor: article.quoteAuthorRole || article.quoteAuthor || '',
+              advisory: article.advisoryNotice || article.advisory || '',
             });
+
             if (article.category) {
               setCategoriesList(prev => {
                 if (!prev.includes(article.category)) {
@@ -81,14 +93,16 @@ export default function NewsMediaForm() {
                 return prev;
               });
             }
-            if (article.imageUrl) {
-              setImagePreview(article.imageUrl);
+            if (article.imageUrl || article.featuredImage) {
+              setImagePreview(article.imageUrl || article.featuredImage);
             }
           }
+        } catch (err) {
+          console.error('Failed to load article details', err);
+          alert('Failed to load article details from the database.');
         }
-      } catch (e) {
-        console.warn('Failed to load article', e);
-      }
+      };
+      fetchArticle();
     }
   }, [id, isEditing]);
 
@@ -121,11 +135,11 @@ export default function NewsMediaForm() {
       return;
     }
 
+    setSelectedFile(file);
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      setImagePreview(dataUrl);
-      handleChange('imageUrl', dataUrl);
+      setImagePreview(e.target.result);
     };
     reader.readAsDataURL(file);
   };
@@ -148,44 +162,54 @@ export default function NewsMediaForm() {
 
   const removeImage = () => {
     setImagePreview('');
+    setSelectedFile(null);
     handleChange('imageUrl', '');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
 
     try {
-      const stored = localStorage.getItem('kfpl_news_media');
-      let articles = stored ? JSON.parse(stored) : [];
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('category', form.category);
+      formData.append('author', form.author);
+      formData.append('status', form.status);
+      formData.append('excerpt', form.excerpt || '');
+      formData.append('content', form.content);
 
-      if (isEditing) {
-        articles = articles.map(a => a.id === parseInt(id) ? { ...a, ...form } : a);
-      } else {
-        const newId = articles.length > 0 ? Math.max(...articles.map(a => a.id)) + 1 : 1;
-        articles.push({ id: newId, ...form });
+      if (form.date) {
+        formData.append('publishDate', new Date(form.date).toISOString());
+      }
+      formData.append('specialQuote', form.quote || '');
+      formData.append('quoteAuthorRole', form.quoteAuthor || '');
+      formData.append('advisoryNotice', form.advisory || '');
+
+      if (selectedFile) {
+        formData.append('featuredImage', selectedFile);
+      } else if (form.imageUrl) {
+        formData.append('imageUrl', form.imageUrl);
       }
 
-      localStorage.setItem('kfpl_news_media', JSON.stringify(articles));
-
-      if (form.status === 'Published') {
-        try {
-          const subsStored = localStorage.getItem('kfpl_newsletter_subscribers');
-          const subs = subsStored ? JSON.parse(subsStored) : [];
-          if (subs.length > 0) {
-            localStorage.setItem('kfpl_email_notifications_sent', JSON.stringify({
-              title: form.title,
-              count: subs.length,
-              subscribers: subs
-            }));
-          }
-        } catch (err) {
-          console.warn('Failed to dispatch simulated newsletter', err);
-        }
+      if (isEditing) {
+        await apiRequest(`/api/super-admin/articles/${id}`, {
+          method: 'PATCH',
+          body: formData,
+        });
+      } else {
+        await apiRequest('/api/super-admin/articles', {
+          method: 'POST',
+          body: formData,
+        });
       }
 
       navigate('/news-media');
-    } catch (e) {
-      console.error('Failed to save article', e);
+    } catch (err) {
+      console.error('Failed to save article:', err);
+      alert(`Failed to save article: ${err.message || 'Server error'}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -360,9 +384,9 @@ export default function NewsMediaForm() {
                 <input className="kfpl-input" type="date" value={form.date} onChange={e => handleChange('date', e.target.value)} />
               </div>
               <div className="kfpl-nm-publish-actions">
-                <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/news-media')}>Cancel</button>
-                <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={!isValid}>
-                  {isEditing ? 'Update Article' : 'Publish Article'}
+                <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => navigate('/news-media')} disabled={submitting}>Cancel</button>
+                <button type="submit" className="kfpl-btn kfpl-btn--primary" disabled={!isValid || submitting}>
+                  {submitting ? 'Saving...' : (isEditing ? 'Update Article' : 'Publish Article')}
                 </button>
               </div>
             </div>

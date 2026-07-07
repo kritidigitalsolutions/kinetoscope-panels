@@ -314,14 +314,28 @@ export default function InvestmentOverview() {
   const [investments, setInvestments] = useState([]);
   const [roiHistory, setRoiHistory] = useState([]);
 
+  const [roiFilter, setRoiFilter] = useState('All');
+  const [calcPrincipal, setCalcPrincipal] = useState(6000000);
+  const [calcRate, setCalcRate] = useState(1.2);
+  const [segmentFilter, setSegmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [clientDividends, setClientDividends] = useState([]);
+  const [totalDividends, setTotalDividends] = useState(0);
+  const [hoveredSegment, setHoveredSegment] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
-    const fetchInvestments = async () => {
+    const loadDashboardData = async () => {
       try {
+        // 1. Fetch client investments
         const response = await apiRequest('/api/client/investments');
+        let activeInvestments = [];
         if (response) {
           const list = Array.isArray(response) ? response : (response.investments || response.data || []);
           if (Array.isArray(list)) {
             setInvestments(list);
+            activeInvestments = list;
           }
           if (response.client || response.user) {
             setClient(response.client || response.user);
@@ -330,84 +344,44 @@ export default function InvestmentOverview() {
             setRoiHistory(response.roiHistory);
           }
         }
-      } catch (err) {
-        console.warn('Failed to fetch client investments via API:', err);
-      }
-    };
-    fetchInvestments();
-  }, []);
 
-  const [roiFilter, setRoiFilter] = useState('All');
-  const [calcPrincipal, setCalcPrincipal] = useState(6000000);
-  const [calcRate, setCalcRate] = useState(1.2);
-  const [segmentFilter, setSegmentFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [yearFilter, setYearFilter] = useState('all');
-  const [clientDividends, setClientDividends] = useState([]);
-  const [hoveredSegment, setHoveredSegment] = useState(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+        // 2. Fetch client dividends and stats
+        const [divListRes, statsRes] = await Promise.all([
+          apiRequest('/api/client/dividends'),
+          apiRequest('/api/client/dividends/stats')
+        ]);
+        
+        // Parse list
+        const raw = divListRes.allotments || divListRes.data?.allotments || divListRes.data || divListRes || [];
+        const mapped = (Array.isArray(raw) ? raw : []).map(d => {
+          const projectObj = d.project || d.projectId || {};
+          return {
+            id: d._id || d.id,
+            projectId: projectObj._id || projectObj.id || d.projectId || '',
+            projectName: projectObj.name || d.projectName || 'General Payout',
+            segment: projectObj.segment || d.segment || 'Other',
+            amount: d.allottedAmount || d.amount || 0,
+            creditDate: d.creditDate || d.createdAt || new Date().toISOString(),
+            adminNote: d.remarks || d.adminNote || 'Project distribution credit.'
+          };
+        });
 
-  useEffect(() => {
-    const handleUpdate = () => {
-      const stored = localStorage.getItem('kfpl_project_dividends');
-      if (stored) {
-        try {
-          const allDividends = JSON.parse(stored);
-          const myDividends = allDividends.filter(
-            div => String(div.clientId).toUpperCase() === String(client.clientId).toUpperCase()
-          );
-          setClientDividends(myDividends);
-        } catch (e) {
-          console.error('Error parsing dividends:', e);
+        // Filter: only show allotments for projects the client has an active investment in
+        const myProjectIds = activeInvestments.map(inv => String(inv.projectId || inv.project || ''));
+        const filtered = mapped.filter(d => myProjectIds.includes(String(d.projectId || '')));
+        setClientDividends(filtered);
+
+        // Parse stats based on filtered allotments
+        if (statsRes) {
+          const filteredTotal = filtered.reduce((sum, d) => sum + d.amount, 0);
+          setTotalDividends(filteredTotal);
         }
-      } else {
-        const defaultDivs = [
-          {
-            id: 1,
-            projectId: 1,
-            projectName: 'Project Astra',
-            segment: 'Film Making',
-            clientId: 'KFPL-1001',
-            clientName: 'Rajesh Kumar',
-            amount: 150000,
-            creditDate: '2025-04-15T00:00:00.000Z',
-            adminNote: 'Annual performance bonus for exceptional project returns.'
-          },
-          {
-            id: 2,
-            projectId: 1,
-            projectName: 'Project Astra',
-            segment: 'Film Making',
-            clientId: 'KFPL-1002',
-            clientName: 'Priya Sharma',
-            amount: 120000,
-            creditDate: '2025-04-15T00:00:00.000Z',
-            adminNote: 'Annual performance bonus for exceptional project returns.'
-          },
-          {
-            id: 3,
-            projectId: 2,
-            projectName: 'Rhythm Series',
-            segment: 'Music',
-            clientId: 'KFPL-1004',
-            clientName: 'Suresh Patel',
-            amount: 50000,
-            creditDate: '2025-05-10T00:00:00.000Z',
-            adminNote: 'Streaming milestone bonus for Rhythm catalogue.'
-          }
-        ];
-        localStorage.setItem('kfpl_project_dividends', JSON.stringify(defaultDivs));
-        const myDividends = defaultDivs.filter(
-          div => String(div.clientId).toUpperCase() === String(client.clientId).toUpperCase()
-        );
-        setClientDividends(myDividends);
+      } catch (err) {
+        console.error('Failed to load client investments/dividends data:', err);
       }
     };
-
-    handleUpdate();
-    window.addEventListener('storage', handleUpdate);
-    return () => window.removeEventListener('storage', handleUpdate);
-  }, [client.clientId]);
+    loadDashboardData();
+  }, []);
 
   const uniqueSegments = Array.from(new Set(investments.map(i => i.segment)));
   const uniqueStatuses = Array.from(new Set(investments.map(i => i.status)));
@@ -571,6 +545,21 @@ export default function InvestmentOverview() {
       ),
       iconColor: 'danger',
       borderColor: 'var(--color-danger)'
+    },
+    {
+      label: 'Dividends Received',
+      value: formatAmount(totalDividends),
+      trend: `${clientDividends.length} payouts completed`,
+      trendDirection: 'up',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="8" r="7"/>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+        </svg>
+      ),
+      iconColor: 'gold',
+      borderColor: 'var(--color-gold-dark)',
+      variant: 'gold'
     }
   ];
 

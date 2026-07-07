@@ -3,8 +3,9 @@
    Description: Perks module with tier card, benefits, progress, history
    ============================================================ */
 
+import { useState, useEffect } from 'react';
 import { PERK_TIERS } from '../../constants';
-import { mockPerks, mockStats, mockTotalInvested } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 /* ── SVG Tier Icons ─────────────────────── */
 const TierIcons = {
@@ -47,16 +48,61 @@ const SparkleIcon = () => (
 );
 
 export default function PerksAndRecognition() {
-  const tier = PERK_TIERS[mockPerks.currentTier];
-  const visual = tierVisuals[mockPerks.currentTier];
+  const [perksData, setPerksData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPerks = async () => {
+      setLoading(true);
+      try {
+        const res = await apiRequest('/api/client/perks');
+        
+        // Normalize tier case (e.g. GOLD -> Gold, gold -> Gold)
+        const rawTier = res.currentTier || res.tier || 'Silver';
+        const currentTier = rawTier.charAt(0).toUpperCase() + rawTier.slice(1).toLowerCase();
+
+        setPerksData({
+          currentTier,
+          nextTierAmount: res.nextTierAmount || 0,
+          progressPercent: res.progressPercent !== undefined ? res.progressPercent : (res.upgradePercentage || 0),
+          totalInvested: res.totalInvested || 0,
+          history: (res.history || []).map(h => ({
+            date: h.date || h.assignedAt || new Date().toISOString(),
+            event: h.event || h.perkName || h.title || '',
+            type: h.type || 'perk'
+          }))
+        });
+      } catch (err) {
+        console.error('Failed to fetch client perks:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPerks();
+  }, []);
+
+  const activePerksData = perksData || {
+    currentTier: 'Silver',
+    nextTierAmount: 2500000,
+    progressPercent: 0,
+    totalInvested: 0,
+    history: []
+  };
+
+  const tier = PERK_TIERS[activePerksData.currentTier] || PERK_TIERS.Silver;
+  const visual = tierVisuals[activePerksData.currentTier] || tierVisuals.Silver;
   const tierKeys = Object.keys(PERK_TIERS);
-  const currentIdx = tierKeys.indexOf(mockPerks.currentTier);
+  const currentIdx = tierKeys.indexOf(activePerksData.currentTier);
   const nextTier = currentIdx < tierKeys.length - 1 ? PERK_TIERS[tierKeys[currentIdx + 1]] : null;
   const nextVisual = nextTier ? tierVisuals[tierKeys[currentIdx + 1]] : null;
 
-  const progressPercent = nextTier
-    ? Math.min(100, ((mockTotalInvested - tier.minAmount) / (nextTier.minAmount - tier.minAmount)) * 100)
-    : 100;
+  const upgradeAmountNeeded = activePerksData.nextTierAmount !== undefined
+    ? activePerksData.nextTierAmount
+    : (nextTier ? Math.max(0, nextTier.minAmount - activePerksData.totalInvested) : 0);
+
+  const progressPercent = activePerksData.progressPercent !== undefined
+    ? activePerksData.progressPercent
+    : (nextTier ? Math.min(100, ((activePerksData.totalInvested - tier.minAmount) / (nextTier.minAmount - tier.minAmount)) * 100) : 100);
 
   const formatAmount = (num) => {
     if (num >= 100000) return `₹${(num / 100000).toFixed(1)}L`;
@@ -68,6 +114,14 @@ export default function PerksAndRecognition() {
     return Icon ? <Icon size={size} color={color} /> : null;
   };
 
+  if (loading) {
+    return (
+      <div className="kfpl-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+        <div className="kfpl-loading-spinner" />
+      </div>
+    );
+  }
+
   return (
     <div className="kfpl-page">
       <div className="kfpl-page-header">
@@ -77,7 +131,7 @@ export default function PerksAndRecognition() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span className="kfpl-prk-current-badge" style={{ background: visual.gradient }}>
-            {renderTierIcon(mockPerks.currentTier, 16, '#fff')}
+            {renderTierIcon(activePerksData.currentTier, 16, '#fff')}
             {tier.label}
           </span>
         </div>
@@ -93,12 +147,12 @@ export default function PerksAndRecognition() {
         <div className="kfpl-prk-hero-content">
           <div className="kfpl-prk-hero-left">
             <div className="kfpl-prk-hero-icon">
-              {renderTierIcon(mockPerks.currentTier, 48, visual.iconColor)}
+              {renderTierIcon(activePerksData.currentTier, 48, visual.iconColor)}
             </div>
             <div>
               <h2 className="kfpl-prk-hero-title">{tier.label} Tier Member</h2>
               <p className="kfpl-prk-hero-subtitle">
-                Based on your investment of <strong>{formatAmount(mockTotalInvested)}</strong>
+                Based on your investment of <strong>{formatAmount(activePerksData.totalInvested)}</strong>
               </p>
             </div>
           </div>
@@ -128,7 +182,7 @@ export default function PerksAndRecognition() {
                   Upgrade to {tierKeys[currentIdx + 1]}
                 </h3>
                 <p className="kfpl-prk-upgrade-subtitle">
-                  Invest <strong style={{ color: 'var(--color-gold-dark)' }}>{formatAmount(mockPerks.nextTierAmount)}</strong> more to unlock
+                  Invest <strong style={{ color: 'var(--color-gold-dark)' }}>{formatAmount(upgradeAmountNeeded)}</strong> more to unlock
                 </p>
               </div>
             </div>
@@ -178,22 +232,28 @@ export default function PerksAndRecognition() {
             <h3 className="kfpl-prk-history-title">Recognition History</h3>
           </div>
           <div className="kfpl-prk-timeline">
-            {mockPerks.history.map((item, i) => (
-              <div key={i} className="kfpl-prk-timeline-item" style={{ animationDelay: `${i * 0.08}s` }}>
-                <div className="kfpl-prk-timeline-track">
-                  <div className={`kfpl-prk-timeline-dot ${item.type === 'tier' ? 'kfpl-prk-timeline-dot--tier' : ''}`}>
-                    {item.type === 'tier' ? <ArrowUpIcon /> : <SparkleIcon />}
-                  </div>
-                  {i < mockPerks.history.length - 1 && <div className="kfpl-prk-timeline-line"></div>}
-                </div>
-                <div className="kfpl-prk-timeline-content">
-                  <span className="kfpl-prk-timeline-date">
-                    {new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </span>
-                  <p className="kfpl-prk-timeline-text">{item.event}</p>
-                </div>
+            {activePerksData.history.length === 0 ? (
+              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+                No recognition history found
               </div>
-            ))}
+            ) : (
+              activePerksData.history.map((item, i) => (
+                <div key={i} className="kfpl-prk-timeline-item" style={{ animationDelay: `${i * 0.08}s` }}>
+                  <div className="kfpl-prk-timeline-track">
+                    <div className={`kfpl-prk-timeline-dot ${item.type === 'tier' ? 'kfpl-prk-timeline-dot--tier' : ''}`}>
+                      {item.type === 'tier' ? <ArrowUpIcon /> : <SparkleIcon />}
+                    </div>
+                    {i < activePerksData.history.length - 1 && <div className="kfpl-prk-timeline-line"></div>}
+                  </div>
+                  <div className="kfpl-prk-timeline-content">
+                    <span className="kfpl-prk-timeline-date">
+                      {new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    <p className="kfpl-prk-timeline-text">{item.event}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -208,7 +268,7 @@ export default function PerksAndRecognition() {
           {tierKeys.map((key, idx) => {
             const t = PERK_TIERS[key];
             const v = tierVisuals[key];
-            const isCurrent = key === mockPerks.currentTier;
+            const isCurrent = key === activePerksData.currentTier;
             const isUnlocked = idx <= currentIdx;
             const isNext = idx === currentIdx + 1;
 
@@ -238,7 +298,7 @@ export default function PerksAndRecognition() {
                   <ul className="kfpl-prk-roadmap-benefits">
                     {t.benefits.slice(0, 3).map((b, bi) => (
                       <li key={bi}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isUnlocked ? 'var(--color-gold)' : 'var(--color-border)'} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill={isUnlocked ? 'var(--color-gold)' : 'var(--color-border)'} stroke={isUnlocked ? 'var(--color-gold)' : 'var(--color-border)'} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                         {b}
                       </li>
                     ))}

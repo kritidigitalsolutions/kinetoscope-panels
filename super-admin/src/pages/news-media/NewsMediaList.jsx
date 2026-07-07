@@ -6,6 +6,18 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { NEWS_CATEGORIES } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
+
+const extractArticles = (res) => {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (res.data) {
+    if (Array.isArray(res.data)) return res.data;
+    if (res.data.articles && Array.isArray(res.data.articles)) return res.data.articles;
+  }
+  if (res.articles && Array.isArray(res.articles)) return res.articles;
+  return [];
+};
 
 export default function NewsMediaList() {
   const [articles, setArticles] = useState([]);
@@ -13,6 +25,7 @@ export default function NewsMediaList() {
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [sentNotification, setSentNotification] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadArticles();
@@ -27,22 +40,44 @@ export default function NewsMediaList() {
     }
   }, []);
 
-  const loadArticles = () => {
+  const loadArticles = async () => {
+    setLoading(true);
     try {
-      const stored = localStorage.getItem('kfpl_news_media');
-      if (stored) {
-        setArticles(JSON.parse(stored));
-      }
+      const data = await apiRequest('/api/super-admin/articles');
+      const raw = extractArticles(data);
+      const mapped = raw.map(a => ({
+        id: a._id || a.id,
+        title: a.title || '',
+        excerpt: a.excerpt || '',
+        content: a.content || '',
+        category: a.category || 'Company News',
+        author: a.author || 'KFPL Communications',
+        date: a.publishDate || a.date || new Date().toISOString(),
+        status: a.status || 'Draft',
+        imageUrl: a.imageUrl || a.featuredImage || '',
+        quote: a.specialQuote || a.quote || '',
+        quoteAuthor: a.quoteAuthorRole || a.quoteAuthor || '',
+        advisory: a.advisoryNotice || a.advisory || '',
+      }));
+      setArticles(mapped);
     } catch (e) {
-      console.warn('Failed to load news media', e);
+      console.error('Failed to load articles', e);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this article?')) return;
-    const updated = articles.filter(a => a.id !== id);
-    localStorage.setItem('kfpl_news_media', JSON.stringify(updated));
-    setArticles(updated);
+    try {
+      await apiRequest(`/api/super-admin/articles/${id}`, {
+        method: 'DELETE'
+      });
+      setArticles(prev => prev.filter(a => a.id !== id));
+    } catch (e) {
+      console.error('Failed to delete article', e);
+      alert(`Failed to delete article: ${e.message}`);
+    }
   };
 
   const filtered = articles.filter(a => {
@@ -163,7 +198,16 @@ export default function NewsMediaList() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <span className="kfpl-spinner" style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid rgba(0,0,0,0.1)', borderTopColor: 'var(--color-gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>Loading articles...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--color-text-muted)' }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 32, height: 32, marginBottom: 8, opacity: 0.5 }}>

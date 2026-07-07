@@ -1,20 +1,48 @@
-/* ============================================================
-   Page: PerkManagement.jsx
-   Description: Perk definitions CRUD and assign to investor
-   ============================================================ */
-
 import { useState, useEffect, useMemo } from 'react';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
-import { perks, investors, formatCurrency } from '../../data/mockData';
+import { formatCurrency } from '../../data/mockData';
 import { useToast } from '../../components/ui/Toast';
+import { apiRequest } from '../../config/apiHelper';
+
+// ── SVG Tier Icons ───────────────────────
+const TierIcons = {
+  silver: (props = {}) => (
+    <svg width={props.size || 16} height={props.size || 16} viewBox="0 0 24 24" fill="none" stroke={props.color || 'currentColor'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="6"/><path d="M9 18l3-6 3 6"/><path d="M8 22h8"/><path d="M12 18v4"/>
+    </svg>
+  ),
+  gold: (props = {}) => (
+    <svg width={props.size || 16} height={props.size || 16} viewBox="0 0 24 24" fill="none" stroke={props.color || 'currentColor'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+  ),
+  platinum: (props = {}) => (
+    <svg width={props.size || 16} height={props.size || 16} viewBox="0 0 24 24" fill="none" stroke={props.color || 'currentColor'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/><path d="M10 9l2-6 2 6"/><path d="M6 9l6 13 6-13"/>
+    </svg>
+  ),
+  diamond: (props = {}) => (
+    <svg width={props.size || 16} height={props.size || 16} viewBox="0 0 24 24" fill="none" stroke={props.color || 'currentColor'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12l5-8h10l5 8-10 10L2 12z"/><path d="M7 4l5 8M17 4l-5 8M2 12h20"/>
+    </svg>
+  ),
+};
 
 // ── Tier Config ───────────────────────
 const tierConfig = {
-  silver: { gradient: 'linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 100%)', icon: '🥈', bg: 'rgba(192, 192, 192, 0.08)' },
-  gold: { gradient: 'linear-gradient(135deg, #F5E6C0 0%, #C9A84C 100%)', icon: '🥇', bg: 'rgba(201, 168, 76, 0.08)' },
-  platinum: { gradient: 'linear-gradient(135deg, #E5E8EB 0%, #8FA3B8 100%)', icon: '💎', bg: 'rgba(143, 163, 184, 0.06)' },
-  diamond: { gradient: 'linear-gradient(135deg, #E0F7FA 0%, #4DD0E1 100%)', icon: '👑', bg: 'rgba(77, 208, 225, 0.06)' },
+  silver: { gradient: 'linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 100%)', icon: TierIcons.silver, bg: 'rgba(192, 192, 192, 0.08)', color: '#9CA3AF' },
+  gold: { gradient: 'linear-gradient(135deg, #F5E6C0 0%, #C9A84C 100%)', icon: TierIcons.gold, bg: 'rgba(201, 168, 76, 0.08)', color: '#C9A84C' },
+  platinum: { gradient: 'linear-gradient(135deg, #E5E8EB 0%, #8FA3B8 100%)', icon: TierIcons.platinum, bg: 'rgba(143, 163, 184, 0.06)', color: '#8FA3B8' },
+  diamond: { gradient: 'linear-gradient(135deg, #E0F7FA 0%, #4DD0E1 100%)', icon: TierIcons.diamond, bg: 'rgba(77, 208, 225, 0.06)', color: '#4DD0E1' },
+};
+
+const renderTierIcon = (tierObj, size = 16) => {
+  if (!tierObj || !tierObj.icon) return null;
+  if (typeof tierObj.icon === 'function') {
+    return tierObj.icon({ size, color: tierObj.color });
+  }
+  return tierObj.icon;
 };
 
 // ── Perk Icons by name ───────────────────────
@@ -41,116 +69,274 @@ const icons = {
   revoke: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
 };
 
-const STORAGE_KEY = 'kfpl_assigned_perks';
-
 export default function PerkManagement() {
   const addToast = useToast();
   const [activeTab, setActiveTab] = useState('library');
   const [showAssign, setShowAssign] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [assignForm, setAssignForm] = useState({ selectedClients: [], perkId: '' });
   const [clientSearch, setClientSearch] = useState('');
   const [newPerk, setNewPerk] = useState({ name: '', description: '', tier: '', minInvestment: '' });
+  const [editingPerk, setEditingPerk] = useState(null);
+  const [deletePerkConfirm, setDeletePerkConfirm] = useState(null);
 
-  // Assigned perks state (localStorage backed)
+  // API database driven states
+  const [perksList, setPerksList] = useState([]);
+  const [clientsList, setClientsList] = useState([]);
   const [assignedPerks, setAssignedPerks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [assignedSearch, setAssignedSearch] = useState('');
   const [assignedFilterPerk, setAssignedFilterPerk] = useState('');
   const [assignedFilterTier, setAssignedFilterTier] = useState('');
 
-  // Load assigned perks from localStorage
-  useEffect(() => {
+  // Helper response parser
+  const extractPerks = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.perks && Array.isArray(res.perks)) return res.perks;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.perks && Array.isArray(res.data.perks)) return res.data.perks;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) return res[key];
+    }
+    return [];
+  };
+
+  const extractAssignments = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.assignments && Array.isArray(res.assignments)) return res.assignments;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.assignments && Array.isArray(res.data.assignments)) return res.data.assignments;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) return res[key];
+    }
+    return [];
+  };
+
+  const extractClients = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.clients && Array.isArray(res.clients)) return res.clients;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.clients && Array.isArray(res.data.clients)) return res.data.clients;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) return res[key];
+    }
+    return [];
+  };
+
+  // Load all dashboard records dynamically
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      if (saved.length > 0) {
-        setAssignedPerks(saved);
-      } else {
-        // Seed from investors mock data
-        const seeded = [];
-        investors.forEach(inv => {
-          if (inv.perks && inv.perks.length > 0) {
-            inv.perks.forEach(perkName => {
-              const perkObj = perks.find(p => p.name === perkName);
-              seeded.push({
-                id: `ap-${inv.id}-${perkName.replace(/\s/g, '')}`,
-                investorId: inv.id,
-                investorName: inv.name,
-                clientId: inv.clientId,
-                perkId: perkObj?.id || 0,
-                perkName: perkName,
-                tier: perkObj?.tier || 'silver',
-                assignedAt: inv.joinDate || '2024-01-15',
-                status: 'active',
-              });
-            });
-          }
-        });
-        setAssignedPerks(seeded);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
-      }
-    } catch { setAssignedPerks([]); }
+      const [perksRes, assignmentsRes, clientsRes] = await Promise.all([
+        apiRequest('/api/super-admin/perks'),
+        apiRequest('/api/super-admin/perks/assignments'),
+        apiRequest('/api/super-admin/clients')
+      ]);
+
+      // Mapped perks definitions list
+      const rawPerks = extractPerks(perksRes);
+      const mappedPerks = rawPerks.map(p => ({
+        id: p._id || p.id,
+        name: p.title || p.name || '',
+        description: p.description || '',
+        tier: (p.tier || 'silver').toLowerCase(),
+        minInvestment: p.minInvestment || 0,
+        status: p.status || 'active',
+      }));
+      setPerksList(mappedPerks);
+
+      // Mapped assignments list
+      const rawAssignments = extractAssignments(assignmentsRes);
+      const mappedAssignments = rawAssignments.map(ap => {
+        const clientObj = ap.client || {};
+        const perkObj = ap.perk || {};
+        return {
+          id: ap._id || ap.id,
+          investorId: clientObj._id || clientObj.id || '',
+          investorName: clientObj.fullName || clientObj.name || 'Unknown Client',
+          clientId: clientObj.clientId || '—',
+          perkId: perkObj._id || perkObj.id || '',
+          perkName: perkObj.title || perkObj.name || 'Unknown Perk',
+          tier: (perkObj.tier || 'silver').toLowerCase(),
+          assignedAt: ap.assignedAt || new Date().toISOString(),
+          status: ap.status || 'active',
+        };
+      });
+      setAssignedPerks(mappedAssignments);
+
+      // Mapped active clients list for selectors
+      const rawClients = extractClients(clientsRes);
+      const mappedClients = rawClients.map((c, index) => {
+        const profile = c.profile || {};
+        const user = (c.userId && typeof c.userId === 'object' ? c.userId : null) || 
+                     (c.user && typeof c.user === 'object' ? c.user : null) || {};
+        const name = profile.fullName || user.name || user.fullName || c.fullName || c.name || 'Client';
+        
+        // Robust ID selection
+        const id = c._id || c.id || user._id || profile.userId || `client-idx-${index}`;
+        const clientId = c.clientId || profile.clientId || `KFPL-CL-${1000 + index}`;
+        return {
+          id: String(id),
+          name,
+          clientId,
+          category: c.category || profile.riskProfile || 'Silver',
+          status: c.status || 'Active'
+        };
+      });
+      setClientsList(mappedClients);
+
+    } catch (err) {
+      console.error('Failed to load Perks & Recognition dashboard data:', err);
+      addToast('Failed to load perks configuration from API', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  // Save to localStorage whenever assignedPerks changes
-  const saveAssigned = (list) => {
-    setAssignedPerks(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  };
-
-  // ── Handle Assign Perk (multi-client) ──
-  const handleAssign = () => {
-    const perk = perks.find(p => p.id === Number(assignForm.perkId));
-    if (!perk || assignForm.selectedClients.length === 0) return;
-
-    const newEntries = [];
-    assignForm.selectedClients.forEach(clientId => {
-      const inv = investors.find(i => i.id === Number(clientId));
-      if (!inv) return;
-      // Skip if already assigned
-      const alreadyAssigned = assignedPerks.some(
-        ap => ap.investorId === inv.id && ap.perkId === perk.id && ap.status === 'active'
-      );
-      if (alreadyAssigned) return;
-
-      newEntries.push({
-        id: `ap-${inv.id}-${perk.id}-${Date.now()}`,
-        investorId: inv.id,
-        investorName: inv.name,
-        clientId: inv.clientId,
-        perkId: perk.id,
-        perkName: perk.name,
-        tier: perk.tier,
-        assignedAt: new Date().toISOString().split('T')[0],
-        status: 'active',
+  // ── Handle Assign Perk (multi-client batch POST) ──
+  const handleAssign = async () => {
+    if (!assignForm.perkId || assignForm.selectedClients.length === 0) return;
+    setLoading(true);
+    try {
+      await apiRequest('/api/super-admin/perks/assign', {
+        method: 'POST',
+        body: JSON.stringify({
+          perkId: assignForm.perkId,
+          clientIds: assignForm.selectedClients,
+        })
       });
-    });
-
-    if (newEntries.length === 0) {
-      addToast('Selected clients already have this perk assigned.', 'warning', 'Already Assigned');
-    } else {
-      const updated = [...assignedPerks, ...newEntries];
-      saveAssigned(updated);
-      addToast(`Perk "${perk.name}" assigned to ${newEntries.length} client(s)!`, 'success', 'Perk Assigned');
+      addToast('Perk assigned successfully to selected clients', 'success', 'Assigned');
+      await loadData();
+      setShowAssign(false);
+      setAssignForm({ selectedClients: [], perkId: '' });
+      setClientSearch('');
+    } catch (err) {
+      console.error('Failed to assign perk:', err);
+      addToast(err.message || 'Failed to assign perk', 'error', 'Error');
+    } finally {
+      setLoading(false);
     }
-
-    setShowAssign(false);
-    setAssignForm({ selectedClients: [], perkId: '' });
-    setClientSearch('');
   };
 
-  // ── Handle Revoke ──
-  const handleRevoke = (assignmentId) => {
-    const updated = assignedPerks.map(ap =>
-      ap.id === assignmentId ? { ...ap, status: 'revoked' } : ap
-    );
-    saveAssigned(updated);
-    addToast('Perk revoked successfully.', 'info', 'Perk Revoked');
+  // ── Handle Revoke Assignment (DELETE) ──
+  const handleRevoke = async (assignmentId) => {
+    setLoading(true);
+    try {
+      await apiRequest(`/api/super-admin/perks/assignments/${assignmentId}`, {
+        method: 'DELETE'
+      });
+      addToast('Perk assignment revoked successfully', 'info', 'Perk Revoked');
+      await loadData();
+    } catch (err) {
+      console.error('Failed to revoke perk assignment:', err);
+      addToast(err.message || 'Failed to revoke perk assignment', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddPerk = () => {
-    addToast('Perk created successfully!', 'success', 'Perk Created');
-    setShowAdd(false);
-    setNewPerk({ name: '', description: '', tier: '', minInvestment: '' });
+  // ── Handle Add Perk Definition (POST) ──
+  const handleAddPerk = async () => {
+    if (!newPerk.name) return;
+    setLoading(true);
+    try {
+      await apiRequest('/api/super-admin/perks', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: newPerk.name.trim(),
+          description: newPerk.description.trim(),
+          tier: newPerk.tier.toUpperCase(),
+          minInvestment: Number(newPerk.minInvestment) || 0,
+          status: 'active'
+        })
+      });
+      addToast('New perk created successfully', 'success', 'Perk Created');
+      await loadData();
+      setShowAdd(false);
+      setNewPerk({ name: '', description: '', tier: '', minInvestment: '' });
+    } catch (err) {
+      console.error('Failed to create perk:', err);
+      addToast(err.message || 'Failed to create perk', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Handle Edit Perk Modal & Submit (PATCH) ──
+  const openEditModal = (perk) => {
+    setEditingPerk({
+      id: perk.id,
+      name: perk.name,
+      description: perk.description,
+      tier: perk.tier,
+      minInvestment: perk.minInvestment,
+      status: perk.status,
+    });
+    setShowEdit(true);
+  };
+
+  const handleUpdatePerk = async () => {
+    if (!editingPerk || !editingPerk.name) return;
+    setLoading(true);
+    try {
+      await apiRequest(`/api/super-admin/perks/${editingPerk.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: editingPerk.name.trim(),
+          description: editingPerk.description.trim(),
+          tier: editingPerk.tier.toUpperCase(),
+          minInvestment: Number(editingPerk.minInvestment) || 0,
+          status: editingPerk.status || 'active',
+        })
+      });
+      addToast('Perk definition updated successfully', 'success', 'Updated');
+      await loadData();
+      setShowEdit(false);
+      setEditingPerk(null);
+    } catch (err) {
+      console.error('Failed to update perk:', err);
+      addToast(err.message || 'Failed to update perk', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Handle Delete Perk Definition (DELETE) ──
+  const openDeleteConfirm = (perk) => {
+    setDeletePerkConfirm(perk);
+  };
+
+  const handleDeletePerk = async () => {
+    if (!deletePerkConfirm) return;
+    setLoading(true);
+    try {
+      await apiRequest(`/api/super-admin/perks/${deletePerkConfirm.id}`, {
+        method: 'DELETE',
+      });
+      addToast(`Perk "${deletePerkConfirm.name}" deleted successfully`, 'success', 'Deleted');
+      await loadData();
+      setDeletePerkConfirm(null);
+    } catch (err) {
+      console.error('Failed to delete perk:', err);
+      addToast(err.message || 'Failed to delete perk', 'error', 'Error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Client toggle in assign modal ──
@@ -181,13 +367,14 @@ export default function PerkManagement() {
 
   // ── Filtered clients for assign modal ──
   const filteredClients = useMemo(() => {
-    return investors.filter(i => {
-      if (i.status !== 'active') return false;
+    return clientsList.filter(i => {
+      const status = i.status || 'Active';
+      if (status.toLowerCase() !== 'active') return false;
       if (!clientSearch) return true;
       const q = clientSearch.toLowerCase();
       return i.name.toLowerCase().includes(q) || i.clientId.toLowerCase().includes(q);
     });
-  }, [clientSearch]);
+  }, [clientsList, clientSearch]);
 
   // ── Filtered assigned perks for table ──
   const filteredAssigned = useMemo(() => {
@@ -202,9 +389,17 @@ export default function PerkManagement() {
     });
   }, [assignedPerks, assignedSearch, assignedFilterPerk, assignedFilterTier]);
 
-  const activePerks = perks.filter(p => p.status === 'active').length;
-  const inactivePerks = perks.filter(p => p.status !== 'active').length;
+  const activePerks = perksList.filter(p => p.status === 'active').length;
+  const inactivePerks = perksList.filter(p => p.status !== 'active').length;
   const totalAssigned = assignedPerks.filter(ap => ap.status === 'active').length;
+
+  if (loading && perksList.length === 0) {
+    return (
+      <div className="kfpl-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+        <div className="kfpl-loading-spinner" />
+      </div>
+    );
+  }
 
   return (
     <div className="kfpl-page">
@@ -244,7 +439,7 @@ export default function PerkManagement() {
           {/* Stats Strip */}
           <div className="kfpl-perks-stats">
             <div className="kfpl-perks-stat">
-              <span className="kfpl-perks-stat-num">{perks.length}</span>
+              <span className="kfpl-perks-stat-num">{perksList.length}</span>
               <span className="kfpl-perks-stat-label">Total Perks</span>
             </div>
             <div className="kfpl-perks-stat">
@@ -263,7 +458,7 @@ export default function PerkManagement() {
 
           {/* Perks Grid — Premium Cards */}
           <div className="kfpl-perks-grid">
-            {perks.map(perk => {
+            {perksList.map(perk => {
               const tier = tierConfig[perk.tier] || tierConfig.silver;
               return (
                 <div className="kfpl-perk-card" key={perk.id} style={{ '--tier-bg': tier.bg }}>
@@ -275,8 +470,16 @@ export default function PerkManagement() {
                     <div className="kfpl-perk-icon-wrap" style={{ background: tier.bg }}>
                       {perkIcons[perk.name] || defaultIcon}
                     </div>
-                    <div className="kfpl-perk-card-badges">
+                    <div className="kfpl-perk-card-badges" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <Badge status={perk.status}>{perk.status}</Badge>
+                      <div className="kfpl-perk-actions-mini" style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
+                        <button onClick={() => openEditModal(perk)} title="Edit perk" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--color-text-secondary)', display: 'inline-flex', alignItems: 'center' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>
+                        </button>
+                        <button onClick={() => openDeleteConfirm(perk)} title="Delete perk" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#ef4444', display: 'inline-flex', alignItems: 'center' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -289,7 +492,7 @@ export default function PerkManagement() {
                   {/* Footer */}
                   <div className="kfpl-perk-card-footer">
                     <div className="kfpl-perk-tier-badge">
-                      <span className="kfpl-perk-tier-icon">{tier.icon}</span>
+                      <span className="kfpl-perk-tier-icon">{renderTierIcon(tier, 14)}</span>
                       <Badge status={perk.tier}>{perk.tier} tier</Badge>
                     </div>
                     <div className="kfpl-perk-min">
@@ -337,14 +540,14 @@ export default function PerkManagement() {
             </div>
             <select className="kfpl-select kfpl-assigned-filter-select" value={assignedFilterPerk} onChange={e => setAssignedFilterPerk(e.target.value)}>
               <option value="">All Perks</option>
-              {perks.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+              {perksList.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>
             <select className="kfpl-select kfpl-assigned-filter-select" value={assignedFilterTier} onChange={e => setAssignedFilterTier(e.target.value)}>
               <option value="">All Tiers</option>
               <option value="silver">Silver</option>
               <option value="gold">Gold</option>
-              <option value="diamond">Diamond</option>
               <option value="platinum">Platinum</option>
+              <option value="diamond">Diamond</option>
             </select>
           </div>
 
@@ -437,7 +640,7 @@ export default function PerkManagement() {
             <label className="kfpl-input-label">Select Perk <span className="required">*</span></label>
             <select className="kfpl-select" value={assignForm.perkId} onChange={(e) => setAssignForm(prev => ({ ...prev, perkId: e.target.value }))}>
               <option value="">Choose perk to assign</option>
-              {perks.filter(p => p.status === 'active').map(p => (
+              {perksList.filter(p => p.status === 'active').map(p => (
                 <option key={p.id} value={p.id}>{p.name} ({p.tier} tier)</option>
               ))}
             </select>
@@ -479,7 +682,7 @@ export default function PerkManagement() {
                 filteredClients.map(inv => {
                   const isSelected = assignForm.selectedClients.includes(String(inv.id));
                   const alreadyHas = assignForm.perkId && assignedPerks.some(
-                    ap => ap.investorId === inv.id && ap.perkId === Number(assignForm.perkId) && ap.status === 'active'
+                    ap => String(ap.investorId) === String(inv.id) && String(ap.perkId) === String(assignForm.perkId) && ap.status === 'active'
                   );
                   return (
                     <div
@@ -538,8 +741,8 @@ export default function PerkManagement() {
                 <option value="">Select tier</option>
                 <option value="silver">Silver</option>
                 <option value="gold">Gold</option>
-                <option value="diamond">Diamond</option>
                 <option value="platinum">Platinum</option>
+                <option value="diamond">Diamond</option>
               </select>
             </div>
             <div className="kfpl-input-group">
@@ -548,6 +751,73 @@ export default function PerkManagement() {
             </div>
           </div>
         </div>
+      </Modal>
+
+      {/* ═══════ Edit Perk Modal ═══════ */}
+      <Modal
+        isOpen={showEdit}
+        onClose={() => { setShowEdit(false); setEditingPerk(null); }}
+        title="Edit Perk Definition"
+        footer={
+          <>
+            <button className="kfpl-btn kfpl-btn--ghost" onClick={() => { setShowEdit(false); setEditingPerk(null); }}>Cancel</button>
+            <button className="kfpl-btn kfpl-btn--primary" onClick={handleUpdatePerk} disabled={!editingPerk?.name}>Update Perk</button>
+          </>
+        }
+      >
+        {editingPerk && (
+          <div className="kfpl-form" style={{ gap: '16px' }}>
+            <div className="kfpl-input-group">
+              <label className="kfpl-input-label">Perk Name <span className="required">*</span></label>
+              <input className="kfpl-input" value={editingPerk.name} onChange={(e) => setEditingPerk(prev => ({ ...prev, name: e.target.value }))} placeholder="e.g. VIP Lounge Access" />
+            </div>
+            <div className="kfpl-input-group">
+              <label className="kfpl-input-label">Description</label>
+              <textarea className="kfpl-textarea" value={editingPerk.description} onChange={(e) => setEditingPerk(prev => ({ ...prev, description: e.target.value }))} placeholder="Describe the perk..." rows="2" />
+            </div>
+            <div className="kfpl-form-row">
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Tier</label>
+                <select className="kfpl-select" value={editingPerk.tier} onChange={(e) => setEditingPerk(prev => ({ ...prev, tier: e.target.value }))}>
+                  <option value="silver">Silver</option>
+                  <option value="gold">Gold</option>
+                  <option value="platinum">Platinum</option>
+                  <option value="diamond">Diamond</option>
+                </select>
+              </div>
+              <div className="kfpl-input-group">
+                <label className="kfpl-input-label">Min Investment (₹)</label>
+                <input className="kfpl-input" type="number" value={editingPerk.minInvestment} onChange={(e) => setEditingPerk(prev => ({ ...prev, minInvestment: e.target.value }))} placeholder="500000" />
+              </div>
+            </div>
+            <div className="kfpl-input-group">
+              <label className="kfpl-input-label">Status</label>
+              <select className="kfpl-select" value={editingPerk.status} onChange={(e) => setEditingPerk(prev => ({ ...prev, status: e.target.value }))}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ═══════ Delete Confirmation Modal ═══════ */}
+      <Modal
+        isOpen={!!deletePerkConfirm}
+        onClose={() => setDeletePerkConfirm(null)}
+        title="Confirm Delete Perk"
+        size="sm"
+        footer={
+          <>
+            <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setDeletePerkConfirm(null)}>Cancel</button>
+            <button className="kfpl-btn kfpl-btn--primary" style={{ background: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={handleDeletePerk}>Delete</button>
+          </>
+        }
+      >
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+          Are you sure you want to delete <strong>{deletePerkConfirm?.name}</strong>?
+          This will delete the perk definition and cascade remove any active client assignments. This action cannot be undone.
+        </p>
       </Modal>
     </div>
   );

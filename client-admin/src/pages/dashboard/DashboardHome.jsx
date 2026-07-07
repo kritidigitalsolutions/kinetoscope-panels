@@ -32,6 +32,24 @@ export default function DashboardHome() {
   const [investments, setInvestments] = useState(fallbackInvestments);
   const [roiHistory, setRoiHistory] = useState(fallbackROIHistory);
   const [journey, setJourney] = useState(mockJourney);
+  const [projects, setProjects] = useState([]);
+
+  // Helper parser for projects
+  const extractProjects = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.projects && Array.isArray(res.projects)) return res.projects;
+    if (res.data) {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.projects && Array.isArray(res.data.projects)) return res.data.projects;
+    }
+    for (const key of Object.keys(res)) {
+      if (Array.isArray(res[key])) {
+        return res[key];
+      }
+    }
+    return [];
+  };
 
   const [statusHistory, setStatusHistory] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -65,7 +83,46 @@ export default function DashboardHome() {
         console.warn('Failed to load client dashboard via API, falling back to mocks:', err);
       }
     };
+
+    const fetchProjects = async () => {
+      try {
+        const data = await apiRequest('/api/client/projects');
+        const raw = extractProjects(data);
+        const filteredRaw = raw.filter(p => p.name !== '__KFPL_DUMMY__');
+        const mapped = filteredRaw.map(p => ({
+          id: p._id || p.id,
+          name: p.name || '',
+          segment: p.segment || '',
+          status: p.status || 'Planning',
+          value: p.portfolioValue || p.value || '₹0 Cr',
+          milestone: p.milestoneProgress !== undefined ? p.milestoneProgress : (p.milestone !== undefined ? p.milestone : 0),
+          summary: p.summary || '',
+          risk: p.riskLevel || p.risk || 'Medium',
+          horizon: p.horizon || '',
+          roi: p.monthlyRoi || p.roi || '',
+          health: p.health || 'On Track',
+        }));
+        setProjects(mapped);
+
+        const liveUpdates = mapped.map((p, idx) => ({
+          id: p.id || idx,
+          type: 'project',
+          segment: p.segment,
+          project: p.name,
+          status: p.status,
+          progress: p.milestone,
+          note: p.summary || 'Project is under active development and tracking.',
+          date: p.health || 'On Track',
+          media: []
+        }));
+        setStatusHistory(liveUpdates);
+      } catch (err) {
+        console.warn('Failed to load dashboard projects via API:', err);
+      }
+    };
+
     fetchDashboard();
+    fetchProjects();
   }, []);
 
   const SEGMENT_COLORS = {
@@ -467,7 +524,25 @@ export default function DashboardHome() {
 
         <KpiCard
           title="Perk Tier"
-          value={`${PERK_TIERS[stats.perkTier]?.icon || '🏅'} ${stats.perkTier}`}
+          value={
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', color: stats.perkTier === 'Gold' ? '#D97706' : stats.perkTier === 'Platinum' ? '#64748B' : stats.perkTier === 'Diamond' ? '#0891B2' : '#9CA3AF' }}>
+                {stats.perkTier === 'Silver' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6"/><path d="M9 18l3-6 3 6"/><path d="M8 22h8"/><path d="M12 18v4"/></svg>
+                )}
+                {stats.perkTier === 'Gold' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                )}
+                {stats.perkTier === 'Platinum' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/><path d="M10 9l2-6 2 6"/><path d="M6 9l6 13 6-13"/></svg>
+                )}
+                {stats.perkTier === 'Diamond' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12l5-8h10l5 8-10 10L2 12z"/><path d="M7 4l5 8M17 4l-5 8M2 12h20"/></svg>
+                )}
+              </span>
+              <span>{stats.perkTier}</span>
+            </span>
+          }
           trend="Recognition benefits enabled"
           trendDirection="up"
           icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></svg>}
@@ -616,24 +691,30 @@ export default function DashboardHome() {
           </div>
           <div className="kfpl-chart-body" style={{ padding: '8px 24px 24px' }}>
             <div className="kfpl-widget-list">
-              {mockPortfolioProjects.slice(0, 4).map((project) => (
-                <div className="kfpl-widget-item" key={project.id}>
-                  <div className="kfpl-widget-item-info">
-                    <div className="kfpl-widget-item-name" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{project.name}</span>
-                      <span className="text-muted text-xs" style={{ marginLeft: 'auto', fontWeight: '500' }}>{project.milestone}%</span>
-                    </div>
-                    <div className="kfpl-widget-item-sub" style={{ marginTop: '4px' }}>
-                      <div className="kfpl-progress" style={{ height: '6px' }}>
-                        <div className="kfpl-progress-fill" style={{ width: `${project.milestone}%` }}></div>
+              {projects.length === 0 ? (
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '24px 0' }}>
+                  No active projects found.
+                </div>
+              ) : (
+                projects.slice(0, 4).map((project) => (
+                  <div className="kfpl-widget-item" key={project.id}>
+                    <div className="kfpl-widget-item-info">
+                      <div className="kfpl-widget-item-name" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{project.name}</span>
+                        <span className="text-muted text-xs" style={{ marginLeft: 'auto', fontWeight: '500' }}>{project.milestone}%</span>
+                      </div>
+                      <div className="kfpl-widget-item-sub" style={{ marginTop: '4px' }}>
+                        <div className="kfpl-progress" style={{ height: '6px' }}>
+                          <div className="kfpl-progress-fill" style={{ width: `${project.milestone}%` }}></div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted" style={{ marginTop: '4px', fontSize: '0.6875rem' }}>
+                        {project.segment} • {project.status}
                       </div>
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: '4px', fontSize: '0.6875rem' }}>
-                      {project.segment} • {project.status}
-                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>

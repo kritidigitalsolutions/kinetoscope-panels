@@ -1,6 +1,28 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { mockMedia } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
+
+const extractArticles = (res) => {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  
+  if (res.articles && Array.isArray(res.articles)) return res.articles;
+  if (res.news && Array.isArray(res.news)) return res.news;
+  if (res.data && Array.isArray(res.data)) return res.data;
+  
+  if (res.data && typeof res.data === 'object') {
+    if (res.data.articles && Array.isArray(res.data.articles)) return res.data.articles;
+    if (res.data.news && Array.isArray(res.data.news)) return res.data.news;
+  }
+  
+  for (const key of Object.keys(res)) {
+    if (Array.isArray(res[key])) {
+      return res[key];
+    }
+  }
+  
+  return [];
+};
 
 // Category-based fallback Unsplash images for premium visual layout
 export const getArticleCover = (article) => {
@@ -14,38 +36,11 @@ export default function MediaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Scroll to top on mount or ID change
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
-
-  const [articles] = useState(() => {
-    try {
-      const stored = localStorage.getItem('kfpl_news_media');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        let updated = false;
-        const mapped = parsed.map(a => {
-          const mock = mockMedia.find(m => m.id === a.id);
-          if (mock && mock.quote && !a.quote) {
-            updated = true;
-            return { ...a, quote: mock.quote, quoteAuthor: mock.quoteAuthor };
-          }
-          return a;
-        });
-        if (updated) {
-          localStorage.setItem('kfpl_news_media', JSON.stringify(mapped));
-          return mapped;
-        }
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to load news media from localStorage', e);
-    }
-    return mockMedia;
-  });
-
-  const article = articles.find(m => m.id === parseInt(id));
+  const [article, setArticle] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [latestArticles, setLatestArticles] = useState([]);
+  const [relatedArticles, setRelatedArticles] = useState([]);
+  const [categoriesWithCounts, setCategoriesWithCounts] = useState({});
 
   // Interactive States
   const [isLiked, setIsLiked] = useState(false);
@@ -55,6 +50,115 @@ export default function MediaDetail() {
   const [subscribedEmail, setSubscribedEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Scroll to top on mount or ID change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      setLoading(true);
+      let art = null;
+      let feed = [];
+
+      // 1. Fetch specific detail
+      try {
+        const detailRes = await apiRequest(`/api/client/news/${id}`);
+        console.log('Client Article Detail API Response:', detailRes);
+        art = detailRes.article || detailRes.data || detailRes;
+      } catch (err) {
+        console.warn('Failed to fetch specific article detail from news API, trying articles API next:', err);
+      }
+
+      // 2. Fetch list
+      try {
+        const feedRes = await apiRequest('/api/client/articles');
+        console.log('Client Articles List API Response:', feedRes);
+        feed = extractArticles(feedRes);
+      } catch (err) {
+        console.error('Failed to fetch articles list:', err);
+      }
+
+      // 3. Fallback: If detail API failed or returned nothing, find it in the feed list
+      if (!art && feed.length > 0) {
+        art = feed.find(a => String(a._id || a.id) === String(id));
+        if (art) {
+          console.log('Successfully found article in feed list fallback:', art);
+        }
+      }
+
+      // 4. Map and set states
+      if (art) {
+        const rawContent = art.content || '';
+        const cleanContent = rawContent.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ');
+        const rawExcerpt = art.excerpt || '';
+        const cleanExcerpt = rawExcerpt.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ');
+
+        const mappedArticle = {
+          id: art._id || art.id,
+          title: art.title || '',
+          excerpt: cleanExcerpt,
+          content: cleanContent,
+          category: art.category || 'Company News',
+          author: art.author || 'KFPL Communications',
+          date: art.publishDate || art.date || art.createdAt || new Date().toISOString(),
+          status: art.status || 'Published',
+          imageUrl: art.imageUrl || art.featuredImage || '',
+          quote: art.specialQuote || art.quote || '',
+          quoteAuthor: art.quoteAuthorRole || art.quoteAuthor || '',
+          advisory: art.advisoryNotice || art.advisory || '',
+        };
+        setArticle(mappedArticle);
+
+        const mappedFeed = feed.map(a => {
+          const rawFeedContent = a.content || '';
+          const cleanFeedContent = rawFeedContent.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ');
+          const rawFeedExcerpt = a.excerpt || '';
+          const cleanFeedExcerpt = rawFeedExcerpt.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ');
+          return {
+            id: a._id || a.id,
+            title: a.title || '',
+            excerpt: cleanFeedExcerpt,
+            category: a.category || 'Company News',
+            date: a.publishDate || a.date || a.createdAt || new Date().toISOString(),
+            imageUrl: a.imageUrl || a.featuredImage || '',
+            author: a.author || 'KFPL Communications',
+            content: cleanFeedContent,
+          };
+        });
+
+        setLatestArticles(mappedFeed.filter(a => a.id !== mappedArticle.id).slice(0, 4));
+
+        const related = mappedFeed.filter(a => a.id !== mappedArticle.id && a.category === mappedArticle.category).slice(0, 2);
+        const others = related.length < 2
+          ? [...related, ...mappedFeed.filter(a => a.id !== mappedArticle.id && a.category !== mappedArticle.category).slice(0, 2 - related.length)]
+          : related;
+        setRelatedArticles(others);
+
+        const catCounts = mappedFeed.reduce((acc, curr) => {
+          acc[curr.category] = (acc[curr.category] || 0) + 1;
+          return acc;
+        }, {});
+        setCategoriesWithCounts(catCounts);
+      } else {
+        setArticle(null);
+      }
+      setLoading(false);
+    };
+    loadDetails();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="kfpl-page">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', gap: '12px' }}>
+          <span className="kfpl-spinner" style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid rgba(0,0,0,0.1)', borderTopColor: 'var(--color-gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem' }}>Loading article details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!article) {
     return (
@@ -69,30 +173,12 @@ export default function MediaDetail() {
     );
   }
 
-  // Filter published articles
-  const publishedArticles = articles.filter(a => a.status === 'Published' || !a.status);
-
-  // Latest Articles list (excluding current)
-  const latestArticles = publishedArticles.filter(a => a.id !== article.id).slice(0, 4);
-
-  // Related Articles list
-  const relatedArticles = publishedArticles.filter(m => m.id !== article.id && m.category === article.category).slice(0, 2);
-  const otherArticles = relatedArticles.length < 2
-    ? [...relatedArticles, ...publishedArticles.filter(m => m.id !== article.id && m.category !== article.category).slice(0, 2 - relatedArticles.length)]
-    : relatedArticles;
-
-  // Categories list with counts
-  const categoriesWithCounts = publishedArticles.reduce((acc, current) => {
-    acc[current.category] = (acc[current.category] || 0) + 1;
-    return acc;
-  }, {});
-
   const formattedDate = new Date(article.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
   const cleanText = article.content ? article.content.replace(/<[^>]*>/g, ' ') : '';
   const wordCount = cleanText.trim().split(/\s+/).filter(Boolean).length;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
   const coverUrl = getArticleCover(article);
-  const viewCount = 1250 + (article.id * 342);
+  const viewCount = 1250 + (parseInt(id) || 1) * 342;
 
   // Share Functions
   const handleLike = () => {
@@ -432,7 +518,7 @@ export default function MediaDetail() {
       </div>
 
       {/* Redesigned Related Articles Bottom Grid */}
-      {otherArticles.length > 0 && (
+      {relatedArticles.length > 0 && (
         <div className="kfpl-pub-related-section-premium">
           <div className="kfpl-pub-related-header-row">
             <h3 className="kfpl-pub-related-title-premium">Related Investor Insights</h3>
@@ -442,7 +528,7 @@ export default function MediaDetail() {
             </Link>
           </div>
           <div className="kfpl-pub-related-grid-premium">
-            {otherArticles.map(rel => {
+            {relatedArticles.map(rel => {
               const relDate = new Date(rel.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
               const relClean = rel.content ? rel.content.replace(/<[^>]*>/g, ' ') : '';
               const relWords = relClean.trim().split(/\s+/).filter(Boolean).length;
