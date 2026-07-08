@@ -158,8 +158,8 @@ export default function PortfolioManagement() {
         bannerImg: p.bannerImage || p.bannerImg || '',
         totalDividendPool: p.totalDividendPool || 0,
         dividendsDistributed: p.dividendsDistributed || 0,
-        update: p.update || '',
-        allocation: p.allocation || '',
+        update: p.currentUpdate || p.update || '',
+        allocation: p.allocationFocus || p.allocation || '',
       }));
       setProjects(mapped);
     } catch (err) {
@@ -392,8 +392,8 @@ export default function PortfolioManagement() {
           formDataToSend.append('milestoneProgress', String(parseInt(formData.milestone) || 0));
           formDataToSend.append('health', formData.health || 'On Track');
           formDataToSend.append('summary', formData.summary || '');
-          formDataToSend.append('update', formData.update || '');
-          formDataToSend.append('allocation', formData.allocation || '');
+          formDataToSend.append('currentUpdate', formData.update || '');
+          formDataToSend.append('allocationFocus', formData.allocation || '');
           formDataToSend.append('bannerImage', selectedFile);
 
           const res = await apiRequest(`/api/super-admin/projects/${id}`, {
@@ -409,11 +409,11 @@ export default function PortfolioManagement() {
             portfolioValue: formData.value || '₹0 Cr',
             monthlyRoi: formData.roi || '0%',
             riskLevel: formData.risk || 'Medium',
-            milestoneProgress: parseInt(formData.milestone) || 0,
+             milestoneProgress: parseInt(formData.milestone) || 0,
             health: formData.health || 'On Track',
             summary: formData.summary || '',
-            update: formData.update || '',
-            allocation: formData.allocation || '',
+            currentUpdate: formData.update || '',
+            allocationFocus: formData.allocation || '',
           };
           if (!formData.bannerImg) {
             payload.bannerImage = '';
@@ -438,8 +438,8 @@ export default function PortfolioManagement() {
           formDataToSend.append('milestoneProgress', String(parseInt(formData.milestone) || 0));
           formDataToSend.append('health', formData.health || 'On Track');
           formDataToSend.append('summary', formData.summary || '');
-          formDataToSend.append('update', formData.update || '');
-          formDataToSend.append('allocation', formData.allocation || '');
+          formDataToSend.append('currentUpdate', formData.update || '');
+          formDataToSend.append('allocationFocus', formData.allocation || '');
           formDataToSend.append('bannerImage', selectedFile);
 
           const res = await apiRequest('/api/super-admin/projects', {
@@ -458,8 +458,8 @@ export default function PortfolioManagement() {
             milestoneProgress: parseInt(formData.milestone) || 0,
             health: formData.health || 'On Track',
             summary: formData.summary || '',
-            update: formData.update || '',
-            allocation: formData.allocation || '',
+            currentUpdate: formData.update || '',
+            allocationFocus: formData.allocation || '',
           };
 
           const res = await apiRequest('/api/super-admin/projects', {
@@ -729,8 +729,8 @@ export default function PortfolioManagement() {
             bannerImg: updatedProject.bannerImage || updatedProject.bannerImg || '',
             totalDividendPool: updatedProject.totalDividendPool || 0,
             dividendsDistributed: updatedProject.dividendsDistributed || 0,
-            update: updatedProject.update || '',
-            allocation: updatedProject.allocation || '',
+            update: updatedProject.currentUpdate || updatedProject.update || '',
+            allocation: updatedProject.allocationFocus || updatedProject.allocation || '',
           };
         }
       } catch (err) {

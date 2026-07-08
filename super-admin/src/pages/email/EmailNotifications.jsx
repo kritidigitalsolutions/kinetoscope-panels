@@ -373,7 +373,7 @@ export default function EmailNotifications() {
     { id: 9, event: 'Commission Marked as Paid', recipient: 'Agent', status: 'active', lastSent: '2026-07-03 12:00', count: 45 },
     { id: 10, event: 'Perk Assigned', recipient: 'Client', status: 'active', lastSent: '2026-07-01 16:30', count: 38 },
   ]);
-  const [metricsData, setMetricsData] = useState({ totalSent: 0, scheduled: 0, recipients: 0, activeTriggers: 0 });
+  const [metricsData, setMetricsData] = useState({ totalSent: null, scheduled: null, recipients: null, activeTriggers: null });
 
   // Handle global modal blur class toggling
   useEffect(() => {
@@ -435,13 +435,17 @@ export default function EmailNotifications() {
     // 3. Metrics
     try {
       const metricsRes = await apiRequest('/api/super-admin/notifications/metrics');
-      const metrics = metricsRes.data || metricsRes || {};
-      if (metrics.totalSent !== undefined) {
+      const metrics = metricsRes.data?.metrics 
+        || metricsRes.metrics 
+        || metricsRes.data 
+        || metricsRes 
+        || {};
+      if (metrics.totalSent !== undefined || metrics.totalSentCount !== undefined) {
         setMetricsData({
-          totalSent: metrics.totalSent || 0,
-          scheduled: metrics.scheduled || 0,
-          recipients: metrics.recipients || 0,
-          activeTriggers: metrics.activeTriggers || 0
+          totalSent: metrics.totalSent !== undefined ? metrics.totalSent : (metrics.totalSentCount || 0),
+          scheduled: metrics.scheduled !== undefined ? metrics.scheduled : (metrics.scheduledCount || 0),
+          recipients: metrics.recipients !== undefined ? metrics.recipients : (metrics.recipientsCount || 0),
+          activeTriggers: metrics.activeTriggers !== undefined ? metrics.activeTriggers : (metrics.activeTriggersCount || 0)
         });
       }
     } catch (err) {
@@ -1040,9 +1044,9 @@ export default function EmailNotifications() {
   });
 
   // Calculate dynamic stats (API metrics override, otherwise fallback to local computation)
-  const totalSentCount = metricsData.totalSent || (sentLogs.filter(l => l.status === 'Delivered').length * 28 + 1284);
-  const scheduledCount = metricsData.scheduled || sentLogs.filter(l => l.status === 'Scheduled').length;
-  const activeTriggersCount = metricsData.activeTriggers || autoTriggers.filter(t => t.status === 'active').length;
+  const totalSentCount = metricsData.totalSent !== null ? metricsData.totalSent : (sentLogs.filter(l => l.status === 'Delivered').length * 28 + 1284);
+  const scheduledCount = metricsData.scheduled !== null ? metricsData.scheduled : sentLogs.filter(l => l.status === 'Scheduled').length;
+  const activeTriggersCount = metricsData.activeTriggers !== null ? metricsData.activeTriggers : autoTriggers.filter(t => t.status === 'active').length;
 
   // Selected Clients and Agents count for display in accordions
   const selectedClientsCount = selectedRecipients.filter(id => clients.some(c => c.id === id)).length;

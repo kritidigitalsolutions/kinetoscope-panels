@@ -8,23 +8,7 @@ import { useToast } from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
 import { apiRequest } from '../../config/apiHelper';
 
-// Default mock values if not already in localStorage
-const DEFAULT_ONETIME_SLABS = [
-  { id: 'ot-1', minAmount: 0, maxAmount: 1000000, percentage: 1.0 },
-  { id: 'ot-2', minAmount: 1000000, maxAmount: 5000000, percentage: 1.5 },
-  { id: 'ot-3', minAmount: 5000000, maxAmount: 999999999, percentage: 2.0 }
-];
 
-const DEFAULT_MONTHLY_SLABS = [
-  { id: 'm-1', minAmount: 0, maxAmount: 1000000, percentage: 0.5 },
-  { id: 'm-2', minAmount: 1000000, maxAmount: 5000000, percentage: 0.75 },
-  { id: 'm-3', minAmount: 5000000, maxAmount: 999999999, percentage: 1.0 }
-];
-
-const DEFAULT_OVERRIDES = [
-  { id: 'or-1', agentId: 'AGT-001', agentName: 'Vikram Patel', percentage: 0.5, reason: 'High-value clients portfolio onboarding' },
-  { id: 'or-2', agentId: 'AGT-002', agentName: 'Neha Gupta', percentage: 0.5, reason: 'Promotional agent tier' }
-];
 
 export default function CommissionConfig() {
   const addToast = useToast();
@@ -37,6 +21,7 @@ export default function CommissionConfig() {
   const [monthlySlabs, setMonthlySlabs] = useState([]);
   const [overrides, setOverrides] = useState([]);
   const [calcAmount, setCalcAmount] = useState('');
+  const [calcResult, setCalcResult] = useState(null);
   const [agentsList, setAgentsList] = useState([]);
 
   // Modal State
@@ -48,33 +33,61 @@ export default function CommissionConfig() {
   const [overrideModalType, setOverrideModalType] = useState('add'); // 'add' | 'edit'
   const [overrideForm, setOverrideForm] = useState({ id: '', agentId: '', percentage: '', reason: '' });
 
-  // Load from localStorage on mount
+  const loadConfigData = async () => {
+    // 1. Load Slabs
+    try {
+      const res = await apiRequest('/api/super-admin/commission-slabs');
+      console.log('Commission Slabs API Response:', res);
+      const rawSlabs = res.slabs || res.data || (Array.isArray(res) ? res : []);
+      
+      const mapSlab = s => ({
+        id: s._id || s.id,
+        minAmount: s.minAmount || 0,
+        maxAmount: (s.maxAmount === null || s.maxAmount === undefined || s.maxAmount === 999999999) ? 999999999 : s.maxAmount,
+        percentage: s.commissionPercentage !== undefined ? s.commissionPercentage : (s.percentage || 0),
+        type: s.type || 'monthly'
+      });
+      
+      const parsedSlabs = rawSlabs.map(mapSlab);
+      const ot = parsedSlabs.filter(s => s.type === 'one-time');
+      const m = parsedSlabs.filter(s => s.type === 'monthly');
+      
+      setOneTimeSlabs(ot.sort((a, b) => a.minAmount - b.minAmount));
+      setMonthlySlabs(m.sort((a, b) => a.minAmount - b.minAmount));
+    } catch (err) {
+      console.error('Failed to load slabs from backend:', err);
+      setOneTimeSlabs([]);
+      setMonthlySlabs([]);
+    }
+
+    // 2. Load Overrides
+    try {
+      const res = await apiRequest('/api/super-admin/commission-slabs/overrides');
+      console.log('Overrides API Response:', res);
+      const rawOverrides = res.overrides || res.data || (Array.isArray(res) ? res : []);
+      const mapped = rawOverrides.map(o => ({
+        id: o._id || o.id,
+        agentId: o.agentId?._id || o.agentId?.id || o.agentId || '',
+        agentCode: o.agentId?.agentId || o.agentCode || '',
+        agentName: o.agentId?.name || o.agentId?.fullName || o.agentName || 'Agent',
+        percentage: o.commissionOverride !== undefined ? o.commissionOverride : (o.percentage || 0),
+        reason: o.reason || ''
+      }));
+      setOverrides(mapped);
+    } catch (err) {
+      console.error('Failed to load overrides from backend:', err);
+      setOverrides([]);
+    }
+  };
+
+  // Load from backend/localStorage on mount
   useEffect(() => {
-    const ot = localStorage.getItem('kfpl_commission_onetime');
-    const m = localStorage.getItem('kfpl_commission_monthly');
-    const ov = localStorage.getItem('kfpl_commission_overrides');
-
-    if (ot) setOneTimeSlabs(JSON.parse(ot));
-    else {
-      setOneTimeSlabs(DEFAULT_ONETIME_SLABS);
-      localStorage.setItem('kfpl_commission_onetime', JSON.stringify(DEFAULT_ONETIME_SLABS));
-    }
-
-    if (m) setMonthlySlabs(JSON.parse(m));
-    else {
-      setMonthlySlabs(DEFAULT_MONTHLY_SLABS);
-      localStorage.setItem('kfpl_commission_monthly', JSON.stringify(DEFAULT_MONTHLY_SLABS));
-    }
-
-    if (ov) setOverrides(JSON.parse(ov));
-    else {
-      setOverrides(DEFAULT_OVERRIDES);
-      localStorage.setItem('kfpl_commission_overrides', JSON.stringify(DEFAULT_OVERRIDES));
-    }
+    loadConfigData();
 
     const fetchAgents = async () => {
       try {
         const res = await apiRequest('/api/super-admin/agents');
+        console.log('Agents List API Response:', res);
         const extractAgents = (r) => {
           if (!r) return [];
           if (Array.isArray(r)) return r;
@@ -94,21 +107,42 @@ export default function CommissionConfig() {
     fetchAgents();
   }, []);
 
-  // Sync to localStorage helpers
-  const saveOneTimeSlabs = (data) => {
-    setOneTimeSlabs(data);
-    localStorage.setItem('kfpl_commission_onetime', JSON.stringify(data));
-  };
-
-  const saveMonthlySlabs = (data) => {
-    setMonthlySlabs(data);
-    localStorage.setItem('kfpl_commission_monthly', JSON.stringify(data));
-  };
-
-  const saveOverrides = (data) => {
-    setOverrides(data);
-    localStorage.setItem('kfpl_commission_overrides', JSON.stringify(data));
-  };
+  // Debounced API calculator hook
+  useEffect(() => {
+    const amount = parseFloat(calcAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setCalcResult(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiRequest('/api/super-admin/commission-slabs/calculate', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount,
+            type: activeTab === 'one-time' ? 'one-time' : 'monthly'
+          })
+        });
+        const matchedData = res.data || res;
+        if (matchedData) {
+          setCalcResult({
+            slab: {
+              minAmount: matchedData.slab?.minAmount !== undefined ? matchedData.slab.minAmount : (matchedData.minAmount || 0),
+              maxAmount: matchedData.slab?.maxAmount !== undefined ? matchedData.slab.maxAmount : (matchedData.maxAmount || 999999999),
+              percentage: matchedData.slab?.commissionPercentage !== undefined ? matchedData.slab.commissionPercentage : (matchedData.commissionPercentage || matchedData.percentage || 0)
+            },
+            amount: matchedData.amount !== undefined ? matchedData.amount : (matchedData.commissionAmount || 0)
+          });
+        }
+      } catch (err) {
+        console.error('Failed to calculate commission via API:', err);
+        // Fallback to local calculation
+        const local = getCalculatedCommission(activeTab === 'one-time' ? oneTimeSlabs : monthlySlabs, calcAmount);
+        setCalcResult(local);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [calcAmount, activeTab, oneTimeSlabs, monthlySlabs]);
 
   // Helper to check overlap
   const hasOverlap = (slabs, min, max, excludeId) => {
@@ -137,15 +171,22 @@ export default function CommissionConfig() {
     setShowSlabModal(true);
   };
 
-  const handleDeleteSlab = (id, slabsList, setListFn) => {
+  const handleDeleteSlab = async (id) => {
     if (window.confirm('Are you sure you want to delete this slab?')) {
-      const updated = slabsList.filter(s => s.id !== id);
-      setListFn(updated);
-      addToast('Slab deleted successfully', 'success', 'Slab Removed');
+      try {
+        await apiRequest(`/api/super-admin/commission-slabs/${id}`, {
+          method: 'DELETE'
+        });
+        addToast('Slab deleted successfully', 'success', 'Slab Removed');
+        await loadConfigData();
+      } catch (err) {
+        console.error('Failed to delete slab:', err);
+        alert(err.message || 'Failed to delete slab.');
+      }
     }
   };
 
-  const handleSaveSlab = () => {
+  const handleSaveSlab = async () => {
     const min = parseFloat(slabForm.minAmount);
     let max = parseFloat(slabForm.maxAmount);
     const pct = parseFloat(slabForm.percentage);
@@ -155,7 +196,7 @@ export default function CommissionConfig() {
       return;
     }
     if (slabForm.maxAmount === '' || isNaN(max)) {
-      max = 999999999; // Represents No Limit / Unlimited
+      max = 999999999;
     }
     if (max <= min) {
       alert('Maximum Amount must be greater than Minimum Amount.');
@@ -166,37 +207,38 @@ export default function CommissionConfig() {
       return;
     }
 
-    const currentSlabs = activeTab === 'one-time' ? oneTimeSlabs : monthlySlabs;
-    const saveFn = activeTab === 'one-time' ? saveOneTimeSlabs : saveMonthlySlabs;
-
-    // Check overlap
-    if (hasOverlap(currentSlabs, min, max, slabForm.id)) {
-      alert('This range overlaps with an existing slab. Please check your slab ranges.');
-      return;
-    }
-
-    let updated;
-    if (slabModalType === 'add') {
-      const newSlab = {
-        id: 'slab-' + Date.now(),
+    try {
+      const type = activeTab === 'one-time' ? 'one-time' : 'monthly';
+      const slabPayload = {
+        type,
         minAmount: min,
-        maxAmount: max,
-        percentage: pct
+        maxAmount: max === 999999999 ? null : max,
+        commissionPercentage: pct
       };
-      updated = [...currentSlabs, newSlab].sort((a, b) => a.minAmount - b.minAmount);
-      addToast('New slab added successfully', 'success', 'Slab Created');
-    } else {
-      updated = currentSlabs.map(s => {
-        if (s.id === slabForm.id) {
-          return { ...s, minAmount: min, maxAmount: max, percentage: pct };
-        }
-        return s;
-      }).sort((a, b) => a.minAmount - b.minAmount);
-      addToast('Slab updated successfully', 'success', 'Slab Updated');
-    }
 
-    saveFn(updated);
-    setShowSlabModal(false);
+      if (slabModalType === 'add') {
+        await apiRequest('/api/super-admin/commission-slabs', {
+          method: 'POST',
+          body: JSON.stringify(slabPayload)
+        });
+        addToast('New slab added successfully', 'success', 'Slab Created');
+      } else {
+        await apiRequest(`/api/super-admin/commission-slabs/${slabForm.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            minAmount: min,
+            maxAmount: max === 999999999 ? null : max,
+            commissionPercentage: pct
+          })
+        });
+        addToast('Slab updated successfully', 'success', 'Slab Updated');
+      }
+      await loadConfigData();
+      setShowSlabModal(false);
+    } catch (err) {
+      console.error('Failed to save slab:', err);
+      alert(err.message || 'Failed to save slab.');
+    }
   };
 
   // Override handlers
@@ -217,15 +259,22 @@ export default function CommissionConfig() {
     setShowOverrideModal(true);
   };
 
-  const handleDeleteOverride = (id) => {
+  const handleDeleteOverride = async (id) => {
     if (window.confirm('Are you sure you want to delete this special override?')) {
-      const updated = overrides.filter(o => o.id !== id);
-      saveOverrides(updated);
-      addToast('Special override removed successfully', 'success', 'Override Deleted');
+      try {
+        await apiRequest(`/api/super-admin/commission-slabs/overrides/${id}`, {
+          method: 'DELETE'
+        });
+        addToast('Special override removed successfully', 'success', 'Override Deleted');
+        await loadConfigData();
+      } catch (err) {
+        console.error('Failed to delete override:', err);
+        alert(err.message || 'Failed to delete override.');
+      }
     }
   };
 
-  const handleSaveOverride = () => {
+  const handleSaveOverride = async () => {
     const pct = parseFloat(overrideForm.percentage);
     if (!overrideForm.agentId) {
       alert('Please select an agent.');
@@ -240,37 +289,41 @@ export default function CommissionConfig() {
       return;
     }
 
-    const matchedAgent = agentsList.find(a => a.agentId === overrideForm.agentId || a.id === parseInt(overrideForm.agentId) || a._id === overrideForm.agentId);
-    const agentName = matchedAgent ? (matchedAgent.name || matchedAgent.fullName) : overrideForm.agentId;
-
-    let updated;
-    if (overrideModalType === 'add') {
-      // Prevent duplicate override for the same agent
-      if (overrides.some(o => o.agentId === overrideForm.agentId)) {
-        alert('Override already exists for this agent. Please edit the existing override.');
-        return;
-      }
-      const newOv = {
-        id: 'ov-' + Date.now(),
+    try {
+      const payload = {
         agentId: overrideForm.agentId,
-        agentName,
-        percentage: pct,
+        commissionOverride: pct,
         reason: overrideForm.reason
       };
-      updated = [...overrides, newOv];
-      addToast('Special override added successfully', 'success', 'Override Created');
-    } else {
-      updated = overrides.map(o => {
-        if (o.id === overrideForm.id) {
-          return { ...o, agentId: overrideForm.agentId, agentName, percentage: pct, reason: overrideForm.reason };
-        }
-        return o;
-      });
-      addToast('Special override updated successfully', 'success', 'Override Updated');
-    }
 
-    saveOverrides(updated);
-    setShowOverrideModal(false);
+      if (overrideModalType === 'add') {
+        await apiRequest('/api/super-admin/commission-slabs/overrides', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        addToast('Special override added successfully', 'success', 'Override Created');
+      } else {
+        if (overrideForm.id) {
+          try {
+            await apiRequest(`/api/super-admin/commission-slabs/overrides/${overrideForm.id}`, {
+              method: 'DELETE'
+            });
+          } catch (e) {
+            console.warn('Old override delete failed:', e);
+          }
+        }
+        await apiRequest('/api/super-admin/commission-slabs/overrides', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        addToast('Special override updated successfully', 'success', 'Override Updated');
+      }
+      await loadConfigData();
+      setShowOverrideModal(false);
+    } catch (err) {
+      console.error('Failed to save override:', err);
+      alert(err.message || 'Failed to save override.');
+    }
   };
 
   const formatCurrencyLocal = (val) => {
@@ -655,7 +708,7 @@ export default function CommissionConfig() {
             >
               <option value="">Choose Agent</option>
               {agentsList.map(a => (
-                <option key={a.id || a._id} value={a.agentId}>{a.name || a.fullName} ({a.agentId})</option>
+                <option key={a.id || a._id} value={a._id || a.id || a.agentId}>{a.name || a.fullName} ({a.agentId})</option>
               ))}
             </select>
           </div>
