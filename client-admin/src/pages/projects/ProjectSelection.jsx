@@ -263,7 +263,7 @@ export default function ProjectSelection() {
                 backgroundSize: 'cover',
                 backgroundPosition: 'left center',
                 padding: '24px',
-                minHeight: '220px',
+                minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'flex-end',

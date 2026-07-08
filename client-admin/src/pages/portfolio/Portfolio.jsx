@@ -100,6 +100,13 @@ export default function Portfolio() {
   const [drawerProject, setDrawerProject] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(null);
+
+  useEffect(() => {
+    if (!drawerProject) {
+      setActiveMediaIndex(null);
+    }
+  }, [drawerProject]);
 
   // Helper parser for projects
   const extractProjects = (res) => {
@@ -137,8 +144,28 @@ export default function Portfolio() {
           horizon: p.horizon || '',
           roi: p.monthlyRoi || p.roi || '',
           health: p.health || 'On Track',
-          media: p.media || [],
+          media: (p.mediaFiles || []).map(url => {
+            const cleanUrl = url.split('?')[0];
+            // Extract extension only from the LAST URL segment (not across slashes)
+            const lastSegment = cleanUrl.split('/').pop() || '';
+            const rawExt = lastSegment.includes('.') ? lastSegment.split('.').pop()?.toLowerCase() : '';
+            // Valid extensions are max 5 chars (pdf, doc, jpg...) — reject garbage strings
+            const ext = (rawExt && rawExt.length <= 5) ? rawExt : '';
+            const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'tiff'];
+            // Cloudinary raw uploads (/raw/upload/) store docs without extension in URL
+            const isRawUpload = cleanUrl.includes('/raw/upload/');
+            return {
+              id: url,
+              name: lastSegment || 'File',
+              url: url,
+              ext: ext,
+              isImage: imageExts.includes(ext),
+              isRawUpload: isRawUpload
+            };
+          }),
           bannerImg: p.bannerImage || p.bannerImg || '',
+          update: p.update || '',
+          allocation: p.allocation || '',
         }));
         setProjects(mapped);
       } catch (err) {
@@ -181,8 +208,8 @@ export default function Portfolio() {
         horizon: project.horizon || matchedMeta.horizon || '12 month cycle',
         roi: project.roi || matchedMeta.roi || '1.0%',
         health: project.health || matchedMeta.health || 'On Track',
-        update: project.update || matchedMeta.update || 'Project under active tracking.',
-        allocation: project.allocation || matchedMeta.allocation || 'General project operational capital.',
+        update: project.update || '',
+        allocation: project.allocation || '',
         accent: project.accent || matchedMeta.accent || '#10B981',
         valueLabel: cleanValue(project.value || '₹0 Cr'),
         valueCr: parseCroreValue(project.value || '₹0 Cr'),
@@ -231,6 +258,7 @@ export default function Portfolio() {
             backgroundImage: drawerProject.bannerImg ? `linear-gradient(rgba(6, 29, 19, 0.5), rgba(6, 29, 19, 0.8)), url(${drawerProject.bannerImg})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            minHeight: '250px',
           }}>
             <span>{drawerProject.initials}</span>
             <div>
@@ -287,6 +315,99 @@ export default function Portfolio() {
           <div className="kfpl-portfolio-drawer-section">
             <h3>Allocation Focus</h3>
             <p>{drawerProject.allocation}</p>
+          </div>
+
+          {/* Project Media & Files */}
+          <div className="kfpl-portfolio-drawer-section">
+            <style>{`
+              .kfpl-media-file-link {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 16px;
+                background: #F8FAFC;
+                border: 1.5px solid #E2E8F0;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s ease-in-out;
+              }
+              .kfpl-media-file-link:hover {
+                background: #FFFFFF;
+                border-color: var(--color-gold, #C5A880);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+                transform: translateY(-2px);
+              }
+            `}</style>
+            <h3>Project Media & Files</h3>
+            {(drawerProject.media || []).length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', border: '2px dashed #E2E8F0', borderRadius: '8px', color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>
+                No files uploaded for this project yet.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {(drawerProject.media || []).map((m, index) => (
+                  <div 
+                    key={m.id}
+                    className="kfpl-media-file-link"
+                    onClick={() => setActiveMediaIndex(index)}
+                  >
+                    {m.isImage ? (
+                      <img src={m.url} alt={m.name} style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover', border: '1px solid #E2E8F0', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 42, height: 42, borderRadius: 6, background: 'linear-gradient(135deg, #1e3a5f 0%, #2563EB 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px', flexShrink: 0, border: '1px solid #BFDBFE' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#93C5FD" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline stroke="#93C5FD" points="14 2 14 8 20 8" />
+                        </svg>
+                        <span style={{ fontSize: '0.5rem', fontWeight: 800, color: '#93C5FD', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{m.ext || 'file'}</span>
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                        {m.isImage
+                          ? 'Click to preview in viewer'
+                          : m.ext
+                          ? `${m.ext.toUpperCase()} • Click to preview`
+                          : 'Document • Click to preview'}
+                      </div>
+                    </div>
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      {/* Preview button */}
+                      <button
+                        title="Preview"
+                        onClick={() => setActiveMediaIndex(index)}
+                        style={{ background: 'none', border: '1.5px solid #E2E8F0', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748B', transition: 'all 0.18s' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-gold)'; e.currentTarget.style.color = 'var(--color-gold)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748B'; }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 14, height: 14 }}>
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                      {/* Open in new tab button */}
+                      <a
+                        href={m.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open in new tab"
+                        style={{ background: 'none', border: '1.5px solid #E2E8F0', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748B', transition: 'all 0.18s', textDecoration: 'none' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563EB'; e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748B'; }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}>
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -417,6 +538,272 @@ export default function Portfolio() {
       </section>
 
       {drawer}
+      {activeMediaIndex !== null && drawerProject && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(10, 10, 10, 0.95)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            userSelect: 'none',
+            animation: 'fadeIn 0.25s ease'
+          }}
+          onClick={() => setActiveMediaIndex(null)}
+        >
+          {/* Styles for animations */}
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: scale(0.98); }
+              to { opacity: 1; transform: scale(1); }
+            }
+            .kfpl-slider-nav-btn {
+              background: rgba(255,255,255,0.08);
+              border: 1px solid rgba(255,255,255,0.15);
+              color: white;
+              width: 50px;
+              height: 50px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              transition: all 0.2s;
+              flex-shrink: 0;
+            }
+            .kfpl-slider-nav-btn:hover:not(:disabled) {
+              background: var(--color-gold, #C5A880) !important;
+              color: #000 !important;
+              border-color: var(--color-gold, #C5A880) !important;
+              transform: scale(1.1);
+            }
+            .kfpl-slider-close {
+              position: absolute;
+              top: 20px;
+              right: 20px;
+              background: rgba(255,255,255,0.1);
+              border: 1px solid rgba(255,255,255,0.15);
+              color: white;
+              width: 40px;
+              height: 40px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              font-size: 1rem;
+              transition: all 0.25s;
+              z-index: 10000;
+            }
+            .kfpl-slider-close:hover {
+              background: #ef4444 !important;
+              border-color: #ef4444 !important;
+              transform: rotate(90deg) scale(1.1);
+            }
+            .kfpl-slider-open-btn:hover {
+              background: rgba(255,255,255,0.12) !important;
+              border-color: var(--color-gold, #C5A880) !important;
+              color: var(--color-gold, #C5A880) !important;
+            }
+          `}</style>
+
+          {/* Close button */}
+          <button className="kfpl-slider-close" onClick={() => setActiveMediaIndex(null)}>✕</button>
+
+          {/* Content wrapper */}
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              maxWidth: '1200px',
+              padding: '0 24px',
+              gap: '24px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Prev Button */}
+            <button 
+              className="kfpl-slider-nav-btn"
+              disabled={drawerProject.media.length <= 1}
+              style={{ opacity: drawerProject.media.length <= 1 ? 0.3 : 1 }}
+              onClick={() => {
+                setActiveMediaIndex(prev => (prev - 1 + drawerProject.media.length) % drawerProject.media.length);
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 24, height: 24 }}>
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+
+            {/* Center Media Display */}
+            <div 
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                maxHeight: '80vh',
+                gap: '16px'
+              }}
+            >
+              {drawerProject.media[activeMediaIndex] && drawerProject.media[activeMediaIndex].isImage ? (
+                <img 
+                  src={drawerProject.media[activeMediaIndex].url} 
+                  alt={drawerProject.media[activeMediaIndex].name} 
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    borderRadius: '12px',
+                    objectFit: 'contain',
+                    boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
+                    border: '1px solid rgba(255,255,255,0.08)'
+                  }}
+                />
+              ) : (
+                drawerProject.media[activeMediaIndex] && (() => {
+                  const m = drawerProject.media[activeMediaIndex];
+                  const ext = m.ext || '';
+                  const isPdf = ext === 'pdf';
+                  const isDocViewable = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext);
+                  // Cloudinary raw uploads and known doc types → Google Docs Viewer
+                  const useGoogleViewer = isDocViewable || (m.isRawUpload && !isPdf && !m.isImage);
+                  const iframeUrl = isPdf
+                    ? m.url
+                    : useGoogleViewer
+                    ? `https://docs.google.com/viewer?url=${encodeURIComponent(m.url)}&embedded=true`
+                    : null;
+
+                  return (
+                    <div style={{ width: '100%', maxWidth: '860px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+                      {/* Header bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 6, background: 'linear-gradient(135deg, #1e3a5f, #2563EB)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', flexShrink: 0 }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#93C5FD" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline stroke="#93C5FD" points="14 2 14 8 20 8" />
+                          </svg>
+                          <span style={{ fontSize: '0.4rem', fontWeight: 800, color: '#93C5FD', textTransform: 'uppercase' }}>{ext || 'DOC'}</span>
+                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
+                        <a
+                          href={m.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{ textDecoration: 'none', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', flexShrink: 0 }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 13, height: 13 }}>
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                          Open
+                        </a>
+                      </div>
+
+                      {/* Embedded iframe or fallback */}
+                      {iframeUrl ? (
+                        <iframe
+                          key={iframeUrl}
+                          src={iframeUrl}
+                          title={m.name}
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            width: '100%',
+                            height: '62vh',
+                            border: 'none',
+                            borderRadius: '10px',
+                            background: '#fff',
+                            boxShadow: '0 12px 40px rgba(0,0,0,0.5)'
+                          }}
+                        />
+                      ) : (
+                        <div style={{ padding: '40px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                          Preview not available for this file type.<br />
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-gold)', textDecoration: 'none', fontWeight: 600 }}>Open in new tab instead →</a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+
+              {/* Counter + filename */}
+              {drawerProject.media[activeMediaIndex] && (
+                <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase' }}>
+                    {activeMediaIndex + 1} / {drawerProject.media.length}
+                  </span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500, maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {drawerProject.media[activeMediaIndex].name}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Next Button */}
+            <button 
+              className="kfpl-slider-nav-btn"
+              disabled={drawerProject.media.length <= 1}
+              style={{ opacity: drawerProject.media.length <= 1 ? 0.3 : 1 }}
+              onClick={() => {
+                setActiveMediaIndex(prev => (prev + 1) % drawerProject.media.length);
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 24, height: 24 }}>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Bottom: Open original link — only for images */}
+          {drawerProject.media[activeMediaIndex] && drawerProject.media[activeMediaIndex].isImage && (
+            <a 
+              href={drawerProject.media[activeMediaIndex].url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="kfpl-slider-open-btn"
+              style={{
+                position: 'absolute',
+                bottom: '24px',
+                color: 'rgba(255,255,255,0.7)',
+                textDecoration: 'none',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                padding: '9px 20px',
+                borderRadius: '30px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                transition: 'all 0.2s'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 13, height: 13 }}>
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              Open Original
+            </a>
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

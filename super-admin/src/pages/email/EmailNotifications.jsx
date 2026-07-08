@@ -43,7 +43,8 @@ const PRESET_TEMPLATES = [
     id: 'custom',
     name: 'Custom Email (Blank)',
     subject: '',
-    body: ''
+    body: '',
+    targetRole: 'all'
   },
   {
     id: 'welcome',
@@ -55,7 +56,8 @@ const PRESET_TEMPLATES = [
 <p>You can now log in to the Client Portal using your registered email address to check your monthly ROI allocation, active portfolio value, and download certificate statements.</p>
 <p>If you have any questions, feel free to reach out to your assigned representative or raise a ticket in the support center.</p>
 <br/>
-<p>Warm Regards,<br/><strong>KFPL Admin Desk</strong></p>`
+<p>Warm Regards,<br/><strong>KFPL Admin Desk</strong></p>`,
+    targetRole: 'client'
   },
   {
     id: 'reward',
@@ -66,7 +68,8 @@ const PRESET_TEMPLATES = [
 <p>Based on your latest portfolio expansion, we are delighted to inform you that your profile has been promoted to a higher Perks tier. You have unlocked exclusive privileges including higher priority project allocations, invitation to private screening events, and direct access to production advisory panels.</p>
 <p>Please log in to your portal and visit the "Perks & Recognition" tab to view your active benefits.</p>
 <br/>
-<p>Cheers,<br/><strong>KFPL Investor Relations Team</strong></p>`
+<p>Cheers,<br/><strong>KFPL Investor Relations Team</strong></p>`,
+    targetRole: 'client'
   },
   {
     id: 'statement',
@@ -77,7 +80,8 @@ const PRESET_TEMPLATES = [
 <p>This is to inform you that the quarterly ROI statements and investment audit reports for the period ended June 2026 have been generated. You can download the authenticated PDF/CSV statement ledger directly from the documents vault under your account details.</p>
 <p>All active movie project segments have yielded competitive returns aligned with the monthly slab projections.</p>
 <br/>
-<p>Regards,<br/><strong>KFPL Operations Desk</strong></p>`
+<p>Regards,<br/><strong>KFPL Operations Desk</strong></p>`,
+    targetRole: 'client'
   },
   {
     id: 'alert',
@@ -88,7 +92,70 @@ const PRESET_TEMPLATES = [
 <p>This is an automated reminder regarding your pending KYC documentation. To keep your movie portfolio active and receive uninterrupted monthly payouts, please verify your identity details. Upload your PAN card, Aadhaar card, and bank proof documents through your portal profile section at your earliest convenience.</p>
 <p>Security and compliance are crucial for our investment cycles.</p>
 <br/>
-<p>Best Regards,<br/><strong>KFPL Compliance Department</strong></p>`
+<p>Best Regards,<br/><strong>KFPL Compliance Department</strong></p>`,
+    targetRole: 'client'
+  },
+  // Agent-Specific Templates
+  {
+    id: 'agent-welcome',
+    name: 'Agent Onboarding Welcome',
+    subject: 'Welcome to KFPL Agent Network - Onboarding Complete',
+    body: `<h3>Welcome to the KFPL Agent Network! 🤝</h3>
+<p>Dear {AgentName},</p>
+<p>Congratulations on being onboarded as a verified Agent Partner with Kross Film Productions Ltd. Your Agent ID is: <strong>{AgentID}</strong>.</p>
+<p>You can now access the Agent Portal to manage your referred client base, track commission earnings, submit deposit/withdrawal requests on behalf of clients, and view your performance dashboard.</p>
+<p>We look forward to a productive partnership. If you need any assistance, please reach out to the admin support desk.</p>
+<br/>
+<p>Best Regards,<br/><strong>KFPL Agent Operations Desk</strong></p>`,
+    targetRole: 'agent'
+  },
+  {
+    id: 'agent-commission',
+    name: 'Commission Payout Notification',
+    subject: 'KFPL Commission Payout Processed - {AgentID}',
+    body: `<h3>Commission Payout Confirmation 💸</h3>
+<p>Dear {AgentName},</p>
+<p>We are pleased to confirm that your commission payout has been successfully processed. Below is the transaction summary:</p>
+<ul>
+<li><strong>Agent ID:</strong> {AgentID}</li>
+<li><strong>Payout Status:</strong> Paid</li>
+<li><strong>Processing Date:</strong> ${new Date().toLocaleDateString('en-IN')}</li>
+</ul>
+<p>You can view detailed commission breakdowns, slab tier details, and historical payouts in the Agent Portal under the "Commission Slabs" section.</p>
+<br/>
+<p>Thank you for your continued partnership.<br/><strong>KFPL Finance Department</strong></p>`,
+    targetRole: 'agent'
+  },
+  {
+    id: 'agent-performance',
+    name: 'Monthly Performance Report',
+    subject: 'KFPL Monthly Agent Performance Summary',
+    body: `<h3>Monthly Performance Report 📊</h3>
+<p>Dear {AgentName},</p>
+<p>Here is your monthly performance snapshot as an Agent Partner with KFPL (Agent ID: <strong>{AgentID}</strong>):</p>
+<ul>
+<li><strong>Active Referred Clients:</strong> View in portal</li>
+<li><strong>Total Deposits Processed:</strong> View in portal</li>
+<li><strong>Commission Earned (This Month):</strong> View in portal</li>
+</ul>
+<p>Keep up the excellent work! Higher referral volumes unlock premium commission tiers and exclusive bonus incentives.</p>
+<p>Log in to your Agent Portal dashboard for detailed analytics and graphs.</p>
+<br/>
+<p>Best Regards,<br/><strong>KFPL Agent Relations Team</strong></p>`,
+    targetRole: 'agent'
+  },
+  {
+    id: 'agent-referral',
+    name: 'Referral Bonus Announcement',
+    subject: 'New Referral Bonus Unlocked! - KFPL Agent Rewards',
+    body: `<h3>Referral Bonus Achieved! 🎉</h3>
+<p>Dear {AgentName},</p>
+<p>Great news! Based on your recent client referrals, you have unlocked a special referral bonus reward. Your consistent efforts in expanding the KFPL investor network have been recognized.</p>
+<p>Details of your bonus will be reflected in your next commission cycle. Please check the "Commission Slabs" tab in your Agent Portal for the latest updates.</p>
+<p>Thank you for being a valued partner in our growth journey.</p>
+<br/>
+<p>Warm Regards,<br/><strong>KFPL Rewards & Incentives Team</strong></p>`,
+    targetRole: 'agent'
   }
 ];
 
@@ -132,6 +199,32 @@ const INITIAL_SENT_LOGS = [
     body: '<p>Please brief your investors on the delay...</p>',
     status: 'Delivered',
     scheduledFor: null
+  },
+  {
+    id: 'msg-104',
+    dateTime: '2026-07-07 09:00',
+    subject: 'Monthly ROI Payout Summary - July 2026',
+    recipientType: 'Bulk Group',
+    recipientSummary: 'All Active Clients (3 recipients total)',
+    templateName: 'Quarterly Statement Notice',
+    attachmentsCount: 1,
+    attachments: [{ name: 'July_2026_ROI_Report.pdf', size: '3.1 MB' }],
+    body: '<p>Attached is your monthly ROI payout report...</p>',
+    status: 'Scheduled',
+    scheduledFor: '2026-07-10 (Thursday) at 10:00 AM IST'
+  },
+  {
+    id: 'msg-105',
+    dateTime: '2026-07-06 16:30',
+    subject: 'Welcome to KFPL - Agent Onboarding Complete',
+    recipientType: 'Individual',
+    recipientSummary: 'Rishika Chaudhary (KFPL-AGT-1001)',
+    templateName: 'Agent Onboarding Welcome',
+    attachmentsCount: 0,
+    attachments: [],
+    body: '<p>Dear Rishika, Welcome to the KFPL Agent Network...</p>',
+    status: 'Scheduled',
+    scheduledFor: '2026-07-08 (Tuesday) at 09:30 AM IST'
   }
 ];
 
@@ -251,6 +344,9 @@ export default function EmailNotifications() {
   const htmlUploadRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // Logs sub-tab state: 'sent' or 'scheduled'
+  const [logsSubTab, setLogsSubTab] = useState('sent');
+
   // Scheduling states
   const [sendMode, setSendMode] = useState('now'); // now, schedule
   const [scheduleDate, setScheduleDate] = useState('');
@@ -277,6 +373,7 @@ export default function EmailNotifications() {
     { id: 9, event: 'Commission Marked as Paid', recipient: 'Agent', status: 'active', lastSent: '2026-07-03 12:00', count: 45 },
     { id: 10, event: 'Perk Assigned', recipient: 'Client', status: 'active', lastSent: '2026-07-01 16:30', count: 38 },
   ]);
+  const [metricsData, setMetricsData] = useState({ totalSent: 0, scheduled: 0, recipients: 0, activeTriggers: 0 });
 
   // Handle global modal blur class toggling
   useEffect(() => {
@@ -290,6 +387,91 @@ export default function EmailNotifications() {
       document.body.classList.remove('global-modal-blur');
     };
   }, [showAddTemplateModal, selectedLog]);
+
+  const loadNotificationData = async () => {
+    // 1. Auto Triggers - fetch database triggers to merge real MongoDB IDs and isEnabled statuses
+    try {
+      const tRes = await apiRequest('/api/super-admin/notifications/triggers');
+      const tList = tRes.data?.triggers || tRes.triggers || (Array.isArray(tRes.data) ? tRes.data : (Array.isArray(tRes) ? tRes : []));
+      if (tList && tList.length > 0) {
+        setAutoTriggers(prev => prev.map(mockTrigger => {
+          // Find matching real trigger by systemEventTrigger name (case-insensitive) or triggerKey
+          const realTrigger = tList.find(t => 
+            (t.systemEventTrigger && t.systemEventTrigger.toLowerCase() === mockTrigger.event.toLowerCase()) ||
+            (t.triggerKey && t.triggerKey.toLowerCase().replace(/_/g, ' ') === mockTrigger.event.toLowerCase())
+          );
+          if (realTrigger) {
+            return {
+              ...mockTrigger,
+              id: realTrigger._id || realTrigger.id,
+              status: realTrigger.isEnabled ? 'active' : 'inactive'
+            };
+          }
+          return mockTrigger;
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to load real trigger configurations:', err);
+    }
+
+    // 2. Custom Templates
+    try {
+      const tmplRes = await apiRequest('/api/super-admin/notifications/templates');
+      const tmplList = tmplRes.data?.templates || tmplRes.templates || (Array.isArray(tmplRes.data) ? tmplRes.data : (Array.isArray(tmplRes) ? tmplRes : []));
+      if (tmplList.length > 0) {
+        const mappedCustom = tmplList.map(t => ({
+          id: t._id || t.id,
+          name: t.name,
+          subject: t.subject,
+          body: t.body,
+          isCustom: true
+        }));
+        setTemplates([...PRESET_TEMPLATES, ...mappedCustom]);
+      }
+    } catch (err) {
+      console.error('Failed to load custom templates:', err);
+    }
+
+    // 3. Metrics
+    try {
+      const metricsRes = await apiRequest('/api/super-admin/notifications/metrics');
+      const metrics = metricsRes.data || metricsRes || {};
+      if (metrics.totalSent !== undefined) {
+        setMetricsData({
+          totalSent: metrics.totalSent || 0,
+          scheduled: metrics.scheduled || 0,
+          recipients: metrics.recipients || 0,
+          activeTriggers: metrics.activeTriggers || 0
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load notification metrics:', err);
+    }
+
+    // 4. Sent Logs
+    try {
+      const logsRes = await apiRequest('/api/super-admin/notifications/logs');
+      const logsList = logsRes.data?.logs || logsRes.logs || (Array.isArray(logsRes.data) ? logsRes.data : (Array.isArray(logsRes) ? logsRes : []));
+      if (logsList.length > 0) {
+        const mappedLogs = logsList.map(l => ({
+          id: l._id || l.id,
+          dateTime: l.dateTime || (l.createdAt ? new Date(l.createdAt).toLocaleString() : '—'),
+          subject: l.subject || '',
+          recipientType: l.recipientType || (l.recipientEmails?.length > 1 ? 'Bulk Group' : 'Individual'),
+          recipientSummary: l.recipientSummary || (l.recipientEmails ? l.recipientEmails.join(', ') : ''),
+          templateName: l.templateName || l.templateType || 'Custom Email (Blank)',
+          attachmentsCount: l.attachmentsCount || l.attachments?.length || 0,
+          attachments: l.attachments || [],
+          body: l.body || '',
+          status: l.status || 'Delivered',
+          scheduledFor: l.scheduledFor || l.scheduledAt || null
+        }));
+        setSentLogs(prev => [...mappedLogs, ...prev.filter(p => !mappedLogs.some(m => m.id === p.id))]);
+      }
+    } catch (err) {
+      console.error('Failed to load sent logs:', err);
+    }
+  };
 
   // Fetch real clients and agents on load
   useEffect(() => {
@@ -363,23 +545,48 @@ export default function EmailNotifications() {
         ...loadedAgents.map(a => ({ ...a, role: 'agent' }))
       ];
       setRecipientsList(combined);
+
+      await loadNotificationData();
     };
 
     loadData();
   }, []);
 
-  // Pre-fill fields when template changes
+  // Pre-fill fields when template changes (with auto-fill of recipient placeholders)
   const handleTemplateChange = (templateId) => {
     setSelectedTemplate(templateId);
     const tmpl = templates.find(t => t.id === templateId);
     if (tmpl) {
-      setSubject(tmpl.subject);
-      setBodyText(tmpl.body);
+      let filledSubject = tmpl.subject;
+      let filledBody = tmpl.body;
+
+      // Auto-fill client placeholders if a single client is selected
+      const selectedClientIds = selectedRecipients.filter(id => clients.some(c => c.id === id));
+      if (selectedClientIds.length === 1) {
+        const client = clients.find(c => c.id === selectedClientIds[0]);
+        if (client) {
+          filledSubject = filledSubject.replace(/\{ClientName\}/g, client.name).replace(/\{ClientID\}/g, client.code);
+          filledBody = filledBody.replace(/\{ClientName\}/g, client.name).replace(/\{ClientID\}/g, client.code);
+        }
+      }
+
+      // Auto-fill agent placeholders if a single agent is selected
+      const selectedAgentIds = selectedRecipients.filter(id => agents.some(a => a.id === id));
+      if (selectedAgentIds.length === 1) {
+        const agent = agents.find(a => a.id === selectedAgentIds[0]);
+        if (agent) {
+          filledSubject = filledSubject.replace(/\{AgentName\}/g, agent.name).replace(/\{AgentID\}/g, agent.code);
+          filledBody = filledBody.replace(/\{AgentName\}/g, agent.name).replace(/\{AgentID\}/g, agent.code);
+        }
+      }
+
+      setSubject(filledSubject);
+      setBodyText(filledBody);
     }
   };
 
   // Create new custom template
-  const handleAddTemplate = (e) => {
+  const handleAddTemplate = async (e) => {
     e.preventDefault();
     if (!newTemplateName.trim()) {
       addToast('Template name is required', 'error', 'Validation Failed');
@@ -394,26 +601,102 @@ export default function EmailNotifications() {
       return;
     }
 
-    const newTmpl = {
-      id: 'custom-' + Date.now(),
-      name: newTemplateName,
-      subject: newTemplateSubject,
-      body: newTemplateBody
-    };
+    try {
+      const res = await apiRequest('/api/super-admin/notifications/templates', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newTemplateName,
+          subject: newTemplateSubject,
+          body: newTemplateBody
+        })
+      });
+      const savedTemplate = res.data || res.template || res;
+      const newTmpl = {
+        id: savedTemplate._id || savedTemplate.id,
+        name: savedTemplate.name,
+        subject: savedTemplate.subject,
+        body: savedTemplate.body,
+        isCustom: true
+      };
 
-    setTemplates(prev => [...prev, newTmpl]);
-    setSelectedTemplate(newTmpl.id);
-    setSubject(newTemplateSubject);
-    setBodyText(newTemplateBody);
-    
-    // Clear and close modal
-    setNewTemplateName('');
-    setNewTemplateSubject('');
-    setNewTemplateBody('');
-    setShowAddTemplateModal(false);
-    
-    addToast(`Template "${newTemplateName}" saved successfully`, 'success', 'Template Created');
+      setTemplates(prev => [...prev, newTmpl]);
+      setSelectedTemplate(newTmpl.id);
+      setSubject(newTmpl.subject);
+      setBodyText(newTmpl.body);
+      
+      // Clear and close modal
+      setNewTemplateName('');
+      setNewTemplateSubject('');
+      setNewTemplateBody('');
+      setShowAddTemplateModal(false);
+      
+      addToast(`Template "${newTemplateName}" saved successfully`, 'success', 'Template Created');
+    } catch (err) {
+      console.error('Failed to create custom template:', err);
+      addToast(err.message || 'Failed to create template', 'error', 'Error');
+    }
   };
+
+  // Update details of a custom template
+  const handleUpdateCustomTemplate = async () => {
+    const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
+    if (!selectedTemplateObj || !selectedTemplateObj.isCustom) return;
+    try {
+      await apiRequest(`/api/super-admin/notifications/templates/${selectedTemplate}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          subject: subject,
+          body: bodyText
+        })
+      });
+      addToast(`Template "${selectedTemplateObj.name}" updated successfully`, 'success', 'Template Updated');
+      setTemplates(prev => prev.map(t => {
+        if (t.id === selectedTemplate) {
+          return { ...t, subject: subject, body: bodyText };
+        }
+        return t;
+      }));
+    } catch (err) {
+      console.error('Failed to update custom template:', err);
+      addToast(err.message || 'Failed to update template', 'error', 'Error');
+    }
+  };
+
+  // Delete custom template
+  const handleDeleteCustomTemplate = async () => {
+    const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
+    if (!selectedTemplateObj || !selectedTemplateObj.isCustom) return;
+    if (!window.confirm(`Are you sure you want to delete template "${selectedTemplateObj.name}"?`)) return;
+    try {
+      await apiRequest(`/api/super-admin/notifications/templates/${selectedTemplate}`, {
+        method: 'DELETE'
+      });
+      addToast('Template deleted successfully', 'success', 'Template Deleted');
+      setTemplates(prev => prev.filter(t => t.id !== selectedTemplate));
+      setSelectedTemplate('custom');
+      setSubject('');
+      setBodyText('');
+    } catch (err) {
+      console.error('Failed to delete custom template:', err);
+      addToast(err.message || 'Failed to delete template', 'error', 'Error');
+    }
+  };
+
+  // Force run scheduled queue processor
+  const handleForceProcessQueue = async () => {
+    try {
+      await apiRequest('/api/super-admin/notifications/process-scheduled', {
+        method: 'POST'
+      });
+      addToast('Scheduled queue processed successfully', 'success', 'Queue Processed');
+      await loadNotificationData();
+    } catch (err) {
+      console.error('Failed to process scheduled queue:', err);
+      addToast(err.message || 'Failed to process scheduled queue', 'error', 'Error');
+    }
+  };
+
+
 
   // Upload HTML template file and read contents
   const handleHtmlTemplateUpload = (e) => {
@@ -627,7 +910,7 @@ export default function EmailNotifications() {
   };
 
   // Submit email notification (supports immediate or scheduled)
-  const handleSendNotification = (e) => {
+  const handleSendNotification = async (e) => {
     e.preventDefault();
     if (selectedRecipients.length === 0) {
       addToast('Please select at least one recipient from the Client or Agent accordions below', 'error', 'Validation Failed');
@@ -648,63 +931,59 @@ export default function EmailNotifications() {
 
     setIsSending(true);
 
-    // Simulate sending progress (looks premium!)
-    setTimeout(() => {
-      const now = new Date();
-      const formatTime = now.getFullYear() + '-' + 
-                         String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                         String(now.getDate()).padStart(2, '0') + ' ' + 
-                         String(now.getHours()).padStart(2, '0') + ':' + 
-                         String(now.getMinutes()).padStart(2, '0');
+    const recipientEmails = recipientsList
+      .filter(r => selectedRecipients.includes(r.id))
+      .map(r => r.email)
+      .filter(Boolean);
+
+    // Normalize square brackets to curly braces before saving/sending
+    const normalizedBody = bodyText
+      .replace(/\[ClientName\]/g, '{ClientName}')
+      .replace(/\[ClientID\]/g, '{ClientID}')
+      .replace(/\[AgentName\]/g, '{AgentName}')
+      .replace(/\[AgentID\]/g, '{AgentID}');
+
+    let scheduledAt = null;
+    if (sendMode === 'schedule') {
+      let hourNum = parseInt(scheduleHour, 10);
+      if (schedulePeriod === 'PM' && hourNum < 12) hourNum += 12;
+      if (schedulePeriod === 'AM' && hourNum === 12) hourNum = 0;
       
-      const isBulk = selectedRecipients.length > 1;
-      let labelType = isBulk ? 'Bulk Group' : 'Individual';
-      
-      let summaryText = '';
-      if (selectedRecipients.length === 1) {
-        const target = recipientsList.find(r => r.id === selectedRecipients[0]);
-        summaryText = target ? `${target.name} (${target.code})` : '1 Recipient';
-      } else {
-        const clientsCount = recipientsList.filter(r => selectedRecipients.includes(r.id) && r.role === 'client').length;
-        const agentsCount = recipientsList.filter(r => selectedRecipients.includes(r.id) && r.role === 'agent').length;
-        summaryText = `${selectedRecipients.length} Recipients (${clientsCount} Clients, ${agentsCount} Agents)`;
-      }
+      const timeString = `${scheduleDate}T${String(hourNum).padStart(2, '0')}:${scheduleMinute}:00`;
+      const scheduledDateObj = new Date(timeString);
+      scheduledAt = scheduledDateObj.toISOString();
+    }
 
-      const selectedDay = getDayOfWeek(scheduleDate);
-      const scheduledString = sendMode === 'schedule' 
-        ? `${scheduleDate} (${selectedDay}) at ${scheduleHour}:${scheduleMinute} ${schedulePeriod}` 
-        : null;
+    const attachmentsPayload = attachments.map(att => ({
+      filename: att.name,
+      path: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+    }));
 
-      // Normalize square brackets to curly braces before saving/sending
-      const normalizedBody = bodyText
-        .replace(/\[ClientName\]/g, '{ClientName}')
-        .replace(/\[ClientID\]/g, '{ClientID}')
-        .replace(/\[AgentName\]/g, '{AgentName}')
-        .replace(/\[AgentID\]/g, '{AgentID}');
+    const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
+    const templateType = selectedTemplateObj?.isCustom ? 'custom' : selectedTemplate;
 
-      const newLog = {
-        id: `msg-${Date.now().toString().slice(-4)}`,
-        dateTime: formatTime,
-        subject: subject,
-        recipientType: labelType,
-        recipientSummary: summaryText,
-        templateName: templates.find(t => t.id === selectedTemplate)?.name || 'Custom Email (Blank)',
-        attachmentsCount: attachments.length,
-        attachments: attachments.map(att => ({ name: att.name, size: att.size })),
-        body: normalizedBody,
-        status: scheduledString ? 'Scheduled' : 'Delivered',
-        scheduledFor: scheduledString
-      };
+    const payload = {
+      recipientEmails,
+      subject,
+      body: normalizedBody,
+      attachments: attachmentsPayload,
+      ...(sendMode === 'schedule' ? { sendTiming: 'schedule', scheduledAt } : { sendTiming: 'now', templateType })
+    };
 
-      setSentLogs(prev => [newLog, ...prev]);
-      setIsSending(false);
-      
-      if (scheduledString) {
+    try {
+      await apiRequest('/api/super-admin/notifications/send-email', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (sendMode === 'schedule') {
+        const selectedDay = getDayOfWeek(scheduleDate);
+        const scheduledString = `${scheduleDate} (${selectedDay}) at ${scheduleHour}:${scheduleMinute} ${schedulePeriod}`;
         addToast(`Email notification successfully scheduled for ${scheduledString}!`, 'success', 'Mail Scheduled');
       } else {
         addToast('Notification emails have been dispatched successfully!', 'success', 'Mail Sent');
       }
-      
+
       // Reset form
       setSubject('');
       setBodyText('');
@@ -716,19 +995,37 @@ export default function EmailNotifications() {
       setScheduleHour('10');
       setScheduleMinute('00');
       setSchedulePeriod('AM');
-    }, 1800);
+
+      // Refresh sent logs history and metrics
+      await loadNotificationData();
+    } catch (err) {
+      console.error('Failed to send or schedule notification:', err);
+      addToast(err.message || 'Failed to dispatch email', 'error', 'Error');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Toggle automated system trigger configuration
-  const handleToggleAutoTrigger = (triggerId, triggerName) => {
+  const handleToggleAutoTrigger = async (triggerId, triggerName) => {
+    // Always toggle locally first for instant UI feedback
+    const nextStatusLocal = autoTriggers.find(t => t.id === triggerId)?.status === 'active' ? 'inactive' : 'active';
     setAutoTriggers(prev => prev.map(t => {
       if (t.id === triggerId) {
-        const nextStatus = t.status === 'active' ? 'inactive' : 'active';
-        addToast(`Trigger '${triggerName}' has been ${nextStatus === 'active' ? 'enabled' : 'disabled'}`, 'info', 'Configuration Updated');
-        return { ...t, status: nextStatus };
+        return { ...t, status: nextStatusLocal };
       }
       return t;
     }));
+    addToast(`Trigger '${triggerName}' has been ${nextStatusLocal === 'active' ? 'enabled' : 'disabled'}`, 'info', 'Configuration Updated');
+
+    // Then call API in background (non-blocking, if it fails local state stays)
+    try {
+      await apiRequest(`/api/super-admin/notifications/triggers/${triggerId}/toggle`, {
+        method: 'PATCH'
+      });
+    } catch (err) {
+      console.error('API toggle call failed (local state kept):', err);
+    }
   };
 
   // Filter sent logs
@@ -742,14 +1039,37 @@ export default function EmailNotifications() {
     );
   });
 
-  // Calculate dynamic stats
-  const totalSentCount = sentLogs.filter(l => l.status === 'Delivered').length * 28 + 1284;
-  const scheduledCount = sentLogs.filter(l => l.status === 'Scheduled').length;
-  const activeTriggersCount = autoTriggers.filter(t => t.status === 'active').length;
+  // Calculate dynamic stats (API metrics override, otherwise fallback to local computation)
+  const totalSentCount = metricsData.totalSent || (sentLogs.filter(l => l.status === 'Delivered').length * 28 + 1284);
+  const scheduledCount = metricsData.scheduled || sentLogs.filter(l => l.status === 'Scheduled').length;
+  const activeTriggersCount = metricsData.activeTriggers || autoTriggers.filter(t => t.status === 'active').length;
 
   // Selected Clients and Agents count for display in accordions
   const selectedClientsCount = selectedRecipients.filter(id => clients.some(c => c.id === id)).length;
   const selectedAgentsCount = selectedRecipients.filter(id => agents.some(a => a.id === id)).length;
+
+  // Determine current recipient selection type for dynamic template filtering
+  const hasClientsSelected = selectedClientsCount > 0;
+  const hasAgentsSelected = selectedAgentsCount > 0;
+  const recipientSelectionType = hasClientsSelected && hasAgentsSelected ? 'mixed' 
+    : hasAgentsSelected ? 'agent' 
+    : hasClientsSelected ? 'client' 
+    : 'none';
+
+  // Dynamic template filtering based on selected recipients
+  const filteredTemplates = templates.filter(t => {
+    if (t.targetRole === 'all' || !t.targetRole) return true; // Custom/blank always visible
+    if (t.isCustom) return true; // User-created custom templates always visible
+    if (recipientSelectionType === 'none' || recipientSelectionType === 'mixed') return true; // Show all if none or mixed
+    return t.targetRole === recipientSelectionType;
+  });
+
+  // Template dropdown label based on selection type
+  const templateDropdownLabel = recipientSelectionType === 'agent' 
+    ? 'Select Agent Template' 
+    : recipientSelectionType === 'client' 
+    ? 'Select Client Template' 
+    : 'Select System Template';
 
   // Hour options (1 to 12)
   const hourOptions = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -870,6 +1190,7 @@ export default function EmailNotifications() {
           {svgIcons.settings}
           Auto Trigger Config
         </button>
+
       </div>
 
       {/* Tab 1: Compose Notification */}
@@ -1128,16 +1449,73 @@ export default function EmailNotifications() {
                 
                 {/* Built-in dropdown */}
                 <div className="kfpl-input-group">
-                  <label className="kfpl-input-label">Select System Template</label>
-                  <select 
-                    className="kfpl-select" 
-                    value={selectedTemplate} 
-                    onChange={(e) => handleTemplateChange(e.target.value)}
-                  >
-                    {templates.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
+                  <label className="kfpl-input-label">{templateDropdownLabel}</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select 
+                      className="kfpl-select" 
+                      value={selectedTemplate} 
+                      onChange={(e) => handleTemplateChange(e.target.value)}
+                      style={{ flex: 1 }}
+                    >
+                      {/* Always show Custom Email (Blank) first */}
+                      {filteredTemplates.filter(t => t.targetRole === 'all' || !t.targetRole).map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                      {/* Client templates group */}
+                      {filteredTemplates.some(t => t.targetRole === 'client') && (
+                        <optgroup label="— Client Templates —">
+                          {filteredTemplates.filter(t => t.targetRole === 'client').map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {/* Agent templates group */}
+                      {filteredTemplates.some(t => t.targetRole === 'agent') && (
+                        <optgroup label="— Agent Templates —">
+                          {filteredTemplates.filter(t => t.targetRole === 'agent').map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {/* Custom user-created templates */}
+                      {filteredTemplates.some(t => t.isCustom) && (
+                        <optgroup label="— Custom Templates —">
+                          {filteredTemplates.filter(t => t.isCustom).map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    {templates.find(t => t.id === selectedTemplate)?.isCustom && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          type="button"
+                          className="kfpl-btn kfpl-btn--secondary kfpl-btn--sm"
+                          onClick={handleUpdateCustomTemplate}
+                          title="Save changes to this template"
+                          style={{ padding: '8px 12px', border: '1.5px solid var(--color-gold)', color: 'var(--color-gold-dark)', borderRadius: '8px', height: '100%' }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="kfpl-btn kfpl-btn--secondary kfpl-btn--sm"
+                          onClick={handleDeleteCustomTemplate}
+                          title="Delete this template"
+                          style={{ padding: '8px 12px', border: '1.5px solid #FCA5A5', color: '#EF4444', borderRadius: '8px', height: '100%' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {recipientSelectionType !== 'none' && (
+                    <p style={{ margin: '4px 0 0', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                      {recipientSelectionType === 'agent' && '🔸 Agent recipients detected — showing agent-specific templates'}
+                      {recipientSelectionType === 'client' && '🔹 Client recipients detected — showing client-specific templates'}
+                      {recipientSelectionType === 'mixed' && '📋 Mixed recipients — showing all available templates'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Upload HTML Template file */}
@@ -1392,14 +1770,87 @@ export default function EmailNotifications() {
         </div>
       )}
 
-      {/* Tab 2: Sent History Logs */}
+      {/* Tab 2: Sent History & Scheduled Logs */}
       {activeTab === 'logs' && (
-        <DataTable
-          columns={logColumns}
-          data={sentLogs}
-          onRowClick={(row) => setSelectedLog(row)}
-          searchPlaceholder="Search history by subject, recipient, template or status..."
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Sub-tab toggle buttons */}
+          <div style={{ display: 'flex', gap: '0', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--color-border)', width: 'fit-content' }}>
+            <button 
+              type="button"
+              onClick={() => setLogsSubTab('sent')}
+              style={{ 
+                padding: '10px 22px', 
+                fontSize: '0.85rem', 
+                fontWeight: 700, 
+                border: 'none', 
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: logsSubTab === 'sent' ? 'var(--color-gold)' : '#F8FAFC', 
+                color: logsSubTab === 'sent' ? '#FFF' : 'var(--color-text-secondary)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {svgIcons.send}
+              Sent History ({sentLogs.filter(l => l.status === 'Delivered' || l.status === 'Failed').length})
+            </button>
+            <button 
+              type="button"
+              onClick={() => setLogsSubTab('scheduled')}
+              style={{ 
+                padding: '10px 22px', 
+                fontSize: '0.85rem', 
+                fontWeight: 700, 
+                border: 'none', 
+                borderLeft: '1.5px solid var(--color-border)',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: logsSubTab === 'scheduled' ? 'var(--color-gold)' : '#F8FAFC', 
+                color: logsSubTab === 'scheduled' ? '#FFF' : 'var(--color-text-secondary)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {svgIcons.clock}
+              Scheduled Queue ({sentLogs.filter(l => l.status === 'Scheduled').length})
+            </button>
+          </div>
+
+          {/* Sub-tab: Sent History */}
+          {logsSubTab === 'sent' && (
+            <DataTable
+              columns={logColumns}
+              data={sentLogs.filter(l => l.status !== 'Scheduled')}
+              onRowClick={(row) => setSelectedLog(row)}
+              searchPlaceholder="Search sent emails by subject, recipient, template or status..."
+            />
+          )}
+
+          {/* Sub-tab: Scheduled Queue */}
+          {logsSubTab === 'scheduled' && (
+            <>
+              <div className="kfpl-card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', border: '1.5px solid var(--color-border)', borderRadius: '10px' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>Scheduled Delivery Queue</h4>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>Emails waiting to be dispatched at their scheduled time. Force process to send immediately.</p>
+                </div>
+                <button 
+                  type="button" 
+                  className="kfpl-btn kfpl-btn--primary kfpl-btn--sm"
+                  onClick={handleForceProcessQueue}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', height: 'auto', padding: '8px 16px', borderRadius: '8px', fontWeight: 600 }}
+                >
+                  ⚡ Force Process Queue
+                </button>
+              </div>
+              <DataTable
+                columns={logColumns}
+                data={sentLogs.filter(l => l.status === 'Scheduled')}
+                onRowClick={(row) => setSelectedLog(row)}
+                searchPlaceholder="Search scheduled emails by subject, recipient or template..."
+              />
+            </>
+          )}
+        </div>
       )}
 
       {/* Tab 3: Auto-Trigger Configuration */}

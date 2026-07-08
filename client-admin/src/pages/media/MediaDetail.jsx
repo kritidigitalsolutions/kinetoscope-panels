@@ -208,10 +208,15 @@ export default function MediaDetail() {
     }
   };
 
-  const handleSubscribeSubmit = (e) => {
+  const handleSubscribeSubmit = async (e) => {
     e.preventDefault();
     if (subscribedEmail && subscribedEmail.includes('@')) {
       try {
+        await apiRequest('/api/client/articles/subscribe', {
+          method: 'POST',
+          body: JSON.stringify({ email: subscribedEmail })
+        });
+
         const stored = localStorage.getItem('kfpl_newsletter_subscribers');
         let subs = stored ? JSON.parse(stored) : [];
         if (!subs.includes(subscribedEmail)) {
@@ -219,7 +224,7 @@ export default function MediaDetail() {
           localStorage.setItem('kfpl_newsletter_subscribers', JSON.stringify(subs));
         }
       } catch (err) {
-        console.warn('Failed to save subscriber email', err);
+        console.warn('Failed to save subscriber email via API', err);
       }
       setIsSubscribed(true);
       setSubscribedEmail('');

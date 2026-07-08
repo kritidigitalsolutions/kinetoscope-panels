@@ -1800,7 +1800,7 @@
 }
 
 .kfpl-portfolio-card-media {
-  min-height: 154px;
+  min-height: 220px;
   padding: 18px;
   background:
     linear-gradient(135deg, rgba(6, 29, 19, 0.94) 0%, rgba(8, 54, 35, 0.96) 100%),
@@ -2039,7 +2039,7 @@
 }
 
 .kfpl-portfolio-drawer-visual {
-  min-height: 164px;
+  min-height: 250px;
   padding: 22px;
   border-radius: 14px;
   background:

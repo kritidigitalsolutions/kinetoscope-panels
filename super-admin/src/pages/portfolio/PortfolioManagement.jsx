@@ -40,6 +40,11 @@ export default function PortfolioManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [drawerProject, setDrawerProject] = useState(null);
   const [uploadTarget, setUploadTarget] = useState(null);
+  // Map of Cloudinary URL → original filename (persisted in localStorage)
+  const [mediaFileNames, setMediaFileNames] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kfpl_media_names') || '{}'); }
+    catch { return {}; }
+  });
   const [activePage, setActivePage] = useState('projects'); // 'projects' or 'dividends'
   const [dividends, setDividends] = useState([]);
   const [investorList, setInvestorList] = useState([]);
@@ -65,6 +70,7 @@ export default function PortfolioManagement() {
   const [formData, setFormData] = useState({
     name: '', segment: '', status: '', value: '', milestone: 0,
     summary: '', risk: 'Medium', horizon: '', roi: '', health: 'On Track', bannerImg: '',
+    update: '', allocation: '',
   });
 
   const [loading, setLoading] = useState(true);
@@ -105,6 +111,28 @@ export default function PortfolioManagement() {
     return [];
   };
 
+
+  // Helper: map a Cloudinary URL to a media object using saved original names
+  const mapMediaUrl = (url, namesMap) => {
+    const cleanUrl = url.split('?')[0];
+    const lastSegment = cleanUrl.split('/').pop() || '';
+    const rawExt = lastSegment.includes('.') ? lastSegment.split('.').pop()?.toLowerCase() : '';
+    const ext = (rawExt && rawExt.length <= 5) ? rawExt : '';
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'tiff'];
+    const isRawUpload = cleanUrl.includes('/raw/upload/');
+    const savedName = namesMap[url] || namesMap[cleanUrl];
+    const displayName = savedName || lastSegment || 'File';
+    const finalExt = ext || (savedName ? savedName.split('.').pop()?.toLowerCase() : '') || '';
+    return {
+      id: url,
+      name: displayName,
+      url: url,
+      ext: finalExt,
+      isImage: ['jpg','jpeg','png','gif','webp','svg','bmp','avif','tiff'].includes(finalExt),
+      isRawUpload: isRawUpload
+    };
+  };
+
   const loadDashboardData = async () => {
     setLoading(true);
     
@@ -125,10 +153,12 @@ export default function PortfolioManagement() {
         horizon: p.horizon || '',
         roi: p.monthlyRoi || p.roi || '',
         health: p.health || 'On Track',
-        media: p.media || [],
+        media: (p.mediaFiles || []).map(url => mapMediaUrl(url, mediaFileNames)),
         bannerImg: p.bannerImage || p.bannerImg || '',
         totalDividendPool: p.totalDividendPool || 0,
         dividendsDistributed: p.dividendsDistributed || 0,
+        update: p.update || '',
+        allocation: p.allocation || '',
       }));
       setProjects(mapped);
     } catch (err) {
@@ -253,7 +283,11 @@ export default function PortfolioManagement() {
 
   // ── CRUD handlers ─────────────────────────
   const resetForm = () => {
-    setFormData({ name: '', segment: '', status: '', value: '', milestone: 0, summary: '', risk: 'Medium', horizon: '', roi: '', health: 'On Track', bannerImg: '' });
+    setFormData({
+      name: '', segment: '', status: '', value: '', milestone: 0,
+      summary: '', risk: 'Medium', horizon: '', roi: '', health: 'On Track', bannerImg: '',
+      update: '', allocation: '',
+    });
     setCustomSegmentText('');
     setSelectedFile(null);
   };
@@ -277,6 +311,8 @@ export default function PortfolioManagement() {
       roi: project.roi || '',
       health: project.health || 'On Track',
       bannerImg: project.bannerImg || '',
+      update: project.update || '',
+      allocation: project.allocation || '',
     });
     setEditingProject(project);
     setShowAddModal(true);
@@ -327,6 +363,8 @@ export default function PortfolioManagement() {
           formDataToSend.append('milestoneProgress', String(parseInt(formData.milestone) || 0));
           formDataToSend.append('health', formData.health || 'On Track');
           formDataToSend.append('summary', formData.summary || '');
+          formDataToSend.append('update', formData.update || '');
+          formDataToSend.append('allocation', formData.allocation || '');
           formDataToSend.append('bannerImage', selectedFile);
 
           await apiRequest(`/api/super-admin/projects/${id}`, {
@@ -344,6 +382,8 @@ export default function PortfolioManagement() {
             milestoneProgress: parseInt(formData.milestone) || 0,
             health: formData.health || 'On Track',
             summary: formData.summary || '',
+            update: formData.update || '',
+            allocation: formData.allocation || '',
           };
           if (!formData.bannerImg) {
             payload.bannerImage = '';
@@ -367,6 +407,8 @@ export default function PortfolioManagement() {
           formDataToSend.append('milestoneProgress', String(parseInt(formData.milestone) || 0));
           formDataToSend.append('health', formData.health || 'On Track');
           formDataToSend.append('summary', formData.summary || '');
+          formDataToSend.append('update', formData.update || '');
+          formDataToSend.append('allocation', formData.allocation || '');
           formDataToSend.append('bannerImage', selectedFile);
 
           await apiRequest('/api/super-admin/projects', {
@@ -384,6 +426,8 @@ export default function PortfolioManagement() {
             milestoneProgress: parseInt(formData.milestone) || 0,
             health: formData.health || 'On Track',
             summary: formData.summary || '',
+            update: formData.update || '',
+            allocation: formData.allocation || '',
           };
 
           await apiRequest('/api/super-admin/projects', {
@@ -600,55 +644,112 @@ export default function PortfolioManagement() {
   };
 
   // ── Media upload ──────────────────────────
-  const handleMediaUpload = (e) => {
+  const handleMediaUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!uploadTarget || files.length === 0) return;
 
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const mediaItem = {
-          id: Date.now() + Math.random(),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          dataUrl: ev.target.result,
-          uploadedAt: new Date().toISOString(),
-        };
-        const updated = projects.map(p => {
-          if (p.id === uploadTarget) {
-            return { ...p, media: [...(p.media || []), mediaItem] };
-          }
-          return p;
-        });
-        persist(updated);
-        // Update drawer if open
-        const updatedProject = updated.find(p => p.id === uploadTarget);
-        if (drawerProject && drawerProject.id === uploadTarget) {
-          setDrawerProject(updatedProject);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setSubmitting(true);
+    let successCount = 0;
+    let lastMappedProject = null;
 
-    addToast(`${files.length} file(s) uploaded`, 'success', 'Upload Complete');
+    for (const file of files) {
+      try {
+        const formDataToSend = new FormData();
+        formDataToSend.append('file', file);
+        // Remember the original filename before upload
+        const originalFileName = file.name;
+        // Get existing URLs for this project to detect the newly added one
+        const projectBefore = projects.find(p => p.id === uploadTarget);
+        const urlsBefore = new Set((projectBefore?.media || []).map(m => m.url));
+
+        const res = await apiRequest(`/api/super-admin/projects/${uploadTarget}/media`, {
+          method: 'POST',
+          body: formDataToSend
+        });
+
+        successCount++;
+        const updatedProject = res.project || res.data?.project || res.data || {};
+
+        // Find the new Cloudinary URL (one that wasn't in the previous list)
+        const newMediaUrls = updatedProject.mediaFiles || [];
+        const newUrl = newMediaUrls.find(u => !urlsBefore.has(u)) || newMediaUrls[newMediaUrls.length - 1];
+        if (newUrl && originalFileName) {
+          const updatedNames = { ...mediaFileNames, [newUrl]: originalFileName };
+          setMediaFileNames(updatedNames);
+          try { localStorage.setItem('kfpl_media_names', JSON.stringify(updatedNames)); } catch {}
+        }
+
+        if (updatedProject && (updatedProject._id || updatedProject.id)) {
+          lastMappedProject = {
+            id: updatedProject._id || updatedProject.id,
+            name: updatedProject.name || '',
+            segment: updatedProject.segment || '',
+            status: updatedProject.status || 'Planning',
+            value: updatedProject.portfolioValue || updatedProject.value || '₹0 Cr',
+            milestone: updatedProject.milestoneProgress !== undefined ? updatedProject.milestoneProgress : (updatedProject.milestone !== undefined ? updatedProject.milestone : 0),
+            summary: updatedProject.summary || '',
+            risk: updatedProject.riskLevel || updatedProject.risk || 'Medium',
+            horizon: updatedProject.horizon || '',
+            roi: updatedProject.monthlyRoi || updatedProject.roi || '',
+            health: updatedProject.health || 'On Track',
+            media: (updatedProject.mediaFiles || []).map(url => mapMediaUrl(url, { ...mediaFileNames, ...(newUrl ? { [newUrl]: originalFileName } : {}) })),
+            bannerImg: updatedProject.bannerImage || updatedProject.bannerImg || '',
+            totalDividendPool: updatedProject.totalDividendPool || 0,
+            dividendsDistributed: updatedProject.dividendsDistributed || 0,
+            update: updatedProject.update || '',
+            allocation: updatedProject.allocation || '',
+          };
+        }
+      } catch (err) {
+        console.error('Failed to upload file:', file.name, err);
+      }
+    }
+
+    if (successCount > 0) {
+      addToast(`${successCount} file(s) uploaded successfully`, 'success', 'Success');
+      await loadDashboardData();
+      if (lastMappedProject && drawerProject && drawerProject.id === uploadTarget) {
+        setDrawerProject(lastMappedProject);
+      }
+    } else {
+      addToast('Failed to upload project media', 'error', 'Error');
+    }
+
+    setSubmitting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setUploadTarget(null);
   };
 
-  const handleRemoveMedia = (projectId, mediaId) => {
-    const updated = projects.map(p => {
-      if (p.id === projectId) {
-        return { ...p, media: (p.media || []).filter(m => m.id !== mediaId) };
+  const handleRemoveMedia = async (projectId, mediaId) => {
+    // mediaId here is the Cloudinary URL of the file
+    setSubmitting(true);
+    try {
+      await apiRequest(`/api/super-admin/projects/${projectId}/media`, {
+        method: 'DELETE',
+        body: JSON.stringify({
+          url: mediaId
+        })
+      });
+
+      addToast('Media removed successfully', 'success', 'Success');
+      await loadDashboardData();
+
+      // Update drawer if open
+      if (drawerProject && drawerProject.id === projectId) {
+        setDrawerProject(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            media: (prev.media || []).filter(m => m.id !== mediaId)
+          };
+        });
       }
-      return p;
-    });
-    persist(updated);
-    const updatedProject = updated.find(p => p.id === projectId);
-    if (drawerProject && drawerProject.id === projectId) {
-      setDrawerProject(updatedProject);
+    } catch (err) {
+      console.error('Failed to remove media:', err);
+      addToast(err.message || 'Failed to remove media', 'error', 'Error');
+    } finally {
+      setSubmitting(false);
     }
-    addToast('Media removed', 'success', 'Removed');
   };
 
   // ── Filtering ─────────────────────────────
@@ -656,7 +757,6 @@ export default function PortfolioManagement() {
     ? projects
     : projects.filter(p => p.segment === activeTab);
 
-  // ── Computed stats ────────────────────────
   const totalProjects = projects.length;
   const activeProjects = projects.filter(p => !['Completed', 'Planned'].includes(p.status)).length;
   const avgProgress = totalProjects > 0
@@ -702,12 +802,14 @@ export default function PortfolioManagement() {
             backgroundImage: drawerProject.bannerImg ? `linear-gradient(rgba(6, 29, 19, 0.5), rgba(6, 29, 19, 0.8)), url(${drawerProject.bannerImg})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            position: 'relative'
           }}>
             <span>{SEGMENT_ABBR[drawerProject.segment] || drawerProject.name.slice(0, 2).toUpperCase()}</span>
             <div>
               <strong>{drawerProject.value || '—'}</strong>
               <small>Portfolio value</small>
             </div>
+
           </div>
 
           <p className="kfpl-portfolio-drawer-summary">{drawerProject.summary}</p>
@@ -772,8 +874,8 @@ export default function PortfolioManagement() {
                     display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
                     background: 'var(--color-surface)', borderRadius: '8px', border: '1px solid var(--color-border)',
                   }}>
-                    {m.type?.startsWith('image/') ? (
-                      <img src={m.dataUrl} alt={m.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
+                    {m.isImage ? (
+                      <img src={m.url} alt={m.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
                         {m.name?.split('.').pop()?.toUpperCase() || 'FILE'}
@@ -781,7 +883,7 @@ export default function PortfolioManagement() {
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.8125rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>{(m.size / 1024).toFixed(1)} KB</div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>{m.size ? `${(m.size / 1024).toFixed(1)} KB` : 'Cloud Storage'}</div>
                     </div>
                     <button
                       className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm"
@@ -1419,7 +1521,18 @@ export default function PortfolioManagement() {
 
           <div className="kfpl-input-group">
             <label className="kfpl-input-label">Summary</label>
-            <textarea className="kfpl-textarea" value={formData.summary} onChange={e => setFormData({ ...formData, summary: e.target.value })} placeholder="Brief project description..." rows="3" />
+            <textarea className="kfpl-textarea" value={formData.summary} onChange={e => setFormData({ ...formData, summary: e.target.value })} placeholder="Brief project description..." rows="2" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="kfpl-input-group">
+              <label className="kfpl-input-label">Current Update</label>
+              <textarea className="kfpl-textarea" value={formData.update} onChange={e => setFormData({ ...formData, update: e.target.value })} placeholder="e.g. Principal photography completed..." rows="2" />
+            </div>
+            <div className="kfpl-input-group">
+              <label className="kfpl-input-label">Allocation Focus</label>
+              <textarea className="kfpl-textarea" value={formData.allocation} onChange={e => setFormData({ ...formData, allocation: e.target.value })} placeholder="e.g. Film production, talent..." rows="2" />
+            </div>
           </div>
         </div>
       </Modal>
