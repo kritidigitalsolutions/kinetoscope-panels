@@ -21,7 +21,6 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState(tabParam);
 
   const [client, setClient] = useState(fallbackClient);
-  const [documents, setDocuments] = useState([]);
   const [clientEmail, setClientEmail] = useState(fallbackClient.email);
 
   useEffect(() => {
@@ -46,23 +45,7 @@ export default function Profile() {
       }
     };
 
-    const loadDocs = async () => {
-      try {
-        const response = await apiRequest('/api/client/documents');
-        setDocuments(response.documents || response.data || response || []);
-      } catch (err) {
-        console.warn('Failed to load client documents checklist from API, using fallback:', err);
-        setDocuments([
-          { name: 'Aadhaar Card / Government ID', fileName: 'aadhaar_card.pdf', fileSize: '1.4 MB', desc: 'Verified Identity verification document', verified: true },
-          { name: 'PAN Card / Tax ID', fileName: 'pan_card.pdf', fileSize: '850 KB', desc: 'Tax compliance document verified', verified: true },
-          { name: 'Signed Investment Agreement', fileName: 'agreement_signed.pdf', fileSize: '3.1 MB', desc: 'Active slot allocation contract', verified: true },
-          { name: 'Address Proof (Utility Bill / Rent Agreement)', fileName: 'utility_bill.pdf', fileSize: '1.8 MB', desc: 'Address verification', verified: false }
-        ]);
-      }
-    };
-
     loadProfile();
-    loadDocs();
   }, []);
 
   const riskProfile = RISK_PROFILES.find(r => r.id === client.riskProfile);
@@ -105,7 +88,6 @@ export default function Profile() {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const [passOtpSent, setPassOtpSent] = useState(false);
-  const [passOtpCode, setPassOtpCode] = useState('');
   const [passOtpInput, setPassOtpInput] = useState('');
   const [passResendTimer, setPassResendTimer] = useState(0);
 
@@ -131,12 +113,13 @@ export default function Profile() {
       addToast('error', 'Error', 'New password and confirm password do not match.');
       return;
     }
-    if (passForm.newPass.length < 6) {
-      addToast('error', 'Error', 'New password must be at least 6 characters.');
+    if (passForm.newPass.length < 8) {
+      addToast('error', 'Error', 'New password must be at least 8 characters.');
       return;
     }
 
     try {
+      console.log('Sending OTP request to backend...');
       await apiRequest('/api/client/settings/change-password/send-otp', {
         method: 'POST',
         body: JSON.stringify({
@@ -149,11 +132,8 @@ export default function Profile() {
       setPassResendTimer(30);
       addToast('success', 'Verification Code Sent', 'An OTP code has been sent to your registered email.');
     } catch (err) {
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      setPassOtpCode(code);
-      setPassOtpSent(true);
-      setPassResendTimer(30);
-      addToast('info', 'Verification Code Sent (Mock)', `Mock OTP sent: ${code}`);
+      console.error('Error sending OTP to backend:', err);
+      addToast('error', 'Failed to send OTP', err.message || 'Verification code could not be sent.');
     }
   };
 
@@ -165,6 +145,7 @@ export default function Profile() {
     }
 
     try {
+      console.log('Verifying OTP request at backend...');
       await apiRequest('/api/client/settings/change-password/verify-otp', {
         method: 'POST',
         body: JSON.stringify({
@@ -176,18 +157,10 @@ export default function Profile() {
       setPassForm({ currentPass: '', newPass: '', confirmPass: '' });
       setPassOtpSent(false);
       setPassOtpInput('');
-      setPassOtpCode('');
       addToast('success', 'Password Updated', 'Your security password has been changed successfully.');
     } catch (err) {
-      if (passOtpCode && passOtpInput === passOtpCode) {
-        setPassForm({ currentPass: '', newPass: '', confirmPass: '' });
-        setPassOtpSent(false);
-        setPassOtpInput('');
-        setPassOtpCode('');
-        addToast('success', 'Password Updated (Mock)', 'Your security password has been changed.');
-      } else {
-        addToast('error', 'Verification Failed', err.message || 'Incorrect OTP. Please try again.');
-      }
+      console.error('Error verifying OTP at backend:', err);
+      addToast('error', 'Verification Failed', err.message || 'Incorrect OTP. Please try again.');
     }
   };
 
@@ -239,15 +212,6 @@ export default function Profile() {
             <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           Support Desk
-        </button>
-        <button
-          className={`kfpl-pay-tab ${activeTab === 'documents' ? 'kfpl-pay-tab--active' : ''}`}
-          onClick={() => handleTabChange('documents')}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-          </svg>
-          KYC Documents
         </button>
       </div>
 
@@ -490,7 +454,6 @@ export default function Profile() {
                         onClick={() => {
                           setPassOtpSent(false);
                           setPassOtpInput('');
-                          setPassOtpCode('');
                         }}
                       >
                         Cancel
@@ -592,57 +555,6 @@ export default function Profile() {
 
             </div>
 
-          </div>
-        )}
-
-        {/* ==================== TAB 4: KYC Documents ==================== */}
-        {activeTab === 'documents' && (
-          <div className="kfpl-card" style={{ padding: '28px' }}>
-            <h3 style={{ marginBottom: '8px', paddingBottom: '12px', borderBottom: '2px solid var(--color-gold)' }}>KYC & Onboarded Documents</h3>
-            <p className="kfpl-page-subtitle" style={{ margin: '0 0 24px 0' }}>Your verified government identifications, signed agreements, and nominee consent files</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {documents.map((doc, idx) => {
-                const docName = doc.name || doc.label || 'Document';
-                const isVerified = doc.verified === true || doc.status?.toLowerCase() === 'verified';
-                return (
-                  <div key={idx} style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px' }}>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-navy)' }}>{docName}</h4>
-                        <span className={`kfpl-badge kfpl-badge--${isVerified ? 'success' : 'warning'}`} style={{ fontSize: '0.68rem', flexShrink: 0 }}>
-                          {isVerified ? 'Verified' : 'Pending'}
-                        </span>
-                      </div>
-                      <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                        {doc.desc || doc.description || 'Onboarded verification certificate.'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px', marginTop: '12px' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                        {doc.fileName || 'document.pdf'} • {doc.fileSize || '1.2 MB'}
-                      </span>
-                      <button
-                        className="kfpl-btn kfpl-btn--ghost kfpl-btn--xs"
-                        style={{ fontSize: '0.72rem', padding: '4px 8px' }}
-                        onClick={() => {
-                          const mockContent = `Dummy certificate content for ${docName} of client ${client.name}`;
-                          const blob = new Blob([mockContent], { type: 'text/plain' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = doc.fileName || 'document.pdf';
-                          a.click();
-                          URL.revokeObjectURL(url);
-                          addToast('success', 'Success', 'Document downloaded successfully.');
-                        }}
-                      >
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>

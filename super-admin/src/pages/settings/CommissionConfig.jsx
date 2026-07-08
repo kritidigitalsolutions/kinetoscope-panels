@@ -33,12 +33,28 @@ export default function CommissionConfig() {
   const [overrideModalType, setOverrideModalType] = useState('add'); // 'add' | 'edit'
   const [overrideForm, setOverrideForm] = useState({ id: '', agentId: '', percentage: '', reason: '' });
 
+  const extractArray = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.data && Array.isArray(res.data)) return res.data;
+    for (const key in res) {
+      if (Array.isArray(res[key])) {
+        return res[key];
+      }
+      if (res[key] && typeof res[key] === 'object') {
+        const nested = extractArray(res[key]);
+        if (nested && nested.length > 0) return nested;
+      }
+    }
+    return [];
+  };
+
   const loadConfigData = async () => {
     // 1. Load Slabs
     try {
       const res = await apiRequest('/api/super-admin/commission-slabs');
       console.log('Commission Slabs API Response:', res);
-      const rawSlabs = res.slabs || res.data || (Array.isArray(res) ? res : []);
+      const rawSlabs = extractArray(res);
       
       const mapSlab = s => ({
         id: s._id || s.id,
@@ -64,7 +80,7 @@ export default function CommissionConfig() {
     try {
       const res = await apiRequest('/api/super-admin/commission-slabs/overrides');
       console.log('Overrides API Response:', res);
-      const rawOverrides = res.overrides || res.data || (Array.isArray(res) ? res : []);
+      const rawOverrides = extractArray(res);
       const mapped = rawOverrides.map(o => ({
         id: o._id || o.id,
         agentId: o.agentId?._id || o.agentId?.id || o.agentId || '',
@@ -522,7 +538,7 @@ export default function CommissionConfig() {
                           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ padding: '4px 8px' }} onClick={() => handleOpenEditSlab(slab)}>
                             Edit
                           </button>
-                          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ padding: '4px 8px', color: 'var(--color-danger)' }} onClick={() => handleDeleteSlab(slab.id, oneTimeSlabs, saveOneTimeSlabs)}>
+                          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ padding: '4px 8px', color: 'var(--color-danger)' }} onClick={() => handleDeleteSlab(slab.id)}>
                             Delete
                           </button>
                         </div>
@@ -572,7 +588,7 @@ export default function CommissionConfig() {
                           <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ padding: '4px 8px' }} onClick={() => handleOpenEditSlab(slab)}>
                             Edit
                           </button>
-                          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ padding: '4px 8px', color: 'var(--color-danger)' }} onClick={() => handleDeleteSlab(slab.id, monthlySlabs, saveMonthlySlabs)}>
+                          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" style={{ padding: '4px 8px', color: 'var(--color-danger)' }} onClick={() => handleDeleteSlab(slab.id)}>
                             Delete
                           </button>
                         </div>
@@ -615,7 +631,7 @@ export default function CommissionConfig() {
                 ) : (
                   overrides.map(ov => (
                     <tr key={ov.id}>
-                      <td>{ov.agentId}</td>
+                      <td>{ov.agentCode || ov.agentId}</td>
                       <td style={{ fontWeight: 600 }}>{ov.agentName}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-gold-dark)' }}>+{ov.percentage}%</td>
                       <td style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{ov.reason}</td>

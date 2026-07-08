@@ -18,6 +18,9 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [mockOtp, setMockOtp] = useState('');
+  const [tempToken, setTempToken] = useState('');
+  const [tempUser, setTempUser] = useState(null);
+  const [backendRequiresTfa, setBackendRequiresTfa] = useState(false);
 
   const generateClientSession = (loginEmail) => {
     const isRajesh = loginEmail.toLowerCase() === 'rajesh.sharma@email.com';
@@ -103,6 +106,9 @@ export default function Login() {
         if (data.requires2FA || isTfaEnabled) {
           const generatedCode = String(Math.floor(100000 + Math.random() * 900000));
           setMockOtp(generatedCode);
+          setTempToken(data.token || '');
+          setTempUser(data.client || (data.data && data.data.user ? data.data.user : data.data) || data.user || {});
+          setBackendRequiresTfa(!!data.requires2FA);
           setStep('otp');
           setError('');
           alert(`[2FA Code] An OTP verification code was sent to your email: ${data.otp || data.code || generatedCode}`);
@@ -130,6 +136,19 @@ export default function Login() {
     setOtpError('');
     if (!otp) { setOtpError('Please enter the verification code.'); return; }
     setLoading(true);
+
+    // If it's a frontend-only 2FA toggle (localStorage has 2FA enabled, but backend didn't require it)
+    // we bypass the backend verify-2fa call and use the token from the first step!
+    const isTfaEnabled = localStorage.getItem('kfpl_tfa_enabled') === 'true';
+    if (isTfaEnabled && !backendRequiresTfa && tempToken && mockOtp && otp === mockOtp) {
+      localStorage.setItem('kfpl_client_auth', JSON.stringify({ 
+        token: tempToken, 
+        client: { ...tempUser, email, name: tempUser.name || tempUser.fullName || 'Investor' } 
+      }));
+      window.location.href = '/dashboard';
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(getApiUrl('/api/auth/verify-2fa'), {

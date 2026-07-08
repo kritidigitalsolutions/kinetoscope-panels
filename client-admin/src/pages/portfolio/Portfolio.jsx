@@ -164,8 +164,8 @@ export default function Portfolio() {
             };
           }),
           bannerImg: p.bannerImage || p.bannerImg || '',
-          update: p.update || '',
-          allocation: p.allocation || '',
+          update: p.currentUpdate || p.update || '',
+          allocation: p.allocationFocus || p.allocation || '',
         }));
         setProjects(mapped);
       } catch (err) {

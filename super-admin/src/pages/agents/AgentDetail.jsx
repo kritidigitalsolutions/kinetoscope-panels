@@ -395,7 +395,7 @@ export default function AgentDetail() {
   const fetchAgentDetails = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const [agentRes, clientsRes, commissionsRes] = await Promise.all([
+      const [agentRes, clientsRes, commissionsRes, overridesRes] = await Promise.all([
         apiRequest(`/api/super-admin/agents/${id}`).catch(err => {
           console.error('Failed to load agent basic details:', err);
           return null;
@@ -406,6 +406,10 @@ export default function AgentDetail() {
         }),
         apiRequest(`/api/super-admin/agents/${id}/commissions`).catch(err => {
           console.error('Failed to load agent commissions:', err);
+          return null;
+        }),
+        apiRequest('/api/super-admin/commission-slabs/overrides').catch(err => {
+          console.error('Failed to load overrides in agent details:', err);
           return null;
         })
       ]);
@@ -442,6 +446,35 @@ export default function AgentDetail() {
         });
         setVerifiedDocs(verifiedMap);
 
+        // Search for overrides mapping
+        let specialOverrideVal = null;
+        let overrideReasonVal = null;
+        
+        const extractArray = (res) => {
+          if (!res) return [];
+          if (Array.isArray(res)) return res;
+          if (res.data && Array.isArray(res.data)) return res.data;
+          for (const key in res) {
+            if (Array.isArray(res[key])) return res[key];
+            if (res[key] && typeof res[key] === 'object') {
+              const nested = extractArray(res[key]);
+              if (nested && nested.length > 0) return nested;
+            }
+          }
+          return [];
+        };
+
+        const rawOverrides = extractArray(overridesRes);
+        const matchedOverride = rawOverrides.find(o => {
+          const oAgentId = o.agentId?._id || o.agentId?.id || o.agentId;
+          return oAgentId === id;
+        });
+
+        if (matchedOverride) {
+          specialOverrideVal = matchedOverride.commissionOverride !== undefined ? matchedOverride.commissionOverride : matchedOverride.percentage;
+          overrideReasonVal = matchedOverride.reason;
+        }
+
         let kycStatus = (ag.header?.kycStatus || ag.summaryCards?.kycStatus || profile.kycStatus || 'PENDING').toUpperCase();
         if (allDocsVerifiedOnLoad) {
           kycStatus = 'VERIFIED';
@@ -472,6 +505,8 @@ export default function AgentDetail() {
           commissionOneTime: profile.oneTimeCommission || 0,
           commissionMonthly: profile.monthlySlab || '—',
           commissionSpecial: profile.specialCommission || 0,
+          specialOverride: specialOverrideVal,
+          overrideReason: overrideReasonVal,
           panDocument: profile.panDocument,
           idProofDocument: profile.idProofDocument,
           bankProofDocument: profile.bankProofDocument,
@@ -1117,6 +1152,46 @@ export default function AgentDetail() {
                 <span className="kfpl-detail-info-item-value">{agent.nomineePhone}</span>
               </div>
             </div>
+          </div>
+
+          <div className="kfpl-detail-info-card">
+            <div className="kfpl-detail-info-title">Commission Rates & Active Overrides</div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.landmark}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">One-Time Commission Rate</span>
+                <span className="kfpl-detail-info-item-value">{agent.commissionOneTime || '0'}%</span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.shield}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Monthly Recurring Rate</span>
+                <span className="kfpl-detail-info-item-value">
+                  {agent.commissionMonthly && agent.commissionMonthly !== '—' ? `${agent.commissionMonthly}%` : 'Standard Slabs'}
+                </span>
+              </div>
+            </div>
+            <div className="kfpl-detail-info-row-item">
+              <div className="kfpl-detail-info-item-icon">{infoIcons.user}</div>
+              <div className="kfpl-detail-info-item-content">
+                <span className="kfpl-detail-info-item-label">Special Commission Override</span>
+                <span className="kfpl-detail-info-item-value" style={{ color: agent.specialOverride ? 'var(--color-gold-dark)' : 'inherit', fontWeight: agent.specialOverride ? 600 : 'normal' }}>
+                  {agent.specialOverride !== undefined && agent.specialOverride !== null ? `+${agent.specialOverride}%` : 'No active override'}
+                </span>
+              </div>
+            </div>
+            {agent.specialOverride && (
+              <div className="kfpl-detail-info-row-item">
+                <div className="kfpl-detail-info-item-icon">{infoIcons.fileText}</div>
+                <div className="kfpl-detail-info-item-content">
+                  <span className="kfpl-detail-info-item-label">Override Reason</span>
+                  <span className="kfpl-detail-info-item-value" style={{ fontSize: '0.875rem', fontStyle: 'italic', color: 'var(--color-text-muted)' }}>
+                    "{agent.overrideReason || 'N/A'}"
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
