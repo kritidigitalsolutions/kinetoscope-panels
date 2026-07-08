@@ -139,6 +139,7 @@ export default function PortfolioManagement() {
     // 1. Fetch projects
     try {
       const data = await apiRequest('/api/super-admin/projects');
+      console.log('GET /api/super-admin/projects raw API data:', data);
       const raw = extractProjects(data);
       const filteredRaw = raw.filter(p => p.name !== '__KFPL_DUMMY__');
       const mapped = filteredRaw.map(p => ({
@@ -219,19 +220,47 @@ export default function PortfolioManagement() {
       // Extract allotments
       const rawAllotments = allotmentsRes.allotments || allotmentsRes.data?.allotments || allotmentsRes.data || allotmentsRes || [];
       const mappedAllotments = (Array.isArray(rawAllotments) ? rawAllotments : []).map(al => {
+        if (!al) return null;
         const clientObj = al.client || al.clientId || {};
         const projectObj = al.project || al.projectId || {};
+
+        let pName = 'Unknown Project';
+        let pSeg = '—';
+        if (projectObj && typeof projectObj === 'object') {
+          pName = projectObj.name || al.projectName || 'Unknown Project';
+          pSeg = projectObj.segment || al.segment || '—';
+        } else {
+          pName = typeof projectObj === 'string' ? projectObj : (al.projectName || 'Unknown Project');
+          pSeg = al.segment || '—';
+        }
+
+        let cName = 'Unknown Client';
+        let cId = '—';
+        if (clientObj && typeof clientObj === 'object') {
+          cName = clientObj.fullName || clientObj.name || al.clientName || 'Unknown Client';
+          cId = clientObj.clientId || clientObj.clientCode || clientObj.id || '—';
+        } else {
+          cName = typeof clientObj === 'string' ? clientObj : (al.clientName || 'Unknown Client');
+          cId = al.clientId || '—';
+        }
+
+        // Just in case any fallback is still an object
+        const safePName = typeof pName === 'object' ? (pName.name || 'Unknown Project') : String(pName);
+        const safePSeg = typeof pSeg === 'object' ? (pSeg.name || '—') : String(pSeg);
+        const safeCName = typeof cName === 'object' ? (cName.name || cName.fullName || 'Unknown Client') : String(cName);
+        const safeCId = typeof cId === 'object' ? (cId.clientId || cId.clientCode || cId.id || '—') : String(cId);
+
         return {
           id: al._id || al.id,
-          projectName: projectObj.name || al.projectName || 'Unknown Project',
-          segment: projectObj.segment || al.segment || '—',
-          clientName: clientObj.fullName || clientObj.name || al.clientName || 'Unknown Client',
-          clientId: clientObj.clientId || al.clientId || '—',
+          projectName: safePName,
+          segment: safePSeg,
+          clientName: safeCName,
+          clientId: safeCId,
           amount: al.allottedAmount || al.amount || 0,
           creditDate: al.creditDate || al.createdAt || new Date().toISOString(),
           adminNote: al.remarks || al.adminNote || '—'
         };
-      });
+      }).filter(Boolean);
       setDividends(mappedAllotments);
 
       // Extract active clients list
@@ -367,10 +396,11 @@ export default function PortfolioManagement() {
           formDataToSend.append('allocation', formData.allocation || '');
           formDataToSend.append('bannerImage', selectedFile);
 
-          await apiRequest(`/api/super-admin/projects/${id}`, {
+          const res = await apiRequest(`/api/super-admin/projects/${id}`, {
             method: 'PATCH',
             body: formDataToSend,
           });
+          console.log('PATCH project (FormData) response:', res);
         } else {
           const payload = {
             name: formData.name.trim(),
@@ -389,10 +419,11 @@ export default function PortfolioManagement() {
             payload.bannerImage = '';
           }
 
-          await apiRequest(`/api/super-admin/projects/${id}`, {
+          const res = await apiRequest(`/api/super-admin/projects/${id}`, {
             method: 'PATCH',
             body: JSON.stringify(payload),
           });
+          console.log('PATCH project (JSON) payload:', payload, 'response:', res);
         }
         addToast(`${formData.name} updated successfully`, 'success', 'Project Updated');
       } else {
@@ -411,10 +442,11 @@ export default function PortfolioManagement() {
           formDataToSend.append('allocation', formData.allocation || '');
           formDataToSend.append('bannerImage', selectedFile);
 
-          await apiRequest('/api/super-admin/projects', {
+          const res = await apiRequest('/api/super-admin/projects', {
             method: 'POST',
             body: formDataToSend,
           });
+          console.log('POST project (FormData) response:', res);
         } else {
           const payload = {
             name: formData.name.trim(),
@@ -430,10 +462,11 @@ export default function PortfolioManagement() {
             allocation: formData.allocation || '',
           };
 
-          await apiRequest('/api/super-admin/projects', {
+          const res = await apiRequest('/api/super-admin/projects', {
             method: 'POST',
             body: JSON.stringify(payload),
           });
+          console.log('POST project (JSON) payload:', payload, 'response:', res);
         }
         addToast(`${formData.name} added successfully`, 'success', 'Project Created');
       }
@@ -1343,17 +1376,28 @@ export default function PortfolioManagement() {
                 {
                   header: 'Date of Allotment',
                   accessor: 'creditDate',
-                  render: (row) => (
-                    <span>
-                      {new Date(row.creditDate).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  )
+                  render: (row) => {
+                    let formattedDate = '—';
+                    try {
+                      if (row.creditDate) {
+                        const dateObj = new Date(row.creditDate);
+                        if (!isNaN(dateObj.getTime())) {
+                          formattedDate = dateObj.toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+                        } else {
+                          formattedDate = String(row.creditDate);
+                        }
+                      }
+                    } catch (e) {
+                      formattedDate = String(row.creditDate || '—');
+                    }
+                    return <span>{formattedDate}</span>;
+                  }
                 },
                 {
                   header: 'Remarks / Notes',

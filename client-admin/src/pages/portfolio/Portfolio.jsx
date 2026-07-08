@@ -309,12 +309,12 @@ export default function Portfolio() {
 
           <div className="kfpl-portfolio-drawer-section">
             <h3>Current Update</h3>
-            <p>{drawerProject.update}</p>
+            <p>{drawerProject.update || 'Project under active tracking.'}</p>
           </div>
 
           <div className="kfpl-portfolio-drawer-section">
             <h3>Allocation Focus</h3>
-            <p>{drawerProject.allocation}</p>
+            <p>{drawerProject.allocation || 'General project operational capital.'}</p>
           </div>
 
           {/* Project Media & Files */}
