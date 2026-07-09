@@ -3,7 +3,7 @@
    Description: Form to create a new agent
    ============================================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import { COMMISSION_SLABS } from '../../data/mockData';
@@ -13,6 +13,7 @@ import { apiRequest } from '../../config/apiHelper';
 export default function AddAgent() {
   const navigate = useNavigate();
   const addToast = useToast();
+  const [apiSlabs, setApiSlabs] = useState([]);
   const [form, setForm] = useState({
     name: '', email: '', phone: '', pan: '', aadhaar: '', passport: '',
     bankName: '', accountNo: '', confirmAccountNo: '', ifsc: '',
@@ -32,6 +33,31 @@ export default function AddAgent() {
   const [idProofDocFile, setIdProofDocFile] = useState(null);
   const [bankProofDocFile, setBankProofDocFile] = useState(null);
   const [nomineeProofDocFile, setNomineeProofDocFile] = useState(null);
+
+  useEffect(() => {
+    const fetchSlabs = async () => {
+      try {
+        const res = await apiRequest('/api/super-admin/commission-slabs');
+        const extractSlabs = (r) => {
+          if (!r) return [];
+          if (Array.isArray(r)) return r;
+          if (r.data) {
+            if (Array.isArray(r.data)) return r.data;
+            if (r.data.slabs && Array.isArray(r.data.slabs)) return r.data.slabs;
+          }
+          if (r.slabs && Array.isArray(r.slabs)) return r.slabs;
+          for (const k in r) {
+            if (Array.isArray(r[k])) return r[k];
+          }
+          return [];
+        };
+        setApiSlabs(extractSlabs(res));
+      } catch (err) {
+        console.error('Failed to load slabs in add agent:', err);
+      }
+    };
+    fetchSlabs();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -254,15 +280,56 @@ export default function AddAgent() {
             <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">One-Time Commission %</label>
-                <input className="kfpl-input" name="commissionOneTime" type="number" step="0.1" value={form.commissionOneTime} onChange={handleChange} placeholder="Enter your one-time commission %" />
+                <select className="kfpl-select" name="commissionOneTime" value={form.commissionOneTime} onChange={handleChange}>
+                  <option value="">Select slab</option>
+                  {(() => {
+                    const oneTimeApiSlabs = apiSlabs.filter(s => s.type === 'one-time');
+                    if (oneTimeApiSlabs.length > 0) {
+                      const formatCurrencyLocal = (val) => {
+                        if (val === 999999999) return 'Unlimited';
+                        if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+                        if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
+                        return `₹${val.toLocaleString('en-IN')}`;
+                      };
+                      return oneTimeApiSlabs.map(s => {
+                        const rate = s.commissionPercentage !== undefined ? s.commissionPercentage : (s.percentage || 0);
+                        const label = `Slab (${formatCurrencyLocal(s.minAmount)} - ${formatCurrencyLocal(s.maxAmount)})`;
+                        return (
+                          <option key={s._id || s.id} value={rate}>{label} — {rate}%</option>
+                        );
+                      });
+                    }
+                    return COMMISSION_SLABS.map(s => (
+                      <option key={s.id} value={s.percentage}>{s.label} — {s.percentage}%</option>
+                    ));
+                  })()}
+                </select>
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Monthly Slab %</label>
                 <select className="kfpl-select" name="commissionMonthly" value={form.commissionMonthly} onChange={handleChange}>
                   <option value="">Select slab</option>
-                  {COMMISSION_SLABS.map(s => (
-                    <option key={s.id} value={s.percentage}>{s.label} — {s.percentage}%</option>
-                  ))}
+                  {(() => {
+                    const monthlyApiSlabs = apiSlabs.filter(s => (s.type || 'monthly') === 'monthly');
+                    if (monthlyApiSlabs.length > 0) {
+                      const formatCurrencyLocal = (val) => {
+                        if (val === 999999999) return 'Unlimited';
+                        if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+                        if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
+                        return `₹${val.toLocaleString('en-IN')}`;
+                      };
+                      return monthlyApiSlabs.map(s => {
+                        const rate = s.commissionPercentage !== undefined ? s.commissionPercentage : (s.percentage || 0);
+                        const label = `Slab (${formatCurrencyLocal(s.minAmount)} - ${formatCurrencyLocal(s.maxAmount)})`;
+                        return (
+                          <option key={s._id || s.id} value={rate}>{label} — {rate}%</option>
+                        );
+                      });
+                    }
+                    return COMMISSION_SLABS.map(s => (
+                      <option key={s.id} value={s.percentage}>{s.label} — {s.percentage}%</option>
+                    ));
+                  })()}
                 </select>
               </div>
               <div className="kfpl-input-group">

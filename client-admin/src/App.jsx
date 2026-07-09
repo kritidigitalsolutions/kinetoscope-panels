@@ -30,6 +30,13 @@ import MediaDetail from './pages/media/MediaDetail';
 import OnboardingDetails from './pages/onboarding/OnboardingDetails';
 import NotFound from './pages/NotFound';
 
+// Protected Route Wrapper
+function ProtectedRoute({ children }) {
+  const auth = localStorage.getItem('kfpl_client_auth');
+  if (!auth) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -40,7 +47,13 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Protected Routes (MainLayout wraps all) */}
-          <Route element={<MainLayout />}>
+          <Route
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/dashboard" element={<DashboardHome />} />
             <Route path="/investment" element={<InvestmentOverview />} />
             <Route path="/complete-transaction-details" element={<CompleteTransactionDetails />} />

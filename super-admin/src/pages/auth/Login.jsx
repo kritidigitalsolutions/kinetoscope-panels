@@ -133,147 +133,161 @@ export default function Login() {
 
   return (
     <div className="kfpl-login">
-      <div className="kfpl-login-card animate-scale-in">
-        {/* Logo */}
-        <div className="kfpl-login-logo">
-          <div className="kfpl-login-logo-icon">K</div>
-          <h1 className="kfpl-login-title">Super Admin Portal</h1>
-          <p className="kfpl-login-subtitle">Kross Film Productions Ltd.</p>
+      {/* Left Column: Cinema Wallpaper */}
+      <div className="kfpl-login-wallpaper">
+        <div className="kfpl-login-brand">
+          <div className="kfpl-login-brand-logo">K</div>
+          <h1>Kinetoscope</h1>
+          <p>Super Admin control center. Manage agents, investors, commissions, and project portfolios in real-time.</p>
         </div>
+      </div>
 
-        {/* ── STEP 1: CREDENTIAL FORM ── */}
-        {step === 'credentials' && (
-          <>
-            {error && (
-              <div className="kfpl-login-error animate-fade-in">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                {error}
-              </div>
-            )}
+      {/* Right Column: Glassmorphic Form Card */}
+      <div className="kfpl-login-panel">
+        <div className="kfpl-login-card animate-scale-in">
+          {/* Logo and Titles */}
+          <div className="kfpl-login-logo">
+            <div className="kfpl-login-logo-icon">K</div>
+            <h1 className="kfpl-login-title">Super Admin Portal</h1>
+            <p className="kfpl-login-subtitle">Sign in to manage the production network</p>
+          </div>
 
-            <form className="kfpl-login-form" onSubmit={handleCredentialsSubmit}>
-              <div className="kfpl-login-input-group">
-                <label className="kfpl-login-label">Email Address</label>
-                <input
-                  type="email"
-                  className="kfpl-login-input"
-                  placeholder="Enter Your E-mail"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoFocus
-                />
-              </div>
+          {/* CREDENTIALS STEP */}
+          {step === 'credentials' && (
+            <div className="animate-fade-in">
+              {error && (
+                <div className="kfpl-login-error">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              )}
 
-              <div className="kfpl-login-input-group">
-                <label className="kfpl-login-label">Password</label>
-                <div className="kfpl-login-password-wrap">
+              <form className="kfpl-login-form" onSubmit={handleCredentialsSubmit}>
+                <div className="kfpl-login-input-group">
+                  <label className="kfpl-login-label">Email Address</label>
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type="email"
                     className="kfpl-login-input"
-                    placeholder="Enter password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
                   />
+                </div>
+
+                <div className="kfpl-login-input-group">
+                  <label className="kfpl-login-label">Password</label>
+                  <div className="kfpl-login-password-wrap">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="kfpl-login-input"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="kfpl-login-password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="kfpl-login-options">
+                  <label className="kfpl-login-remember">
+                    <input type="checkbox" /> Remember me
+                  </label>
+                  <span className="kfpl-login-forgot" onClick={() => navigate('/forgot-password')}>
+                    Forgot Password?
+                  </span>
+                </div>
+
+                <button type="submit" className="kfpl-login-btn" disabled={loading}>
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* TWO-FACTOR AUTHENTICATION STEP */}
+          {step === 'otp' && (
+            <div className="animate-fade-in">
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <div className="kfpl-login-tfa-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>Two-Factor Authentication</h2>
+                <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                  We sent a verification code to your email.<br />Please enter the 6-digit code below.
+                </p>
+              </div>
+
+              {otpError && (
+                <div className="kfpl-login-error">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  <span>{otpError}</span>
+                </div>
+              )}
+
+              <form className="kfpl-login-form" onSubmit={handleOtpSubmit}>
+                <div className="kfpl-login-input-group">
+                  <label className="kfpl-login-label">Verification Code</label>
+                  <input
+                    type="text"
+                    maxLength="6"
+                    className="kfpl-login-input"
+                    placeholder="Enter verification code"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    autoFocus
+                    style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '1.25rem', fontWeight: 700 }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                   <button
                     type="button"
-                    className="kfpl-login-password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
+                    className="kfpl-login-btn"
+                    style={{ flex: 1, background: 'rgba(255, 255, 255, 0.05)', color: 'var(--color-gold)', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: 'none' }}
+                    onClick={() => {
+                      setStep('credentials');
+                      setOtp('');
+                      setOtpError('');
+                    }}
+                    disabled={loading}
                   >
-                    {showPassword ? (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    )}
+                    Back
+                  </button>
+                  <button type="submit" className="kfpl-login-btn" style={{ flex: 2 }} disabled={loading}>
+                    {loading ? 'Verifying...' : 'Verify & Login'}
                   </button>
                 </div>
-              </div>
-
-              <div className="kfpl-login-options">
-                <label className="kfpl-login-remember">
-                  <input type="checkbox" /> Remember me
-                </label>
-                <span className="kfpl-login-forgot" onClick={() => navigate('/forgot-password')}>
-                  Forgot Password?
-                </span>
-              </div>
-
-              <button type="submit" className="kfpl-login-btn" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </form>
-          </>
-        )}
-
-        {/* ── STEP 2: TWO-FACTOR AUTHENTICATION FORM ── */}
-        {step === 'otp' && (
-          <div className="animate-fade-in">
-            <div className="kfpl-login-tfa-header" style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--color-gold)', marginBottom: '12px' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '28px', height: '28px' }}>
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-              </div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '6px' }}>Two-Factor Authentication</h2>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                We sent a verification code to your email.<br />Please enter the 6-digit code below.
-              </p>
+              </form>
             </div>
+          )}
 
-            {otpError && (
-              <div className="kfpl-login-error animate-fade-in" style={{ marginBottom: '16px' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                {otpError}
-              </div>
-            )}
-
-            <form className="kfpl-login-form" onSubmit={handleOtpSubmit}>
-              <div className="kfpl-login-input-group">
-                <label className="kfpl-login-label">Verification Code</label>
-                <input
-                  type="text"
-                  maxLength="6"
-                  className="kfpl-login-input"
-                  placeholder="Enter 6-digit code (use 123456)"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  autoFocus
-                  style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '1.25rem', fontWeight: 700 }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                <button
-                  type="button"
-                  className="kfpl-login-btn"
-                  style={{ flex: 1, background: 'rgba(16, 185, 129, 0.1)', color: 'var(--color-gold)', border: '1px solid rgba(16, 185, 129, 0.2)' }}
-                  onClick={() => {
-                    setStep('credentials');
-                    setOtp('');
-                    setOtpError('');
-                  }}
-                  disabled={loading}
-                >
-                  Back
-                </button>
-                <button type="submit" className="kfpl-login-btn" style={{ flex: 2 }} disabled={loading}>
-                  {loading ? 'Verifying...' : 'Verify & Login'}
-                </button>
-              </div>
-            </form>
+          <div className="kfpl-login-footer">
+            © 2026 Kinetoscope. All rights reserved.
           </div>
-        )}
-
-        <div className="kfpl-login-footer">
-          © 2025 Kross Film Productions Ltd. All rights reserved.
         </div>
       </div>
     </div>

@@ -1,242 +1,291 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 /* ============================================================
    KFPL Client Portal — Page-Specific Styles
    Description: Login, Dashboard, Investment, Perks, Profile,
                 Onboarding, Service Requests, Support, Media
    ============================================================ */
 
-/* ── Login Page ─────────────────────── */
+/* ── Login Page — Premium Cinema Split-Screen ─────────────────────── */
+
 .kfpl-login {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--color-navy) 0%, #0B3020 50%, #11442F 100%);
-  padding: 24px;
-  position: relative;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-family: 'Inter', sans-serif;
   overflow: hidden;
+  background: var(--color-navy);
 }
 
-.kfpl-login::before {
-  content: '';
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
-  top: -200px;
-  right: -200px;
-}
-
-.kfpl-login::after {
-  content: '';
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
-  bottom: -100px;
-  left: -100px;
-}
-
-.kfpl-login-card {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-xl);
-  padding: 40px 36px;
-  width: 100%;
-  max-width: 420px;
+.kfpl-login-wallpaper {
   position: relative;
+  background: url('/login-bg.jpg') center / cover no-repeat;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 48px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.kfpl-login-wallpaper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6,29,19,0.6) 0%, rgba(6,29,19,0.3) 40%, rgba(6,29,19,0.9) 100%);
   z-index: 1;
 }
 
-.kfpl-login-logo {
-  text-align: center;
-  margin-bottom: 32px;
+.kfpl-login-wallpaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, transparent 60%);
+  z-index: 2;
 }
 
-.kfpl-login-logo-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+.kfpl-login-brand { position: relative; z-index: 3; max-width: 440px; }
+
+.kfpl-login-brand-logo {
+  width: 56px; height: 56px; border-radius: 14px;
   background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.5rem;
-  color: var(--color-white);
-  margin-bottom: 16px;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.5rem; color: #fff;
+  margin-bottom: 20px; box-shadow: 0 8px 32px rgba(16,185,129,0.3);
+}
+
+.kfpl-login-brand h1 {
+  font-size: 2.25rem; font-weight: 800; color: #fff;
+  margin-bottom: 12px; line-height: 1.15; letter-spacing: -0.5px;
+}
+
+.kfpl-login-brand p {
+  font-size: 0.95rem; color: rgba(240,253,244,0.7);
+  line-height: 1.6; font-weight: 400;
+}
+
+.kfpl-login-panel {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-navy); padding: 40px;
+  position: relative; height: 100%; overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.kfpl-login-panel::before {
+  content: '';
+  position: absolute; top: -150px; right: -150px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+  border-radius: 50%; pointer-events: none;
+}
+
+.kfpl-login-card { width: 100%; max-width: 440px; position: relative; z-index: 1; }
+
+.kfpl-login-logo { text-align: center; margin-bottom: 28px; }
+
+.kfpl-login-logo-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.375rem; color: #fff;
+  margin-bottom: 14px; box-shadow: 0 6px 24px rgba(16,185,129,0.25);
 }
 
 .kfpl-login-title {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--color-white);
-  margin-bottom: 4px;
+  font-size: 1.5rem; font-weight: 800; color: #fff;
+  margin-bottom: 6px; letter-spacing: -0.3px;
 }
 
-.kfpl-login-subtitle {
-  font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 400;
+.kfpl-login-subtitle { font-size: 0.875rem; color: rgba(240,253,244,0.5); font-weight: 400; }
+
+.kfpl-login-tabs {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.03); border-radius: 12px;
+  padding: 4px; margin-bottom: 28px;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
-.kfpl-login-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-md);
-  color: #FCA5A5;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  margin-bottom: 20px;
+.kfpl-login-tab {
+  flex: 1; padding: 10px 16px; border: none; border-radius: 9px;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  transition: all 0.25s ease; background: transparent;
+  color: rgba(255,255,255,0.4); font-family: 'Inter', sans-serif;
 }
 
-.kfpl-login-error svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.kfpl-login-tab.active {
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: #fff; box-shadow: 0 4px 16px rgba(16,185,129,0.3);
 }
 
-.kfpl-login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
+.kfpl-login-tab:hover:not(.active) { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.04); }
 
-.kfpl-login-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+.kfpl-login-form { display: flex; flex-direction: column; gap: 18px; }
+.kfpl-login-input-group { display: flex; flex-direction: column; gap: 6px; }
 
 .kfpl-login-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8125rem; font-weight: 600;
+  color: rgba(240,253,244,0.65); letter-spacing: 0.2px;
 }
 
 .kfpl-login-input {
-  width: 100%;
-  padding: 11px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  color: var(--color-white);
-  transition: var(--transition-fast);
+  width: 100%; padding: 12px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px; font-size: 0.875rem; color: #fff;
+  font-family: 'Inter', sans-serif; transition: all 0.25s ease; outline: none;
 }
 
-.kfpl-login-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
+.kfpl-login-input::placeholder { color: rgba(255,255,255,0.25); }
 
 .kfpl-login-input:focus {
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 0 20px rgba(16, 185, 129, 0.05);
 }
 
-.kfpl-login-password-wrap {
-  position: relative;
-}
+.kfpl-login-password-wrap { position: relative; }
 
 .kfpl-login-password-toggle {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
-  transition: var(--transition-fast);
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: rgba(255,255,255,0.4); cursor: pointer;
+  background: none; border: none; padding: 0;
+  display: flex; align-items: center; transition: all 0.2s ease;
 }
 
-.kfpl-login-password-toggle:hover {
-  color: var(--color-gold);
-}
+.kfpl-login-password-toggle:hover { color: var(--color-gold); }
+.kfpl-login-password-toggle svg { width: 18px; height: 18px; }
 
-.kfpl-login-password-toggle svg {
-  width: 18px;
-  height: 18px;
-}
-
-.kfpl-login-options {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+.kfpl-login-options { display: flex; align-items: center; justify-content: space-between; }
 
 .kfpl-login-remember {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8125rem; color: rgba(240,253,244,0.5); cursor: pointer;
 }
 
-.kfpl-login-remember input[type='checkbox'] {
-  accent-color: var(--color-gold);
-  width: 14px;
-  height: 14px;
-}
+.kfpl-login-remember input[type='checkbox'] { accent-color: var(--color-gold); width: 14px; height: 14px; }
 
 .kfpl-login-forgot {
-  font-size: 0.8125rem;
-  color: var(--color-gold);
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition-fast);
+  font-size: 0.8125rem; color: var(--color-gold); font-weight: 600;
+  cursor: pointer; transition: all 0.2s ease;
+  background: none; border: none; padding: 0;
 }
 
-.kfpl-login-forgot:hover {
-  color: var(--color-gold-dark);
-}
+.kfpl-login-forgot:hover { color: var(--color-gold); text-decoration: underline; }
 
 .kfpl-login-btn {
-  width: 100%;
-  padding: 12px;
-  border-radius: var(--radius-md);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition-smooth);
+  width: 100%; padding: 13px; border-radius: 10px;
+  font-size: 0.9375rem; font-weight: 700; cursor: pointer;
+  transition: all 0.3s ease;
   background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
-  color: var(--color-white);
-  border: none;
+  color: #fff; border: none; font-family: 'Inter', sans-serif;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2); letter-spacing: 0.3px;
+}
+
+.kfpl-login-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s ease;
 }
 
 .kfpl-login-btn:hover:not(:disabled) {
-  box-shadow: var(--shadow-emerald);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4); transform: translateY(-1.5px);
 }
 
-.kfpl-login-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.kfpl-login-btn:hover:not(:disabled)::after { opacity: 1; }
+.kfpl-login-btn:active:not(:disabled) { transform: translateY(0); }
+.kfpl-login-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.kfpl-login-error {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.18); border-radius: 10px;
+  color: #FCA5A5; font-size: 0.8125rem; font-weight: 500; margin-bottom: 6px;
+}
+
+.kfpl-login-error svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.kfpl-login-success {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.18); border-radius: 10px;
+  color: #86EFAC; font-size: 0.8125rem; font-weight: 500; margin-bottom: 6px;
 }
 
 .kfpl-login-footer {
-  text-align: center;
-  margin-top: 28px;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.25);
+  text-align: center; margin-top: 32px;
+  font-size: 0.75rem; color: rgba(240,253,244,0.25); letter-spacing: 0.3px;
 }
 
-.animate-scale-in {
-  animation: scaleIn 0.4s ease;
+.kfpl-login-register-scroll {
+  max-height: 55vh; overflow-y: auto; padding-right: 8px; margin-bottom: 6px;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease;
+.kfpl-login-register-scroll::-webkit-scrollbar { width: 6px; }
+.kfpl-login-register-scroll::-webkit-scrollbar-track { background: transparent; }
+.kfpl-login-register-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 4px; }
+
+.kfpl-login-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.kfpl-login-section-label {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--color-gold); text-transform: uppercase;
+  letter-spacing: 1.5px; margin-top: 14px; margin-bottom: 6px;
 }
+
+.kfpl-login-divider { display: flex; align-items: center; gap: 14px; margin: 4px 0; }
+.kfpl-login-divider::before, .kfpl-login-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+.kfpl-login-divider span { font-size: 0.75rem; color: rgba(255,255,255,0.25); font-weight: 500; }
+
+.animate-scale-in { animation: loginScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-fade-in { animation: loginFadeIn 0.35s ease; }
+
+@keyframes loginScaleIn {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes loginFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kfpl-login-tfa-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(16,185,129,0.1); color: var(--color-gold); margin-bottom: 14px;
+}
+
+.kfpl-login-tfa-icon svg { width: 28px; height: 28px; }
+
+.kfpl-login-mock-otp {
+  margin-top: 12px; padding: 8px 14px;
+  background: rgba(16,185,129,0.06); border-radius: 8px;
+  border: 1px solid rgba(16,185,129,0.15); display: inline-block;
+}
+
+.kfpl-login-mock-otp span { font-size: 0.75rem; color: var(--color-gold); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .kfpl-login { grid-template-columns: 1fr; height: auto; overflow: auto; }
+  .kfpl-login-wallpaper { display: none; }
+  .kfpl-login-panel {
+    min-height: 100vh;
+    background: linear-gradient(180deg, rgba(6,29,19,0.92) 0%, rgba(6,29,19,0.98) 100%), url('/login-bg.jpg') center / cover no-repeat;
+    overflow-y: auto;
+    height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .kfpl-login-panel { padding: 24px 20px; }
+  .kfpl-login-card { max-width: 100%; }
+  .kfpl-login-form-row { grid-template-columns: 1fr; }
+}
+
+
+
+
 
 /* ── Journey Progress Bar ─────────────────────── */
 .kfpl-journey {

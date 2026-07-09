@@ -461,6 +461,11 @@ export default function InvestmentOverview() {
     roiTillDateVal = `${calculated.toFixed(2)}%`;
   }
 
+  const actualMonthlyReturn = investments.reduce((sum, investment) => {
+    const roiVal = investment.roiAllocated || investment.roi || 0;
+    return sum + Math.round((investment.amount * roiVal) / 100);
+  }, 0);
+
   const summaryCards = [
     {
       label: 'Total Invested',
@@ -479,8 +484,8 @@ export default function InvestmentOverview() {
     },
     {
       label: 'Monthly ROI',
-      value: formatAmount(monthlyReturn),
-      trend: `${calcRate}% annual projection`,
+      value: formatAmount(actualMonthlyReturn),
+      trend: `${(weightedROI * 12).toFixed(2)}% annual projection`,
       trendDirection: 'up',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

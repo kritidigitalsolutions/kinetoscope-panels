@@ -160,73 +160,7 @@ const PRESET_TEMPLATES = [
 ];
 
 // Initial mock logs of manually sent notifications
-const INITIAL_SENT_LOGS = [
-  {
-    id: 'msg-101',
-    dateTime: '2026-07-03 14:20',
-    subject: 'Quarterly Dividend & Return Summary Q2',
-    recipientType: 'Bulk Group',
-    recipientSummary: 'All Active Clients and Agents (4 recipients total)',
-    templateName: 'Quarterly Statement Notice',
-    attachmentsCount: 1,
-    attachments: [{ name: 'Q2_returns_summary.pdf', size: '2.4 MB' }],
-    body: '<p>Statements are ready for download...</p>',
-    status: 'Delivered',
-    scheduledFor: null
-  },
-  {
-    id: 'msg-102',
-    dateTime: '2026-07-02 11:05',
-    subject: 'Welcome to the Diamond Tier Club',
-    recipientType: 'Individual',
-    recipientSummary: 'Tushar Bhatnagar (KFPL-CL-1001)',
-    templateName: 'Reward / Perk Announcement',
-    attachmentsCount: 0,
-    attachments: [],
-    body: '<p>Milestone achieved Tushar...</p>',
-    status: 'Delivered',
-    scheduledFor: null
-  },
-  {
-    id: 'msg-103',
-    dateTime: '2026-06-28 09:15',
-    subject: 'Updates on production schedule for Project Alpha',
-    recipientType: 'Bulk Group',
-    recipientSummary: 'All Registered Agents (1 recipient total)',
-    templateName: 'Custom Email (Blank)',
-    attachmentsCount: 2,
-    attachments: [{ name: 'Project_Alpha_Trailer.mp4', size: '15.8 MB' }, { name: 'agent_guide_v2.pdf', size: '1.2 MB' }],
-    body: '<p>Please brief your investors on the delay...</p>',
-    status: 'Delivered',
-    scheduledFor: null
-  },
-  {
-    id: 'msg-104',
-    dateTime: '2026-07-07 09:00',
-    subject: 'Monthly ROI Payout Summary - July 2026',
-    recipientType: 'Bulk Group',
-    recipientSummary: 'All Active Clients (3 recipients total)',
-    templateName: 'Quarterly Statement Notice',
-    attachmentsCount: 1,
-    attachments: [{ name: 'July_2026_ROI_Report.pdf', size: '3.1 MB' }],
-    body: '<p>Attached is your monthly ROI payout report...</p>',
-    status: 'Scheduled',
-    scheduledFor: '2026-07-10 (Thursday) at 10:00 AM IST'
-  },
-  {
-    id: 'msg-105',
-    dateTime: '2026-07-06 16:30',
-    subject: 'Welcome to KFPL - Agent Onboarding Complete',
-    recipientType: 'Individual',
-    recipientSummary: 'Rishika Chaudhary (KFPL-AGT-1001)',
-    templateName: 'Agent Onboarding Welcome',
-    attachmentsCount: 0,
-    attachments: [],
-    body: '<p>Dear Rishika, Welcome to the KFPL Agent Network...</p>',
-    status: 'Scheduled',
-    scheduledFor: '2026-07-08 (Tuesday) at 09:30 AM IST'
-  }
-];
+const INITIAL_SENT_LOGS = [];
 
 // SVG Icons Definition
 const svgIcons = {
@@ -304,14 +238,8 @@ export default function EmailNotifications() {
   const [activeTab, setActiveTab] = useState('compose');
 
   // Load clients and agents data from APIs (with fallback mock structures)
-  const [clients, setClients] = useState([
-    { id: '6a178eea1bfaaa856cac2115', name: 'Tushar Bhatnagar', code: 'KFPL-CL-1001', email: 'tushar@kritidigital.com', role: 'client' },
-    { id: '6a178eea1bfaaa856cac2116', name: 'Milind Ratan Saugat', code: 'KFPL-CL-1002', email: 'milindsaugat1122@gmail.com', role: 'client' },
-    { id: '6a178eea1bfaaa856cac2117', name: 'Garima Agrawal', code: 'KFPL-CL-1003', email: 'agrawalgarima53@gmail.com', role: 'client' }
-  ]);
-  const [agents, setAgents] = useState([
-    { id: '6a175c3add213cf692b9fd6e', name: 'Rishika Chaudhary', code: 'KFPL-AGT-1001', email: 'rishikakds@gmail.com', role: 'agent' }
-  ]);
+  const [clients, setClients] = useState([]);
+  const [agents, setAgents] = useState([]);
 
   // Combined recipient list for selection states
   const [recipientsList, setRecipientsList] = useState([]);
@@ -362,16 +290,16 @@ export default function EmailNotifications() {
 
   // Auto trigger templates state
   const [autoTriggers, setAutoTriggers] = useState([
-    { id: 1, event: 'New Investor Onboarded', recipient: 'Client', status: 'active', lastSent: '2026-07-03 14:30', count: 247 },
-    { id: 2, event: 'Agreement Uploaded', recipient: 'Client', status: 'active', lastSent: '2026-07-03 16:45', count: 189 },
-    { id: 3, event: 'Investment Assigned / Modified', recipient: 'Client', status: 'active', lastSent: '2026-07-03 10:15', count: 312 },
-    { id: 4, event: 'ROI Marked as Paid', recipient: 'Client', status: 'active', lastSent: '2026-07-02 11:00', count: 856 },
-    { id: 5, event: 'Deposit Approved', recipient: 'Client / Agent', status: 'active', lastSent: '2026-07-01 09:30', count: 124 },
-    { id: 6, event: 'Deposit Rejected', recipient: 'Client / Agent', status: 'active', lastSent: '2026-06-29 14:00', count: 18 },
-    { id: 7, event: 'Withdrawal Approved', recipient: 'Client / Agent', status: 'active', lastSent: '2026-06-28 15:20', count: 67 },
-    { id: 8, event: 'Withdrawal Rejected', recipient: 'Client / Agent', status: 'active', lastSent: '2026-06-27 10:45', count: 9 },
-    { id: 9, event: 'Commission Marked as Paid', recipient: 'Agent', status: 'active', lastSent: '2026-07-03 12:00', count: 45 },
-    { id: 10, event: 'Perk Assigned', recipient: 'Client', status: 'active', lastSent: '2026-07-01 16:30', count: 38 },
+    { id: 1, event: 'New Investor Onboarded', recipient: 'Client', status: 'active', lastSent: '—', count: 0 },
+    { id: 2, event: 'Agreement Uploaded', recipient: 'Client', status: 'active', lastSent: '—', count: 0 },
+    { id: 3, event: 'Investment Assigned / Modified', recipient: 'Client', status: 'active', lastSent: '—', count: 0 },
+    { id: 4, event: 'ROI Marked as Paid', recipient: 'Client', status: 'active', lastSent: '—', count: 0 },
+    { id: 5, event: 'Deposit Approved', recipient: 'Client / Agent', status: 'active', lastSent: '—', count: 0 },
+    { id: 6, event: 'Deposit Rejected', recipient: 'Client / Agent', status: 'active', lastSent: '—', count: 0 },
+    { id: 7, event: 'Withdrawal Approved', recipient: 'Client / Agent', status: 'active', lastSent: '—', count: 0 },
+    { id: 8, event: 'Withdrawal Rejected', recipient: 'Client / Agent', status: 'active', lastSent: '—', count: 0 },
+    { id: 9, event: 'Commission Marked as Paid', recipient: 'Agent', status: 'active', lastSent: '—', count: 0 },
+    { id: 10, event: 'Perk Assigned', recipient: 'Client', status: 'active', lastSent: '—', count: 0 },
   ]);
   const [metricsData, setMetricsData] = useState({ totalSent: null, scheduled: null, recipients: null, activeTriggers: null });
 
@@ -1044,9 +972,9 @@ export default function EmailNotifications() {
   });
 
   // Calculate dynamic stats (API metrics override, otherwise fallback to local computation)
-  const totalSentCount = metricsData.totalSent !== null ? metricsData.totalSent : (sentLogs.filter(l => l.status === 'Delivered').length * 28 + 1284);
-  const scheduledCount = metricsData.scheduled !== null ? metricsData.scheduled : sentLogs.filter(l => l.status === 'Scheduled').length;
-  const activeTriggersCount = metricsData.activeTriggers !== null ? metricsData.activeTriggers : autoTriggers.filter(t => t.status === 'active').length;
+  const totalSentCount = metricsData.totalSent !== null && metricsData.totalSent !== undefined ? metricsData.totalSent : sentLogs.filter(l => l.status === 'Delivered').length;
+  const scheduledCount = metricsData.scheduled !== null && metricsData.scheduled !== undefined ? metricsData.scheduled : sentLogs.filter(l => l.status === 'Scheduled').length;
+  const activeTriggersCount = metricsData.activeTriggers !== null && metricsData.activeTriggers !== undefined ? metricsData.activeTriggers : autoTriggers.filter(t => t.status === 'active').length;
 
   // Selected Clients and Agents count for display in accordions
   const selectedClientsCount = selectedRecipients.filter(id => clients.some(c => c.id === id)).length;

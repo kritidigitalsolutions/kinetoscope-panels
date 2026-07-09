@@ -19,6 +19,7 @@ export default function EditAgent() {
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [apiSlabs, setApiSlabs] = useState([]);
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', pan: '',
@@ -37,9 +38,31 @@ export default function EditAgent() {
   const [nomineeProofDocFile, setNomineeProofDocFile] = useState(null);
 
   useEffect(() => {
-    const fetchAgent = async () => {
+    const fetchAgentAndSlabs = async () => {
       try {
-        const data = await apiRequest(`/api/super-admin/agents/${id}`);
+        const [agentRes, slabsRes] = await Promise.all([
+          apiRequest(`/api/super-admin/agents/${id}`),
+          apiRequest('/api/super-admin/commission-slabs').catch(err => {
+            console.error('Failed to load slabs in edit agent:', err);
+            return null;
+          })
+        ]);
+
+        const extractSlabs = (r) => {
+          if (!r) return [];
+          if (Array.isArray(r)) return r;
+          if (r.data) {
+            if (Array.isArray(r.data)) return r.data;
+            if (r.data.slabs && Array.isArray(r.data.slabs)) return r.data.slabs;
+          }
+          if (r.slabs && Array.isArray(r.slabs)) return r.slabs;
+          for (const k in r) {
+            if (Array.isArray(r[k])) return r[k];
+          }
+          return [];
+        };
+        setApiSlabs(extractSlabs(slabsRes));
+
         const extractAgentDetail = (res) => {
           if (!res) return null;
           if (res.agent) return res.agent;
@@ -49,26 +72,52 @@ export default function EditAgent() {
           }
           return res;
         };
-        const ag = extractAgentDetail(data);
-        setAgent(ag);
+        const ag = extractAgentDetail(agentRes);
+        const user = ag.user || {};
+        const profile = ag.profile || {};
+
+        const normalizedAg = {
+          ...ag,
+          id: user._id || profile.userId || ag._id || ag.id,
+          name: profile.fullName || user.name || '',
+          email: profile.email || user.email || '',
+          phone: profile.phone || '',
+          pan: profile.panNumber || '',
+          status: ag.status || profile.status || 'Active',
+          agentId: ag.header?.agentCode || user.clientCode || profile.agentId || '',
+          citizenship: profile.residencyStatus || 'National',
+          bankName: profile.bankName || '',
+          accountNo: profile.accountNumber || '',
+          ifsc: profile.ifscCode || '',
+          commissionOneTime: profile.oneTimeCommission ?? '',
+          commissionMonthly: profile.monthlySlab ?? '',
+          commissionSpecial: profile.specialCommission ?? '',
+          nomineeName: profile.nomineeName || '',
+          nomineeRelation: profile.nomineeRelation || '',
+          nomineeContact: profile.nomineePhone || '',
+          nomineeEmail: profile.nomineeEmail || '',
+          nomineeCitizenship: profile.nomineeResidency || 'National',
+        };
+
+        setAgent(normalizedAg);
         setForm({
-          name: ag.name || ag.fullName || '',
-          email: ag.email || '',
-          phone: ag.phone || '',
-          pan: ag.pan || ag.panNumber || '',
-          bankName: ag.bankName || '',
-          accountNo: ag.accountNo || ag.accountNumber || '',
-          ifsc: ag.ifsc || ag.ifscCode || '',
-          commissionOneTime: ag.commissionOneTime ?? '',
-          commissionMonthly: ag.commissionMonthly ?? '',
-          commissionSpecial: ag.commissionSpecial ?? '',
-          status: ag.status || '',
-          nomineeName: ag.nominee?.name || ag.nomineeName || '',
-          nomineeRelation: ag.nominee?.relation || ag.nomineeRelation || '',
-          nomineeContact: ag.nominee?.contact || ag.nomineePhone || '',
-          nomineeEmail: ag.nominee?.email || ag.nomineeEmail || '',
-          citizenship: ag.citizenship || ag.residencyStatus || 'National',
-          nomineeCitizenship: ag.nominee?.citizenship || ag.nomineeResidency || 'National',
+          name: normalizedAg.name,
+          email: normalizedAg.email,
+          phone: normalizedAg.phone,
+          pan: normalizedAg.pan,
+          bankName: normalizedAg.bankName,
+          accountNo: normalizedAg.accountNo,
+          ifsc: normalizedAg.ifsc,
+          commissionOneTime: normalizedAg.commissionOneTime,
+          commissionMonthly: normalizedAg.commissionMonthly,
+          commissionSpecial: normalizedAg.commissionSpecial,
+          status: normalizedAg.status.toLowerCase(),
+          nomineeName: normalizedAg.nomineeName,
+          nomineeRelation: normalizedAg.nomineeRelation,
+          nomineeContact: normalizedAg.nomineeContact,
+          nomineeEmail: normalizedAg.nomineeEmail,
+          citizenship: normalizedAg.citizenship,
+          nomineeCitizenship: normalizedAg.nomineeCitizenship === 'International' ? 'International' : 'National',
         });
       } catch (err) {
         console.error('Failed to load agent profile:', err);
@@ -77,7 +126,7 @@ export default function EditAgent() {
         setLoading(false);
       }
     };
-    fetchAgent();
+    fetchAgentAndSlabs();
   }, [id]);
 
   if (loading) {
@@ -125,6 +174,7 @@ export default function EditAgent() {
       formData.append('panNumber', form.pan);
       formData.append('bankName', form.bankName);
       formData.append('accountNumber', form.accountNo);
+      formData.append('confirmAccountNumber', form.accountNo);
       formData.append('ifscCode', form.ifsc);
       formData.append('oneTimeCommission', form.commissionOneTime || '0');
       formData.append('monthlySlab', form.commissionMonthly || '0');
@@ -253,15 +303,56 @@ export default function EditAgent() {
             <div className="kfpl-form-row-3">
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">One-Time Commission %</label>
-                <input className="kfpl-input" name="commissionOneTime" type="number" step="0.1" value={form.commissionOneTime} onChange={handleChange} placeholder="e.g. 2" />
+                <select className="kfpl-select" name="commissionOneTime" value={form.commissionOneTime} onChange={handleChange}>
+                  <option value="">Select slab</option>
+                  {(() => {
+                    const oneTimeApiSlabs = apiSlabs.filter(s => s.type === 'one-time');
+                    if (oneTimeApiSlabs.length > 0) {
+                      const formatCurrencyLocal = (val) => {
+                        if (val === 999999999) return 'Unlimited';
+                        if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+                        if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
+                        return `₹${val.toLocaleString('en-IN')}`;
+                      };
+                      return oneTimeApiSlabs.map(s => {
+                        const rate = s.commissionPercentage !== undefined ? s.commissionPercentage : (s.percentage || 0);
+                        const label = `Slab (${formatCurrencyLocal(s.minAmount)} - ${formatCurrencyLocal(s.maxAmount)})`;
+                        return (
+                          <option key={s._id || s.id} value={rate}>{label} — {rate}%</option>
+                        );
+                      });
+                    }
+                    return COMMISSION_SLABS.map(s => (
+                      <option key={s.id} value={s.percentage}>{s.label} — {s.percentage}%</option>
+                    ));
+                  })()}
+                </select>
               </div>
               <div className="kfpl-input-group">
                 <label className="kfpl-input-label">Monthly Slab %</label>
                 <select className="kfpl-select" name="commissionMonthly" value={form.commissionMonthly} onChange={handleChange}>
                   <option value="">Select slab</option>
-                  {COMMISSION_SLABS.map(s => (
-                    <option key={s.id} value={s.percentage}>{s.label} — {s.percentage}%</option>
-                  ))}
+                  {(() => {
+                    const monthlyApiSlabs = apiSlabs.filter(s => (s.type || 'monthly') === 'monthly');
+                    if (monthlyApiSlabs.length > 0) {
+                      const formatCurrencyLocal = (val) => {
+                        if (val === 999999999) return 'Unlimited';
+                        if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+                        if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
+                        return `₹${val.toLocaleString('en-IN')}`;
+                      };
+                      return monthlyApiSlabs.map(s => {
+                        const rate = s.commissionPercentage !== undefined ? s.commissionPercentage : (s.percentage || 0);
+                        const label = `Slab (${formatCurrencyLocal(s.minAmount)} - ${formatCurrencyLocal(s.maxAmount)})`;
+                        return (
+                          <option key={s._id || s.id} value={rate}>{label} — {rate}%</option>
+                        );
+                      });
+                    }
+                    return COMMISSION_SLABS.map(s => (
+                      <option key={s.id} value={s.percentage}>{s.label} — {s.percentage}%</option>
+                    ));
+                  })()}
                 </select>
               </div>
               <div className="kfpl-input-group">

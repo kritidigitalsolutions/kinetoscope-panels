@@ -1,6 +1,6 @@
 /* ============================================================
    Page: ForgotPassword.jsx
-   Description: Email-based OTP password reset flow
+   Description: Email-based password reset flow
    ============================================================ */
 
 import { useState } from 'react';
@@ -18,38 +18,67 @@ export default function ForgotPassword() {
 
   return (
     <div className="kfpl-login">
-      <div className="kfpl-login-card animate-scale-in">
-        <div className="kfpl-login-logo">
-          <div className="kfpl-login-logo-icon">K</div>
-          <h1 className="kfpl-login-title">Reset Password</h1>
-          <p className="kfpl-login-subtitle">We'll send you a reset link</p>
+      {/* Left Column: Cinema Wallpaper */}
+      <div className="kfpl-login-wallpaper">
+        <div className="kfpl-login-brand">
+          <div className="kfpl-login-brand-logo">K</div>
+          <h1>Kinetoscope</h1>
+          <p>Client Portal. Reset your credentials securely here.</p>
         </div>
+      </div>
 
-        {!sent ? (
-          <form className="kfpl-login-form" onSubmit={handleSubmit}>
-            <div className="kfpl-login-input-group">
-              <label className="kfpl-login-label">Email Address</label>
-              <input type="email" className="kfpl-login-input" placeholder="Enter your registered email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
-            </div>
-            <button type="submit" className="kfpl-login-btn">Send Reset Link</button>
-            <div style={{ textAlign: 'center', marginTop: '8px' }}>
-              <span className="kfpl-login-forgot" onClick={() => navigate('/login')}>← Back to Login</span>
-            </div>
-          </form>
-        ) : (
-          <div className="animate-fade-in" style={{ textAlign: 'center' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--color-gold)', marginBottom: '16px' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: '28px', height: '28px' }}>
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
-            </div>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '8px' }}>Check Your Email</h2>
-            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>We've sent a password reset link to <strong style={{ color: 'var(--color-gold)' }}>{email}</strong></p>
-            <button className="kfpl-login-btn" onClick={() => navigate('/login')}>Back to Login</button>
+      {/* Right Column: Form Panel */}
+      <div className="kfpl-login-panel">
+        <div className="kfpl-login-card animate-scale-in">
+          <div className="kfpl-login-logo">
+            <div className="kfpl-login-logo-icon">K</div>
+            <h1 className="kfpl-login-title">Reset Password</h1>
+            <p className="kfpl-login-subtitle">Enter your email to receive a reset link</p>
           </div>
-        )}
 
-        <div className="kfpl-login-footer">© 2025 Kross Film Productions Ltd. All rights reserved.</div>
+          {sent ? (
+            <div style={{ textAlign: 'center' }} className="animate-fade-in">
+              <div className="kfpl-login-tfa-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '28px', height: '28px' }}>
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '24px', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                A password reset link has been sent to <strong style={{ color: 'var(--color-gold)' }}>{email}</strong>. 
+                Please check your inbox.
+              </p>
+              <button className="kfpl-login-btn" onClick={() => navigate('/login')}>
+                Back to Login
+              </button>
+            </div>
+          ) : (
+            <form className="kfpl-login-form animate-fade-in" onSubmit={handleSubmit}>
+              <div className="kfpl-login-input-group">
+                <label className="kfpl-login-label">Email Address</label>
+                <input
+                  type="email"
+                  className="kfpl-login-input"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+              <button type="submit" className="kfpl-login-btn">Send Reset Link</button>
+              <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                <span className="kfpl-login-forgot" onClick={() => navigate('/login')}>
+                  ← Back to Login
+                </span>
+              </div>
+            </form>
+          )}
+
+          <div className="kfpl-login-footer">
+            © 2026 Kinetoscope. All rights reserved.
+          </div>
+        </div>
       </div>
     </div>
   );

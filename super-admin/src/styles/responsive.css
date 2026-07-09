@@ -274,16 +274,6 @@
     flex: 1;
   }
 
-  /* Tabs */
-  .kfpl-tabs {
-    overflow-x: auto;
-  }
-
-  /* Login */
-  .kfpl-login-card {
-    padding: 28px 24px;
-  }
-
   /* Toast */
   .kfpl-toast-container {
     right: 12px;

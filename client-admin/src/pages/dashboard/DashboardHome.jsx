@@ -27,11 +27,39 @@ import { apiRequest } from '../../config/apiHelper';
 export default function DashboardHome() {
   const navigate = useNavigate();
 
-  const [client, setClient] = useState(fallbackClient);
-  const [stats, setStats] = useState(fallbackStats);
-  const [investments, setInvestments] = useState(fallbackInvestments);
-  const [roiHistory, setRoiHistory] = useState(fallbackROIHistory);
-  const [journey, setJourney] = useState(mockJourney);
+  const [client, setClient] = useState(() => {
+    const authData = localStorage.getItem('kfpl_client_auth');
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        const c = parsed.client || parsed.user || {};
+        return {
+          ...c,
+          name: c.fullName || c.name || 'Investor',
+          onboardingComplete: c.onboardingComplete || false,
+        };
+      } catch (e) {
+        console.error('Failed to parse client auth from localStorage:', e);
+      }
+    }
+    return { name: 'Investor', onboardingComplete: false };
+  });
+  const [stats, setStats] = useState({
+    totalInvested: 0,
+    monthlyROI: 0,
+    roiRate: 0,
+    perkTier: 'Silver',
+    nextROIDate: '—',
+  });
+  const [investments, setInvestments] = useState([]);
+  const [roiHistory, setRoiHistory] = useState([]);
+  const [journey, setJourney] = useState({
+    step1: false,
+    step2: false,
+    step3: false,
+    step4: false,
+    step5: false,
+  });
   const [projects, setProjects] = useState([]);
 
   // Helper parser for projects
@@ -64,7 +92,12 @@ export default function DashboardHome() {
         const response = await apiRequest('/api/client/dashboard');
         if (response) {
           if (response.client || response.user) {
-            setClient(response.client || response.user);
+            const rawClient = response.client || response.user;
+            setClient(prev => ({
+              ...prev,
+              ...rawClient,
+              name: rawClient.fullName || rawClient.name || prev.name || 'Investor'
+            }));
           }
           if (response.stats) {
             setStats(response.stats);
@@ -80,7 +113,7 @@ export default function DashboardHome() {
           }
         }
       } catch (err) {
-        console.warn('Failed to load client dashboard via API, falling back to mocks:', err);
+        console.warn('Failed to load client dashboard via API:', err);
       }
     };
 
@@ -130,42 +163,7 @@ export default function DashboardHome() {
     'Trading & Syndication': '#F59E0B', 'Content IP Bank': '#0F766E', 'Film Exhibition': '#0891B2',
   };
 
-  useEffect(() => {
-    const storedHistory = localStorage.getItem('kfpl_investment_status_history');
-    if (storedHistory) {
-      setStatusHistory(JSON.parse(storedHistory));
-    } else {
-      const defaultHistory = [
-        {
-          id: 1,
-          type: 'project',
-          segment: 'Film Making',
-          project: 'Project Astra',
-          status: 'In Production',
-          progress: 65,
-          note: 'Post-production phase begins next week',
-          date: '2025-04-10',
-          media: [
-            {
-              id: 'mock-1',
-              name: 'astra_poster.png',
-              type: 'image/png',
-              size: 154200,
-              dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="100%" height="100%" fill="%230b3020"/><circle cx="150" cy="150" r="80" fill="%2310b981"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23061d13" font-family="sans-serif" font-weight="bold" font-size="24">PROJECT ASTRA</text></svg>',
-              uploadedAt: '2025-04-10T12:00:00.000Z'
-            }
-          ]
-        },
-        { id: 2, type: 'project', segment: 'Distribution', project: 'Meridian Release', status: 'Active', progress: 80, note: 'Distribution across 3 states confirmed', date: '2025-04-08', media: [] },
-        { id: 3, type: 'project', segment: 'Music', project: 'Rhythm Series', status: 'Recording', progress: 40, note: '4 tracks completed, 6 remaining', date: '2025-04-05', media: [] },
-        { id: 4, type: 'project', segment: 'Trading & Syndication', project: 'Content Deal Q2', status: 'Negotiation', progress: 30, note: 'Final terms under discussion', date: '2025-04-12', media: [] },
-        { id: 5, type: 'project', segment: 'Content IP Bank', project: 'Archive Digitization', status: 'Ongoing', progress: 55, note: '550 titles digitized so far', date: '2025-04-09', media: [] },
-        { id: 6, type: 'project', segment: 'Film Exhibition', project: 'Screen Network', status: 'Planning', progress: 15, note: '3 new screen locations identified', date: '2025-04-11', media: [] }
-      ];
-      setStatusHistory(defaultHistory);
-      localStorage.setItem('kfpl_investment_status_history', JSON.stringify(defaultHistory));
-    }
-  }, []);
+  // Removed mock statusHistory initialization to keep client updates clean and real.
 
   useEffect(() => {
     if (statusHistory.length <= 1) return;
