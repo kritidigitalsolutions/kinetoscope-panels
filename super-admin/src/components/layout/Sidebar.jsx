@@ -144,7 +144,24 @@ export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileC
     const updateCount = async () => {
       try {
         const data = await apiRequest('/api/super-admin/service-requests');
-        const list = data.requests || (Array.isArray(data) ? data : []);
+        let list = [];
+        if (Array.isArray(data)) {
+          list = data;
+        } else if (data) {
+          if (data.requests && Array.isArray(data.requests)) {
+            list = data.requests;
+          } else if (data.serviceRequests && Array.isArray(data.serviceRequests)) {
+            list = data.serviceRequests;
+          } else if (data.data) {
+            if (Array.isArray(data.data)) {
+              list = data.data;
+            } else if (data.data.requests && Array.isArray(data.data.requests)) {
+              list = data.data.requests;
+            } else if (data.data.serviceRequests && Array.isArray(data.data.serviceRequests)) {
+              list = data.data.serviceRequests;
+            }
+          }
+        }
         const count = list.filter(r => r.status === 'Open' || r.status === 'In Progress').length;
         setUnresolvedCount(count);
       } catch (err) {

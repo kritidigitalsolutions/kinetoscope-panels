@@ -38,8 +38,27 @@ export default function ServiceRequests() {
     try {
       setLoading(true);
       const data = await apiRequest('/api/agent/service-requests');
-      // The API returns requests under `data.requests` or directly as an array.
-      const list = data.requests || (Array.isArray(data) ? data : []);
+      console.log('Agent Service Requests Raw Data:', data);
+
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data) {
+        if (data.requests && Array.isArray(data.requests)) {
+          list = data.requests;
+        } else if (data.serviceRequests && Array.isArray(data.serviceRequests)) {
+          list = data.serviceRequests;
+        } else if (data.data) {
+          if (Array.isArray(data.data)) {
+            list = data.data;
+          } else if (data.data.requests && Array.isArray(data.data.requests)) {
+            list = data.data.requests;
+          } else if (data.data.serviceRequests && Array.isArray(data.data.serviceRequests)) {
+            list = data.data.serviceRequests;
+          }
+        }
+      }
+
       setRequests(list);
       setError(null);
     } catch (err) {

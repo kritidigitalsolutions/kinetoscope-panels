@@ -33,7 +33,27 @@ export default function ServiceRequestsPage() {
       const queryString = params.length > 0 ? `?${params.join('&')}` : '';
 
       const data = await apiRequest(`/api/super-admin/service-requests${queryString}`);
-      const list = data.requests || (Array.isArray(data) ? data : []);
+      console.log('Super Admin Service Requests Raw Data:', data);
+
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data) {
+        if (data.requests && Array.isArray(data.requests)) {
+          list = data.requests;
+        } else if (data.serviceRequests && Array.isArray(data.serviceRequests)) {
+          list = data.serviceRequests;
+        } else if (data.data) {
+          if (Array.isArray(data.data)) {
+            list = data.data;
+          } else if (data.data.requests && Array.isArray(data.data.requests)) {
+            list = data.data.requests;
+          } else if (data.data.serviceRequests && Array.isArray(data.data.serviceRequests)) {
+            list = data.data.serviceRequests;
+          }
+        }
+      }
+
       setRequests(list);
     } catch (err) {
       console.error('Failed to load support requests:', err);

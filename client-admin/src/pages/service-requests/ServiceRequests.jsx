@@ -27,9 +27,27 @@ export default function ServiceRequests() {
     try {
       setLoading(true);
       const data = await apiRequest('/api/client/service-requests');
-      // The endpoint returns `{ requests, stats }` or just `requests` list.
-      // We accept either: data.requests or data itself.
-      const list = data.requests || (Array.isArray(data) ? data : []);
+      console.log('Client Service Requests Raw Data:', data);
+
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data) {
+        if (data.requests && Array.isArray(data.requests)) {
+          list = data.requests;
+        } else if (data.serviceRequests && Array.isArray(data.serviceRequests)) {
+          list = data.serviceRequests;
+        } else if (data.data) {
+          if (Array.isArray(data.data)) {
+            list = data.data;
+          } else if (data.data.requests && Array.isArray(data.data.requests)) {
+            list = data.data.requests;
+          } else if (data.data.serviceRequests && Array.isArray(data.data.serviceRequests)) {
+            list = data.data.serviceRequests;
+          }
+        }
+      }
+
       setRequests(list);
       setError(null);
     } catch (err) {
