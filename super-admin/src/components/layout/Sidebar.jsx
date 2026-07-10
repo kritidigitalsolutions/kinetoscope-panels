@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { getApiUrl } from '../../config/apiUrl';
+import { apiRequest } from '../../config/apiHelper';
 
 // ── SVG Icons ───────────────────────
 const icons = {
@@ -140,14 +141,14 @@ export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileC
   const [unresolvedCount, setUnresolvedCount] = useState(2);
 
   useEffect(() => {
-    const updateCount = () => {
-      const data = localStorage.getItem('kfpl_service_requests');
-      if (data) {
-        const list = JSON.parse(data);
+    const updateCount = async () => {
+      try {
+        const data = await apiRequest('/api/super-admin/service-requests');
+        const list = data.requests || (Array.isArray(data) ? data : []);
         const count = list.filter(r => r.status === 'Open' || r.status === 'In Progress').length;
         setUnresolvedCount(count);
-      } else {
-        setUnresolvedCount(2);
+      } catch (err) {
+        console.error('Failed to update sidebar unresolved badge:', err);
       }
     };
     

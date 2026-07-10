@@ -1,0 +1,529 @@
+/* ============================================================
+   KFPL Agent Portal — Layout Styles
+   Description: Sidebar, Header, MainLayout, PageWrapper
+   ============================================================ */
+
+/* ── Main Layout Container ─────────────────────── */
+.kfpl-app {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-surface);
+}
+
+.kfpl-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+}
+
+.kfpl-main-area.sidebar-collapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.kfpl-content {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+  margin-top: var(--header-height);
+  min-width: 0;
+}
+
+/* ── Sidebar ─────────────────────── */
+.kfpl-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--color-white);
+  box-shadow: var(--shadow-sidebar);
+  z-index: var(--z-sidebar);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  border-right: 1px solid var(--color-border-light);
+}
+
+.kfpl-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+/* ── Sidebar Logo ─────────────────────── */
+.kfpl-sidebar-logo {
+  display: flex;
+  align-items: center;
+  padding: 20px 18px;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border-light);
+  min-height: 72px;
+  flex-shrink: 0;
+}
+
+.kfpl-sidebar-logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-gold) 0%, #10B981 50%, var(--color-gold-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.kfpl-sidebar-logo-icon span {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--color-white);
+  line-height: 1;
+}
+
+.kfpl-sidebar-logo-text {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-logo-text {
+  opacity: 0;
+  width: 0;
+}
+
+.kfpl-sidebar-logo-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.kfpl-sidebar-logo-subtitle {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ── Sidebar Navigation ─────────────────────── */
+.kfpl-sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.kfpl-sidebar-section {
+  margin-bottom: 4px;
+}
+
+.kfpl-sidebar-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  padding: 12px 20px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-section-title {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ── Sidebar Items ─────────────────────── */
+.kfpl-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px;
+  margin: 1px 8px;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  letter-spacing: 0.1px;
+}
+
+.kfpl-sidebar-item:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.kfpl-sidebar-item.active {
+  background: var(--color-gold-light);
+  color: var(--color-gold-dark);
+  font-weight: 600;
+}
+
+.kfpl-sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: var(--color-gold);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.kfpl-sidebar-item-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kfpl-sidebar-item-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
+
+.kfpl-sidebar-item-label {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  flex: 1;
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-item-label {
+  opacity: 0;
+  width: 0;
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-item {
+  justify-content: center;
+  padding: 10px 0;
+  margin: 2px 8px;
+}
+
+.kfpl-sidebar-item-badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
+  color: var(--color-white);
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(198, 40, 40, 0.35);
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-item-badge {
+  display: none;
+}
+
+/* ── Sidebar Bottom (Logout + Toggle) ─────────────────────── */
+.kfpl-sidebar-bottom {
+  border-top: 1px solid var(--color-border-light);
+  margin-top: auto;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.kfpl-sidebar-logout {
+  color: var(--color-text-secondary) !important;
+  margin: 4px 0;
+}
+
+.kfpl-sidebar-logout:hover {
+  background: var(--color-danger-bg) !important;
+  color: var(--color-danger) !important;
+}
+
+.kfpl-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+
+.kfpl-sidebar-toggle:hover {
+  color: var(--color-gold-dark);
+  background: var(--color-surface);
+}
+
+.kfpl-sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* ── Header ─────────────────────── */
+.kfpl-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--sidebar-width);
+  height: var(--header-height);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: var(--z-header);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-collapsed .kfpl-header {
+  left: var(--sidebar-collapsed-width);
+}
+
+.kfpl-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kfpl-header-menu-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: var(--transition-fast);
+}
+
+.kfpl-header-menu-btn:hover {
+  background: var(--color-surface);
+}
+
+.kfpl-header-menu-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.kfpl-header-page-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.kfpl-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kfpl-header-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+.kfpl-header-icon-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.kfpl-header-icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.kfpl-header-notif-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  border: 2px solid var(--color-white);
+}
+
+.kfpl-header-agent-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.kfpl-header-agent-pill:hover {
+  background: var(--color-surface-alt);
+}
+
+.kfpl-header-agent-pill-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-gold), var(--color-gold-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.kfpl-header-agent-pill-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.kfpl-header-agent-pill-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+}
+
+/* ── Page Wrapper ─────────────────────── */
+.kfpl-page {
+  width: 100%;
+  min-width: 0;
+  animation: kfpl-page-enter 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kfpl-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.kfpl-page-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kfpl-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.3px;
+}
+
+.kfpl-page-subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.kfpl-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@keyframes kfpl-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Mobile Sidebar Overlay ─────────────────────── */
+.kfpl-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 29, 19, 0.5);
+  z-index: calc(var(--z-sidebar) - 1);
+  backdrop-filter: blur(4px);
+}
+
+.kfpl-sidebar-overlay.visible {
+  display: block;
+  animation: kfpl-fade-in 0.2s ease;
+}
+
+@keyframes kfpl-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Sidebar Collapse Toggle ─────────────────────── */
+.kfpl-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  z-index: 10;
+}
+
+.kfpl-sidebar-toggle:hover {
+  background: var(--color-gold-light);
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+}
+
+.kfpl-sidebar-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.3s ease;
+}
+
+.kfpl-sidebar.collapsed .kfpl-sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* ============ END: layout.css ============ */

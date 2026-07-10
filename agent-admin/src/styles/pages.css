@@ -1,0 +1,2380 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* ============================================================
+   KFPL Agent Portal — Page-Specific Styles
+   Description: Dashboard, Profile, Commission, Rewards, Grow, etc.
+   ============================================================ */
+
+/* ── Dashboard ─────────────────────── */
+.kfpl-dashboard-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.kfpl-welcome-banner {
+  background:
+    radial-gradient(circle at 76% 12%, rgba(16, 185, 129, 0.18) 0%, transparent 28%),
+    linear-gradient(135deg, var(--color-navy) 0%, #092619 52%, var(--color-navy-light) 100%);
+  border-radius: var(--radius-xl);
+  padding: 34px 40px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.12);
+  box-shadow: 0 18px 45px rgba(6, 29, 19, 0.16);
+}
+
+.kfpl-welcome-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.kfpl-welcome-text {
+  max-width: 680px;
+}
+
+.kfpl-welcome-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 12px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.kfpl-welcome-title {
+  color: var(--color-white);
+  font-size: clamp(1.65rem, 2vw, 2.15rem);
+  font-weight: 800;
+  margin-bottom: 8px;
+  letter-spacing: 0;
+}
+
+.kfpl-welcome-name {
+  color: var(--color-gold);
+  background: linear-gradient(135deg, #10B981, #A7F3D0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kfpl-welcome-subtitle {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.kfpl-welcome-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.kfpl-stat-pill {
+  padding: 14px 20px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  min-width: 154px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.kfpl-stat-pill-value {
+  font-family: var(--font-display);
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.kfpl-stat-pill-label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Welcome Banner — Decorative Circles */
+.kfpl-welcome-deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.kfpl-welcome-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(16, 185, 129, 0.08);
+}
+
+.kfpl-welcome-circle--1 {
+  width: 280px;
+  height: 280px;
+  top: -100px;
+  right: -60px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+  animation: floatSlow 8s ease-in-out infinite;
+}
+
+.kfpl-welcome-circle--2 {
+  width: 180px;
+  height: 180px;
+  bottom: -60px;
+  right: 120px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.04) 0%, transparent 70%);
+  animation: floatSlow 6s ease-in-out infinite reverse;
+}
+
+.kfpl-welcome-circle--3 {
+  width: 120px;
+  height: 120px;
+  top: -20px;
+  right: 240px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
+  animation: floatSlow 10s ease-in-out infinite;
+}
+
+/* ── Dashboard KPI Grid ─────────────────────── */
+.kfpl-dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1200px) {
+  .kfpl-dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .kfpl-dashboard-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Dashboard Two-Column Layout ─────────────────────── */
+.kfpl-dashboard-two-col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+/* ── Dashboard Rewards Strip ─────────────────────── */
+.kfpl-rewards-strip {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+}
+
+.kfpl-rewards-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.kfpl-rewards-strip-card {
+  min-width: 200px;
+  max-width: 240px;
+  min-height: 220px;
+  box-shadow: var(--shadow-card);
+  flex-shrink: 0;
+}
+
+/* ── Section Header ─────────────────────── */
+.kfpl-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.kfpl-section-header h2 {
+  font-size: 18px;
+}
+
+.kfpl-section-header-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gold);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition-fast);
+}
+
+.kfpl-section-header-link:hover {
+  color: var(--color-gold-dark);
+}
+
+.kfpl-section-header-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Profile Page ─────────────────────── */
+.kfpl-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.kfpl-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px;
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  grid-column: 1 / -1;
+}
+
+.kfpl-profile-avatar-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+
+.kfpl-profile-hero-info h2 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.kfpl-profile-hero-id {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.kfpl-profile-hero-status {
+  display: flex;
+  gap: 8px;
+}
+
+.kfpl-profile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.kfpl-profile-detail-row:last-child {
+  border-bottom: none;
+}
+
+.kfpl-profile-detail-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.kfpl-profile-detail-value {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ── Commission Page ─────────────────────── */
+.kfpl-commission-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.kfpl-commission-total-card {
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-mid) 100%);
+  border-radius: var(--radius-2xl);
+  padding: 28px 32px;
+  color: var(--color-text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfpl-commission-total-label {
+  font-size: 14px;
+  color: rgba(243, 247, 245, 0.6);
+  margin-bottom: 4px;
+}
+
+.kfpl-commission-total-value {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+/* ── Rewards Page ─────────────────────── */
+.kfpl-rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* ── Grow Page ─────────────────────── */
+.kfpl-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.kfpl-offer-card {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: var(--transition-smooth);
+  cursor: pointer;
+}
+
+.kfpl-offer-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+}
+
+.kfpl-offer-card-banner {
+  height: 140px;
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.kfpl-offer-card-banner::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.kfpl-offer-card-banner-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-gold);
+  z-index: 1;
+}
+
+.kfpl-offer-card-body {
+  padding: 20px;
+}
+
+.kfpl-offer-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.kfpl-offer-card-desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.kfpl-offer-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Withdrawal Page ─────────────────────── */
+.kfpl-withdrawal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.kfpl-withdrawal-balance-card {
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-mid) 100%);
+  border-radius: var(--radius-2xl);
+  padding: 28px 32px;
+  color: var(--color-text-inverse);
+}
+
+.kfpl-withdrawal-balance-label {
+  font-size: 14px;
+  color: rgba(243, 247, 245, 0.6);
+  margin-bottom: 8px;
+}
+
+.kfpl-withdrawal-balance-value {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-gold);
+  margin-bottom: 4px;
+}
+
+.kfpl-withdrawal-balance-sub {
+  font-size: 12px;
+  color: rgba(243, 247, 245, 0.5);
+}
+
+/* ── Service Request Page ─────────────────────── */
+.kfpl-sr-status-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--color-border-light);
+}
+
+.kfpl-sr-timeline-item {
+  position: relative;
+  padding: 16px 0 16px 20px;
+}
+
+.kfpl-sr-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 20px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  border: 3px solid var(--color-white);
+}
+
+.kfpl-sr-timeline-item.active::before {
+  background: var(--color-gold);
+}
+
+.kfpl-sr-timeline-item.completed::before {
+  background: var(--color-success);
+}
+
+.kfpl-sr-timeline-date {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.kfpl-sr-timeline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.kfpl-sr-timeline-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ── Support Page ─────────────────────── */
+.kfpl-support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.kfpl-support-card {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  padding: 32px 24px;
+  text-align: center;
+  transition: var(--transition-smooth);
+  text-decoration: none;
+  display: block;
+}
+
+.kfpl-support-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+  border-color: var(--color-gold);
+}
+
+.kfpl-support-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.kfpl-support-card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.kfpl-support-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.kfpl-support-card-desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+
+/* ── Login Page — Premium Cinema Split-Screen ─────────────────────── */
+
+.kfpl-login {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  background: var(--color-navy);
+}
+
+.kfpl-login-wallpaper {
+  position: relative;
+  background: url('/login-bg.jpg') center / cover no-repeat;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 48px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.kfpl-login-wallpaper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6,29,19,0.6) 0%, rgba(6,29,19,0.3) 40%, rgba(6,29,19,0.9) 100%);
+  z-index: 1;
+}
+
+.kfpl-login-wallpaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, transparent 60%);
+  z-index: 2;
+}
+
+.kfpl-login-brand { position: relative; z-index: 3; max-width: 440px; }
+
+.kfpl-login-brand-logo {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.5rem; color: #fff;
+  margin-bottom: 20px; box-shadow: 0 8px 32px rgba(16,185,129,0.3);
+}
+
+.kfpl-login-brand h1 {
+  font-size: 2.25rem; font-weight: 800; color: #fff;
+  margin-bottom: 12px; line-height: 1.15; letter-spacing: -0.5px;
+}
+
+.kfpl-login-brand p {
+  font-size: 0.95rem; color: rgba(240,253,244,0.7);
+  line-height: 1.6; font-weight: 400;
+}
+
+.kfpl-login-panel {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-navy); padding: 40px;
+  position: relative; height: 100%; overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.kfpl-login-panel::before {
+  content: '';
+  position: absolute; top: -150px; right: -150px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+  border-radius: 50%; pointer-events: none;
+}
+
+.kfpl-login-card { width: 100%; max-width: 440px; position: relative; z-index: 1; }
+
+.kfpl-login-logo { text-align: center; margin-bottom: 28px; }
+
+.kfpl-login-logo-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.375rem; color: #fff;
+  margin-bottom: 14px; box-shadow: 0 6px 24px rgba(16,185,129,0.25);
+}
+
+.kfpl-login-title {
+  font-size: 1.5rem; font-weight: 800; color: #fff;
+  margin-bottom: 6px; letter-spacing: -0.3px;
+}
+
+.kfpl-login-subtitle { font-size: 0.875rem; color: rgba(240,253,244,0.5); font-weight: 400; }
+
+.kfpl-login-tabs {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.03); border-radius: 12px;
+  padding: 4px; margin-bottom: 28px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.kfpl-login-tab {
+  flex: 1; padding: 10px 16px; border: none; border-radius: 9px;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  transition: all 0.25s ease; background: transparent;
+  color: rgba(255,255,255,0.4); font-family: 'Inter', sans-serif;
+}
+
+.kfpl-login-tab.active {
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: #fff; box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+}
+
+.kfpl-login-tab:hover:not(.active) { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.04); }
+
+.kfpl-login-form { display: flex; flex-direction: column; gap: 18px; }
+.kfpl-login-input-group { display: flex; flex-direction: column; gap: 6px; }
+
+.kfpl-login-label {
+  font-size: 0.8125rem; font-weight: 600;
+  color: rgba(240,253,244,0.65); letter-spacing: 0.2px;
+}
+
+.kfpl-login-input {
+  width: 100%; padding: 12px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px; font-size: 0.875rem; color: #fff;
+  font-family: 'Inter', sans-serif; transition: all 0.25s ease; outline: none;
+}
+
+.kfpl-login-input::placeholder { color: rgba(255,255,255,0.25); }
+
+.kfpl-login-input:focus {
+  border-color: var(--color-gold);
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 0 20px rgba(16, 185, 129, 0.05);
+}
+
+.kfpl-login-password-wrap { position: relative; }
+
+.kfpl-login-password-toggle {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: rgba(255,255,255,0.4); cursor: pointer;
+  background: none; border: none; padding: 0;
+  display: flex; align-items: center; transition: all 0.2s ease;
+}
+
+.kfpl-login-password-toggle:hover { color: var(--color-gold); }
+.kfpl-login-password-toggle svg { width: 18px; height: 18px; }
+
+.kfpl-login-options { display: flex; align-items: center; justify-content: space-between; }
+
+.kfpl-login-remember {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8125rem; color: rgba(240,253,244,0.5); cursor: pointer;
+}
+
+.kfpl-login-remember input[type='checkbox'] { accent-color: var(--color-gold); width: 14px; height: 14px; }
+
+.kfpl-login-forgot {
+  font-size: 0.8125rem; color: var(--color-gold); font-weight: 600;
+  cursor: pointer; transition: all 0.2s ease;
+  background: none; border: none; padding: 0;
+}
+
+.kfpl-login-forgot:hover { color: var(--color-gold); text-decoration: underline; }
+
+.kfpl-login-btn {
+  width: 100%; padding: 13px; border-radius: 10px;
+  font-size: 0.9375rem; font-weight: 700; cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: #fff; border: none; font-family: 'Inter', sans-serif;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2); letter-spacing: 0.3px;
+}
+
+.kfpl-login-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s ease;
+}
+
+.kfpl-login-btn:hover:not(:disabled) {
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4); transform: translateY(-1.5px);
+}
+
+.kfpl-login-btn:hover:not(:disabled)::after { opacity: 1; }
+.kfpl-login-btn:active:not(:disabled) { transform: translateY(0); }
+.kfpl-login-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.kfpl-login-error {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.18); border-radius: 10px;
+  color: #FCA5A5; font-size: 0.8125rem; font-weight: 500; margin-bottom: 6px;
+}
+
+.kfpl-login-error svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.kfpl-login-success {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.18); border-radius: 10px;
+  color: #86EFAC; font-size: 0.8125rem; font-weight: 500; margin-bottom: 6px;
+}
+
+.kfpl-login-footer {
+  text-align: center; margin-top: 32px;
+  font-size: 0.75rem; color: rgba(240,253,244,0.25); letter-spacing: 0.3px;
+}
+
+.kfpl-login-register-scroll {
+  max-height: 55vh; overflow-y: auto; padding-right: 8px; margin-bottom: 6px;
+}
+
+.kfpl-login-register-scroll::-webkit-scrollbar { width: 6px; }
+.kfpl-login-register-scroll::-webkit-scrollbar-track { background: transparent; }
+.kfpl-login-register-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 4px; }
+
+.kfpl-login-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.kfpl-login-section-label {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--color-gold); text-transform: uppercase;
+  letter-spacing: 1.5px; margin-top: 14px; margin-bottom: 6px;
+}
+
+.kfpl-login-divider { display: flex; align-items: center; gap: 14px; margin: 4px 0; }
+.kfpl-login-divider::before, .kfpl-login-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+.kfpl-login-divider span { font-size: 0.75rem; color: rgba(255,255,255,0.25); font-weight: 500; }
+
+.animate-scale-in { animation: loginScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-fade-in { animation: loginFadeIn 0.35s ease; }
+
+@keyframes loginScaleIn {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes loginFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kfpl-login-tfa-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(16,185,129,0.1); color: var(--color-gold); margin-bottom: 14px;
+}
+
+.kfpl-login-tfa-icon svg { width: 28px; height: 28px; }
+
+.kfpl-login-mock-otp {
+  margin-top: 12px; padding: 8px 14px;
+  background: rgba(16,185,129,0.06); border-radius: 8px;
+  border: 1px solid rgba(16,185,129,0.15); display: inline-block;
+}
+
+.kfpl-login-mock-otp span { font-size: 0.75rem; color: var(--color-gold); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .kfpl-login { grid-template-columns: 1fr; height: auto; overflow: auto; }
+  .kfpl-login-wallpaper { display: none; }
+  .kfpl-login-panel {
+    min-height: 100vh;
+    background: linear-gradient(180deg, rgba(6,29,19,0.92) 0%, rgba(6,29,19,0.98) 100%), url('/login-bg.jpg') center / cover no-repeat;
+    overflow-y: auto;
+    height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .kfpl-login-panel { padding: 24px 20px; }
+  .kfpl-login-card { max-width: 100%; }
+  .kfpl-login-form-row { grid-template-columns: 1fr; }
+}
+
+/* ── Drawer ─────────────────────── */
+.kfpl-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 29, 19, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal);
+  animation: kfpl-fade-in 0.2s ease;
+}
+
+.kfpl-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 480px;
+  max-width: 90vw;
+  height: 100vh;
+  background: var(--color-white);
+  box-shadow: var(--shadow-modal);
+  z-index: calc(var(--z-modal) + 1);
+  display: flex;
+  flex-direction: column;
+  animation: kfpl-drawer-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes kfpl-drawer-enter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.kfpl-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+.kfpl-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.kfpl-drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+/* ── Premium Detail Page Header ─────────────────────── */
+.kfpl-detail-card-header {
+  background: linear-gradient(135deg, #061D13 0%, #11442F 100%);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  color: var(--color-white);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  box-shadow: 0 10px 30px rgba(6, 29, 19, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.kfpl-detail-card-header .kfpl-detail-name {
+  color: var(--color-white);
+}
+
+.kfpl-detail-card-header .kfpl-detail-id {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.kfpl-detail-card-header .kfpl-detail-avatar {
+  background: rgba(255, 255, 255, 0.1);
+  color: #10B981;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Let's style the KPI summary widgets row inside detail page */
+.kfpl-detail-kpis-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kfpl-detail-kpi-summary-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: var(--transition-smooth);
+}
+
+.kfpl-detail-kpi-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+  border-color: var(--color-gold);
+}
+
+.kfpl-detail-kpi-summary-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.kfpl-detail-kpi-summary-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.kfpl-detail-info-row-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.kfpl-detail-info-row-item:last-child {
+  border-bottom: none;
+}
+
+.kfpl-detail-info-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-gold-light);
+  color: var(--color-gold-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kfpl-detail-info-item-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kfpl-detail-info-item-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kfpl-detail-info-item-label {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.kfpl-detail-info-item-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ── Detail Page ─────────────────────── */
+.kfpl-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.kfpl-detail-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kfpl-detail-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold);
+  font-size: 1.25rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.kfpl-detail-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.kfpl-detail-id {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.kfpl-detail-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.kfpl-detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.kfpl-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.kfpl-detail-info-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border-light);
+  padding: 24px;
+}
+
+.kfpl-detail-info-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.kfpl-detail-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.kfpl-detail-info-row:last-child {
+  border-bottom: none;
+}
+
+.kfpl-detail-info-label {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.kfpl-detail-info-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+/* ── Perks Grid ─────────────────────── */
+.kfpl-perks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.kfpl-perk-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.kfpl-perk-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.kfpl-perk-tier-stripe {
+  height: 4px;
+  width: 100%;
+}
+
+.kfpl-perk-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+}
+
+.kfpl-perk-icon-wrap {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--color-gold-light);
+}
+
+.kfpl-perk-card:hover .kfpl-perk-icon-wrap {
+  background: var(--color-gold-glow);
+}
+
+.kfpl-perk-icon-wrap svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-gold-dark);
+}
+
+.kfpl-perk-card-body {
+  flex: 1;
+  padding: 16px 20px;
+}
+
+.kfpl-perk-card-title {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.kfpl-perk-card-desc {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Dashboard Spacing ── */
+#agent-dashboard-page .kfpl-welcome-banner {
+  margin-bottom: 24px;
+}
+#agent-dashboard-page .kfpl-commission-summary {
+  margin-bottom: 24px;
+}
+#agent-dashboard-page .kfpl-dashboard-kpis {
+  margin-bottom: 24px;
+}
+#agent-dashboard-page .kfpl-rewards-section {
+  margin-bottom: 24px;
+}
+#agent-dashboard-page .kfpl-dashboard-charts-grid {
+  margin-bottom: 24px;
+}
+
+/* Agent dashboard refinements */
+#agent-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#agent-dashboard-page .kfpl-chart-card {
+  min-width: 0;
+}
+
+#agent-dashboard-page .kfpl-chart-title,
+#agent-dashboard-page .kfpl-widget-item-name,
+#agent-dashboard-page .kfpl-activity-text {
+  letter-spacing: 0;
+}
+
+/* Client detail professional layout */
+#client-detail-page .kfpl-detail-card-header {
+  margin-bottom: 22px;
+  border-radius: var(--radius-xl);
+}
+
+#client-detail-page .kfpl-detail-actions .kfpl-btn {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+#client-detail-page .kfpl-detail-kpis-summary {
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+#client-detail-page .kfpl-detail-kpi-summary-card {
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+
+#client-detail-page .kfpl-detail-info-card,
+#client-detail-page .kfpl-table-container {
+  border-radius: var(--radius-lg);
+}
+
+#client-detail-page .kfpl-detail-info-title {
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
+#client-detail-page .kfpl-detail-info-item-content,
+#client-detail-page .kfpl-detail-info-row {
+  gap: 16px;
+}
+
+#client-detail-page .kfpl-detail-info-item-value,
+#client-detail-page .kfpl-detail-info-value {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Commission page polish */
+#commission-page .kfpl-page-header,
+#withdrawal-page .kfpl-page-header,
+#profile-page .kfpl-page-header {
+  margin-bottom: 20px;
+}
+
+#commission-page .kfpl-page-header h2,
+#withdrawal-page .kfpl-page-header h2,
+#profile-page .kfpl-page-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+#commission-page .kfpl-card,
+#withdrawal-page .kfpl-card,
+#profile-page .kfpl-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+#commission-page .kfpl-commission-total-card {
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 34px rgba(6, 29, 19, 0.16);
+  gap: 24px;
+}
+
+#commission-page .kfpl-commission-total-card > div:last-child {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#commission-page .kfpl-tabs {
+  margin-bottom: 0;
+  border: 1px solid var(--color-border-light);
+}
+
+#commission-page .kfpl-chart-wrapper,
+#commission-page .kfpl-table-wrapper,
+#commission-page .kfpl-card {
+  border-radius: var(--radius-lg);
+}
+
+#commission-page .kfpl-table-wrapper {
+  box-shadow: var(--shadow-card);
+}
+
+#commission-page .kfpl-table,
+#commission-page .kfpl-slab-table,
+#commission-page .cell-mono,
+#commission-page .cell-amount {
+  font-family: var(--font-family);
+}
+
+#commission-page .kfpl-table td,
+#commission-page .kfpl-table th {
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+}
+
+#commission-page .kfpl-table th {
+  font-size: 0.72rem;
+}
+
+#commission-page .cell-amount {
+  text-align: right;
+  letter-spacing: 0;
+}
+
+/* Withdrawal page */
+#withdrawal-page .kfpl-withdrawal-balance-card {
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 34px rgba(6, 29, 19, 0.16);
+  position: relative;
+  overflow: hidden;
+}
+
+#withdrawal-page .kfpl-withdrawal-balance-card::after {
+  content: '';
+  position: absolute;
+  inset: auto -60px -90px auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, transparent 68%);
+}
+
+#withdrawal-page .kfpl-withdrawal-grid {
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+#withdrawal-page .kfpl-form-group {
+  margin-bottom: 18px;
+}
+
+#withdrawal-page .kfpl-table td:last-child {
+  white-space: normal;
+  min-width: 180px;
+}
+
+/* Profile page */
+#profile-page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+#profile-page .kfpl-profile-hero {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(280px, auto);
+  align-items: center;
+  gap: 22px;
+  padding: 28px 30px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(16, 185, 129, 0.16);
+  background:
+    radial-gradient(circle at 92% 12%, rgba(16, 185, 129, 0.16) 0%, transparent 30%),
+    linear-gradient(135deg, var(--color-navy) 0%, #092619 48%, var(--color-navy-light) 100%);
+  color: var(--color-text-inverse);
+  box-shadow: 0 16px 38px rgba(6, 29, 19, 0.18);
+  overflow: hidden;
+  position: relative;
+}
+
+#profile-page .kfpl-profile-hero::after {
+  content: '';
+  position: absolute;
+  right: -70px;
+  bottom: -110px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+#profile-page .kfpl-profile-avatar-lg {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.28);
+  position: relative;
+  z-index: 1;
+}
+
+#profile-page .kfpl-profile-hero-info,
+#profile-page .kfpl-profile-hero-stats,
+#profile-page .kfpl-profile-hero-actions {
+  position: relative;
+  z-index: 1;
+}
+
+#profile-page .kfpl-profile-eyebrow {
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+#profile-page .kfpl-profile-hero-info h2 {
+  margin: 0 0 2px;
+  color: var(--color-white);
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+#profile-page .kfpl-profile-hero-id {
+  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--font-family);
+  font-weight: 600;
+}
+
+#profile-page .kfpl-profile-hero-status {
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+#profile-page .kfpl-profile-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+#profile-page .kfpl-profile-stat {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+#profile-page .kfpl-profile-stat-label {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#profile-page .kfpl-profile-stat-value {
+  display: block;
+  color: var(--color-gold);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+#profile-page .kfpl-profile-hero-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#profile-page .kfpl-profile-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#profile-page .kfpl-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+#profile-page .kfpl-profile-card {
+  min-height: 100%;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+#profile-page .kfpl-profile-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-card-hover);
+}
+
+#profile-page .kfpl-profile-card--wide {
+  grid-row: span 2;
+}
+
+#profile-page .kfpl-profile-card .kfpl-card-header {
+  padding: 18px 20px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFA 100%);
+}
+
+#profile-page .kfpl-profile-card .kfpl-card-header h3,
+#settings-page .kfpl-profile-card .kfpl-card-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+#profile-page .kfpl-profile-card-icon,
+#settings-page .kfpl-profile-card-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--color-gold-light);
+  color: var(--color-gold-dark);
+  flex-shrink: 0;
+}
+
+#profile-page .kfpl-profile-card-icon svg,
+#settings-page .kfpl-profile-card-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+#profile-page .kfpl-profile-card .kfpl-card-body,
+#settings-page .kfpl-profile-card .kfpl-card-body {
+  padding: 8px 20px 18px;
+}
+
+#profile-page .kfpl-profile-request-note {
+  margin: 12px 0 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-gold-light);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  color: var(--color-gold-dark);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+#profile-page .kfpl-profile-detail-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 52px;
+  padding: 14px 0;
+}
+
+#profile-page .kfpl-profile-detail-label {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#profile-page .kfpl-profile-detail-value {
+  text-align: right;
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+#profile-page .kfpl-profile-detail-row > .kfpl-badge {
+  justify-self: end;
+}
+
+#profile-page .kfpl-form-input,
+#profile-page .kfpl-form-select {
+  width: 100%;
+  min-height: 40px;
+  font-weight: 600;
+}
+
+#profile-page .kfpl-profile-security-card {
+  margin-bottom: 24px;
+}
+
+#profile-page .kfpl-profile-security-card .kfpl-card-body {
+  padding: 22px;
+}
+
+/* Secondary agent pages */
+#commission-page,
+#rewards-page,
+#grow-page,
+#support-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.kfpl-page-eyebrow {
+  margin-bottom: 8px;
+  color: var(--color-gold-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#commission-page .kfpl-page-header {
+  padding: 22px 24px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, var(--color-white) 0%, #F8FBFA 100%);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 0;
+}
+
+#commission-page .kfpl-commission-total-card {
+  padding: 26px 28px;
+  align-items: stretch;
+}
+
+#commission-page .kfpl-commission-total-card > div:first-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#commission-page .kfpl-commission-total-card > div:last-child > div {
+  min-width: 126px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#commission-page .kfpl-chart-wrapper {
+  padding: 22px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+#commission-page .kfpl-chart-container {
+  min-height: 280px;
+}
+
+#commission-page .kfpl-card-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+#commission-page .kfpl-card-header h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+#rewards-page .kfpl-rewards-hero,
+#grow-page .kfpl-grow-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, var(--color-white) 0%, #F8FBFA 100%);
+  box-shadow: var(--shadow-card);
+}
+
+#rewards-page .kfpl-rewards-hero h2,
+#grow-page .kfpl-grow-hero h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+#rewards-page .kfpl-rewards-hero p,
+#grow-page .kfpl-grow-hero p {
+  max-width: 620px;
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+#rewards-page .kfpl-rewards-summary,
+#grow-page .kfpl-grow-metrics {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 12px;
+}
+
+#rewards-page .kfpl-rewards-summary-item,
+#grow-page .kfpl-grow-metric {
+  min-width: 118px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+#rewards-page .kfpl-rewards-summary-item span,
+#grow-page .kfpl-grow-metric span {
+  display: block;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+#grow-page .kfpl-grow-metric span {
+  font-size: 1rem;
+}
+
+#rewards-page .kfpl-rewards-summary-item small,
+#grow-page .kfpl-grow-metric small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#rewards-page .kfpl-tabs,
+#grow-page .kfpl-tabs {
+  margin-bottom: 0;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+#rewards-page .kfpl-rewards-grid {
+  gap: 22px;
+}
+
+#rewards-page .kfpl-reward-card {
+  min-height: 248px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+}
+
+#rewards-page .kfpl-reward-card-desc {
+  min-height: 38px;
+}
+
+#rewards-page .kfpl-reward-card-target {
+  margin-top: auto;
+}
+
+#grow-page .kfpl-section-header {
+  margin: 4px 0 0;
+}
+
+#grow-page .kfpl-offers-grid {
+  gap: 22px;
+}
+
+#grow-page .kfpl-offer-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+#grow-page .kfpl-offer-card-banner {
+  height: 124px;
+}
+
+#grow-page .kfpl-card {
+  padding: 0;
+  border-radius: var(--radius-lg);
+}
+
+#grow-page .kfpl-card-body {
+  padding: 22px;
+}
+
+#grow-page .kfpl-income-calculator {
+  align-items: stretch;
+}
+
+#grow-page .kfpl-income-calculator-inputs,
+#grow-page .kfpl-income-calculator-results {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+#grow-page .kfpl-income-calculator-results {
+  background: linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%);
+}
+
+#grow-page .kfpl-slab-table {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+}
+
+#support-page .kfpl-welcome-banner {
+  margin: 0;
+  padding: 30px 24px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+#support-page .kfpl-support-grid {
+  gap: 22px;
+  margin-top: 0;
+}
+
+#support-page .kfpl-support-card {
+  min-height: 238px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+#support-page .kfpl-support-card-desc {
+  min-height: 58px;
+  line-height: 1.55;
+}
+
+#support-page > .kfpl-card {
+  margin-top: 0 !important;
+  padding: 0;
+  border-radius: var(--radius-lg);
+}
+
+#support-page > .kfpl-card .kfpl-card-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+#support-page > .kfpl-card .kfpl-card-body {
+  padding: 6px 22px 10px;
+}
+
+/* Professional admin surface overrides */
+#commission-page > .kfpl-page-header,
+#rewards-page > .kfpl-page-header,
+#grow-page > .kfpl-page-header,
+#support-page > .kfpl-page-header {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+#commission-page .kfpl-page-title,
+#rewards-page .kfpl-page-title,
+#grow-page .kfpl-page-title,
+#support-page .kfpl-page-title {
+  color: var(--color-text-primary);
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+#commission-page .kfpl-page-subtitle,
+#rewards-page .kfpl-page-subtitle,
+#grow-page .kfpl-page-subtitle,
+#support-page .kfpl-page-subtitle {
+  max-width: 720px;
+  line-height: 1.55;
+}
+
+#commission-page .kfpl-commission-total-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, transparent 48%),
+    linear-gradient(135deg, var(--color-navy) 0%, #0D2F22 100%);
+}
+
+#commission-page .kfpl-commission-total-main {
+  min-width: 280px;
+}
+
+#commission-page .kfpl-commission-total-note {
+  margin-top: 8px;
+  color: rgba(243, 247, 245, 0.58);
+  font-size: 0.8rem;
+}
+
+#commission-page .kfpl-commission-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+#commission-page .kfpl-commission-breakdown-item {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#commission-page .kfpl-commission-breakdown-item span,
+#commission-page .kfpl-commission-breakdown-item small {
+  display: block;
+  color: rgba(243, 247, 245, 0.62);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+#commission-page .kfpl-commission-breakdown-item strong {
+  display: block;
+  margin: 6px 0 4px;
+  color: var(--color-gold);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+#commission-page .kfpl-tabs,
+#rewards-page .kfpl-tabs {
+  align-self: flex-start;
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
+#commission-page .kfpl-tab,
+#rewards-page .kfpl-tab {
+  min-width: 110px;
+}
+
+.kfpl-panel-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+
+.kfpl-panel-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.kfpl-panel-card-header h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.kfpl-panel-card-header p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.kfpl-panel-card .kfpl-table-wrapper {
+  border: 0;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#rewards-page .kfpl-rewards-overview-card,
+#grow-page .kfpl-grow-overview-card,
+#support-page .kfpl-support-overview {
+  display: grid;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 28px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, #061D13 0%, #0c3323 50%, #11442F 100%);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  box-shadow: 0 10px 30px rgba(6, 29, 19, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+#grow-page .kfpl-grow-overview-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#rewards-page .kfpl-rewards-overview-card,
+#support-page .kfpl-support-overview {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+#rewards-page .kfpl-rewards-overview-card h2,
+#grow-page .kfpl-grow-overview-card h2,
+#support-page .kfpl-support-overview h2 {
+  margin: 0;
+  color: var(--color-white);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+#rewards-page .kfpl-rewards-overview-card p,
+#grow-page .kfpl-grow-overview-card p,
+#support-page .kfpl-support-overview p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+#rewards-page .kfpl-rewards-overview-card .kfpl-page-eyebrow,
+#grow-page .kfpl-grow-overview-card .kfpl-page-eyebrow,
+#support-page .kfpl-support-overview .kfpl-page-eyebrow {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+#rewards-page .kfpl-rewards-summary,
+#grow-page .kfpl-grow-metrics {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 12px;
+}
+
+#rewards-page .kfpl-rewards-summary-item,
+#grow-page .kfpl-grow-metric {
+  min-width: 120px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  text-align: center;
+  transition: all 0.25s ease;
+}
+
+#rewards-page .kfpl-rewards-summary-item:hover,
+#grow-page .kfpl-grow-metric:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+#rewards-page .kfpl-rewards-summary-item span,
+#grow-page .kfpl-grow-metric span {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-white);
+  line-height: 1.25;
+}
+
+#rewards-page .kfpl-rewards-summary-item small,
+#grow-page .kfpl-grow-metric small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#rewards-page .kfpl-reward-card {
+  min-height: 236px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+#rewards-page .kfpl-reward-card-ribbon {
+  top: 14px;
+  right: 14px;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  transform: none;
+  color: var(--color-white);
+  font-size: 0.62rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+#rewards-page .kfpl-reward-card--locked {
+  filter: none;
+  opacity: 1;
+  background: #F8FAFC;
+}
+
+#rewards-page .kfpl-reward-card--unlocked {
+  border-color: rgba(16, 185, 129, 0.42);
+}
+
+#rewards-page .kfpl-reward-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+}
+
+#grow-page .kfpl-section-header h2 {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+#grow-page .kfpl-offer-card {
+  overflow: hidden;
+}
+
+#grow-page .kfpl-offer-card-banner {
+  height: 78px;
+  justify-content: flex-start;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, #F8FAFC 0%, #EFF6F3 100%);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+#grow-page .kfpl-offer-card-banner::after {
+  display: none;
+}
+
+#grow-page .kfpl-offer-card-banner-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--color-gold-dark);
+}
+
+#grow-page .kfpl-offer-card-body {
+  padding: 18px 20px;
+}
+
+#grow-page .kfpl-offer-card-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+#grow-page .kfpl-offer-card-desc {
+  min-height: 42px;
+  font-size: 0.8rem;
+}
+
+#grow-page .kfpl-income-calculator-inputs,
+#grow-page .kfpl-income-calculator-results {
+  background: var(--color-white);
+}
+
+#grow-page .kfpl-income-calculator-results {
+  border-color: rgba(16, 185, 129, 0.22);
+  background: #F8FCFA;
+}
+
+#support-page .kfpl-support-overview {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+#support-page .kfpl-support-overview-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  flex-shrink: 0;
+}
+
+#support-page .kfpl-support-overview-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+#support-page .kfpl-support-overview-meta {
+  min-width: 170px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  text-align: center;
+  transition: all 0.25s ease;
+}
+
+#support-page .kfpl-support-overview-meta:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+#support-page .kfpl-support-overview-meta span,
+#support-page .kfpl-support-overview-meta small {
+  display: block;
+}
+
+#support-page .kfpl-support-overview-meta span {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-white);
+  line-height: 1.25;
+}
+
+#support-page .kfpl-support-overview-meta small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#support-page .kfpl-support-card {
+  align-items: flex-start;
+  min-height: 210px;
+  padding: 24px;
+  text-align: left;
+}
+
+#support-page .kfpl-support-card-icon {
+  margin: 0 0 16px;
+}
+
+#support-page .kfpl-support-card-desc {
+  min-height: 52px;
+}
+
+@media (max-width: 900px) {
+  #rewards-page .kfpl-rewards-hero,
+  #grow-page .kfpl-grow-hero,
+  #rewards-page .kfpl-rewards-overview-card,
+  #grow-page .kfpl-grow-overview-card {
+    grid-template-columns: 1fr;
+  }
+
+  #rewards-page .kfpl-rewards-summary,
+  #grow-page .kfpl-grow-metrics {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #profile-page .kfpl-profile-hero {
+    grid-template-columns: auto 1fr;
+  }
+
+  #profile-page .kfpl-profile-hero-stats,
+  #profile-page .kfpl-profile-hero-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  #profile-page .kfpl-profile-hero-actions {
+    justify-content: flex-start;
+  }
+
+  #withdrawal-page .kfpl-withdrawal-grid,
+  #profile-page .kfpl-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #profile-page .kfpl-profile-card--wide {
+    grid-row: auto;
+  }
+
+  #support-page .kfpl-support-overview {
+    grid-template-columns: auto 1fr;
+  }
+
+  #support-page .kfpl-support-overview-meta {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  #commission-page,
+  #rewards-page,
+  #grow-page,
+  #support-page {
+    gap: 18px;
+  }
+
+  #rewards-page .kfpl-rewards-hero,
+  #grow-page .kfpl-grow-hero,
+  #rewards-page .kfpl-rewards-overview-card,
+  #grow-page .kfpl-grow-overview-card {
+    padding: 20px;
+  }
+
+  #rewards-page .kfpl-rewards-summary,
+  #grow-page .kfpl-grow-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  #commission-page .kfpl-commission-total-card {
+    padding: 22px;
+  }
+
+  #commission-page .kfpl-commission-total-value {
+    font-size: 2rem;
+  }
+
+  #commission-page .kfpl-commission-breakdown {
+    grid-template-columns: 1fr;
+  }
+
+  .kfpl-panel-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #support-page .kfpl-support-overview {
+    grid-template-columns: 1fr;
+  }
+
+  #client-detail-page .kfpl-detail-info-item-content,
+  #profile-page .kfpl-profile-detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  #profile-page .kfpl-profile-detail-value {
+    text-align: left;
+  }
+
+  #profile-page .kfpl-profile-hero {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  #profile-page .kfpl-profile-hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  #profile-page .kfpl-profile-detail-row > .kfpl-badge {
+    justify-self: start;
+  }
+
+  #commission-page .kfpl-commission-total-card > div:last-child {
+    justify-content: center;
+  }
+}
+
+/* Settings Page Password eye toggle override */
+#settings-page .kfpl-login-password-toggle {
+  color: var(--color-text-muted) !important;
+}
+#settings-page .kfpl-login-password-toggle:hover {
+  color: var(--color-gold) !important;
+}
+
+/* ============ END: pages.css ============ */

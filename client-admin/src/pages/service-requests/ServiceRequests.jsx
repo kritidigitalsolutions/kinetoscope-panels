@@ -3,8 +3,9 @@
    Description: List of client's service requests with status
    ============================================================ */
 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockServiceRequests } from '../../data/mockData';
+import { apiRequest } from '../../config/apiHelper';
 
 /* Status config */
 const statusConfig = {
@@ -18,10 +19,34 @@ const getStatusStyle = (status) => statusConfig[status] || statusConfig['Open'];
 
 export default function ServiceRequests() {
   const navigate = useNavigate();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const openCount = mockServiceRequests.filter(r => r.status === 'Open').length;
-  const progressCount = mockServiceRequests.filter(r => r.status === 'In Progress').length;
-  const resolvedCount = mockServiceRequests.filter(r => r.status === 'Resolved').length;
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const data = await apiRequest('/api/client/service-requests');
+      // The endpoint returns `{ requests, stats }` or just `requests` list.
+      // We accept either: data.requests or data itself.
+      const list = data.requests || (Array.isArray(data) ? data : []);
+      setRequests(list);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch service requests:', err);
+      setError('Failed to load service requests. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const openCount = requests.filter(r => r.status === 'Open').length;
+  const progressCount = requests.filter(r => r.status === 'In Progress').length;
+  const resolvedCount = requests.filter(r => r.status === 'Resolved').length;
 
   return (
     <div className="kfpl-page">
@@ -54,49 +79,61 @@ export default function ServiceRequests() {
         </div>
       </div>
 
-      {/* ── Request Cards ─────────────────────── */}
-      <div className="kfpl-sr-list">
-        {mockServiceRequests.map((req, i) => {
-          const st = getStatusStyle(req.status);
-          return (
-            <div key={req.id} className="kfpl-sr-card" style={{ animationDelay: `${i * 0.06}s` }} onClick={() => navigate(`/service-requests/${req.id}`)}>
-              <div className="kfpl-sr-card-left">
-                <div className="kfpl-sr-card-status-dot" style={{ background: st.color }}></div>
-                <div className="kfpl-sr-card-info">
-                  <div className="kfpl-sr-card-top">
-                    <span className="kfpl-sr-card-id">{req.id}</span>
-                    <span className="kfpl-sr-card-category">{req.category}</span>
-                  </div>
-                  <h4 className="kfpl-sr-card-subject">{req.subject}</h4>
-                  <span className="kfpl-sr-card-date">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    {new Date(req.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </span>
-                </div>
-              </div>
-              <div className="kfpl-sr-card-right">
-                <span className="kfpl-sr-card-status" style={{ color: st.color, background: st.bg }}>
-                  {req.status}
-                </span>
-                <svg className="kfpl-sr-card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {mockServiceRequests.length === 0 && (
-        <div className="kfpl-sr-empty">
-          <div className="kfpl-sr-empty-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <h3 className="kfpl-sr-empty-title">No Service Requests</h3>
-          <p className="kfpl-sr-empty-text">You haven't raised any service requests yet.</p>
-          <button className="kfpl-sr-new-btn" onClick={() => navigate('/service-requests/new')} style={{ marginTop: '16px' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Create Your First Request
-          </button>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
+          Loading service requests...
         </div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-danger)' }}>
+          {error}
+        </div>
+      ) : (
+        <>
+          {/* ── Request Cards ─────────────────────── */}
+          <div className="kfpl-sr-list">
+            {requests.map((req, i) => {
+              const st = getStatusStyle(req.status);
+              return (
+                <div key={req._id || req.id} className="kfpl-sr-card" style={{ animationDelay: `${i * 0.06}s` }} onClick={() => navigate(`/service-requests/${req._id || req.id}`)}>
+                  <div className="kfpl-sr-card-left">
+                    <div className="kfpl-sr-card-status-dot" style={{ background: st.color }}></div>
+                    <div className="kfpl-sr-card-info">
+                      <div className="kfpl-sr-card-top">
+                        <span className="kfpl-sr-card-id">{req.id}</span>
+                        <span className="kfpl-sr-card-category">{req.category}</span>
+                      </div>
+                      <h4 className="kfpl-sr-card-subject">{req.subject}</h4>
+                      <span className="kfpl-sr-card-date">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        {req.createdAt || req.date ? new Date(req.createdAt || req.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="kfpl-sr-card-right">
+                    <span className="kfpl-sr-card-status" style={{ color: st.color, background: st.bg }}>
+                      {req.status}
+                    </span>
+                    <svg className="kfpl-sr-card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {requests.length === 0 && (
+            <div className="kfpl-sr-empty">
+              <div className="kfpl-sr-empty-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <h3 className="kfpl-sr-empty-title">No Service Requests</h3>
+              <p className="kfpl-sr-empty-text">You haven't raised any service requests yet.</p>
+              <button className="kfpl-sr-new-btn" onClick={() => navigate('/service-requests/new')} style={{ marginTop: '16px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Create Your First Request
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

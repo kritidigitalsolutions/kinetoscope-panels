@@ -1,0 +1,232 @@
+/* ============================================================
+   KFPL Agent Portal — Form Styles
+   Description: Inputs, selects, textareas, form groups
+   ============================================================ */
+
+.kfpl-form-group {
+  margin-bottom: 20px;
+}
+
+.kfpl-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.kfpl-form-label .required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.kfpl-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+  background: var(--color-white);
+  transition: var(--transition-fast);
+}
+
+.kfpl-form-input:focus {
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+
+.kfpl-form-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.kfpl-form-input:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.kfpl-form-input--error {
+  border-color: var(--color-danger);
+}
+
+.kfpl-form-input--error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* ── Select ─────────────────────── */
+.kfpl-form-select {
+  width: 100%;
+  padding: 10px 14px;
+  padding-right: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+  background: var(--color-white);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236D7E75' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.kfpl-form-select:focus {
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+
+/* ── Textarea ─────────────────────── */
+.kfpl-form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+  background: var(--color-white);
+  min-height: 100px;
+  resize: vertical;
+  transition: var(--transition-fast);
+  font-family: inherit;
+}
+
+.kfpl-form-textarea:focus {
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+
+/* ── Error Message ─────────────────────── */
+.kfpl-form-error {
+  font-size: 12px;
+  color: var(--color-danger);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kfpl-form-error svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Help Text ─────────────────────── */
+.kfpl-form-help {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ── Form Row (Two Columns) ─────────────────────── */
+.kfpl-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Password Strength Meter ─────────────────────── */
+.kfpl-password-strength {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.kfpl-password-strength-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  transition: var(--transition-fast);
+}
+
+.kfpl-password-strength-bar.filled-weak { background: var(--color-danger); }
+.kfpl-password-strength-bar.filled-medium { background: var(--color-warning); }
+.kfpl-password-strength-bar.filled-strong { background: var(--color-success); }
+
+/* ── File Upload ─────────────────────── */
+.kfpl-file-upload {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.kfpl-file-upload:hover {
+  border-color: var(--color-gold);
+  background: var(--color-gold-light);
+}
+
+.kfpl-file-upload-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  color: var(--color-text-muted);
+}
+
+.kfpl-file-upload-text {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.kfpl-file-upload-text strong {
+  color: var(--color-gold);
+}
+
+/* ── Inline Form (Income Calculator) ─────────────────────── */
+.kfpl-income-calculator {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.kfpl-income-calculator-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kfpl-income-calculator-results {
+  background: var(--color-gold-light);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+}
+
+.kfpl-income-calculator-results h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 16px;
+}
+
+.kfpl-income-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.kfpl-income-result-item:last-child {
+  border-bottom: none;
+}
+
+.kfpl-income-result-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.kfpl-income-result-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-gold-dark);
+}
+
+/* ============ END: forms.css ============ */

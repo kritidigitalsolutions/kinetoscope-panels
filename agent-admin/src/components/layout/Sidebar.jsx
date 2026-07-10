@@ -1,0 +1,175 @@
+/* ============================================================
+   Component: Sidebar.jsx
+   Description: Fixed left navigation for Agent Portal
+   Aesthetics match Super Admin sidebar perfectly
+   ============================================================ */
+
+import { NavLink, useLocation } from 'react-router-dom';
+import { agentProfile } from '../../data/mockData';
+
+// ── SVG Icons ───────────────────────
+const icons = {
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  ),
+  profile: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  clients: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  commission: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  ),
+  rewards: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+    </svg>
+  ),
+  grow: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+    </svg>
+  ),
+  withdrawal: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+    </svg>
+  ),
+  serviceRequests: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
+  support: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  chevronLeft: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  ),
+  logout: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  ),
+};
+
+const navSections = [
+  {
+    title: 'Main',
+    items: [
+      { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
+      { path: '/profile', icon: 'profile', label: 'Profile' },
+    ],
+  },
+  {
+    title: 'Portfolio',
+    items: [
+      { path: '/clients', icon: 'clients', label: 'My Clients' },
+      { path: '/commission', icon: 'commission', label: 'Commission' },
+      { path: '/rewards', icon: 'rewards', label: 'Rewards' },
+    ],
+  },
+  {
+    title: 'Finance',
+    items: [
+      { path: '/grow', icon: 'grow', label: 'Grow with KFPL' },
+      { path: '/withdrawal', icon: 'withdrawal', label: 'Withdrawal' },
+    ],
+  },
+  {
+    title: 'Help & Support',
+    items: [
+      { path: '/service-requests', icon: 'serviceRequests', label: 'Service Requests' },
+      { path: '/support', icon: 'support', label: 'Support' },
+      { path: '/settings', icon: 'settings', label: 'Settings' },
+    ],
+  },
+];
+
+export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }) {
+  const location = useLocation();
+
+  const handleLogout = () => {
+    localStorage.removeItem('kfpl_agent_auth');
+    window.location.href = '/login';
+  };
+
+  const isActive = (path) => {
+    if (path === '/dashboard') return location.pathname === '/dashboard';
+    return location.pathname.startsWith(path);
+  };
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      <div
+        className={`kfpl-sidebar-overlay ${isMobileOpen ? 'visible' : ''}`}
+        onClick={onMobileClose}
+      />
+
+      <aside className={`kfpl-sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
+        {/* Logo */}
+        <div className="kfpl-sidebar-logo">
+          <div className="kfpl-sidebar-logo-icon">
+            <span>K</span>
+          </div>
+          <div className="kfpl-sidebar-logo-text">
+            <span className="kfpl-sidebar-logo-title">KINETOSCOPE</span>
+            <span className="kfpl-sidebar-logo-subtitle">Agent Portal</span>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="kfpl-sidebar-nav">
+          {navSections.map((section) => (
+            <div className="kfpl-sidebar-section" key={section.title}>
+              <div className="kfpl-sidebar-section-title">{section.title}</div>
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={`kfpl-sidebar-item ${isActive(item.path) ? 'active' : ''}`}
+                  onClick={onMobileClose}
+                >
+                  <span className="kfpl-sidebar-item-icon">{icons[item.icon]}</span>
+                  <span className="kfpl-sidebar-item-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        {/* Bottom Section: Logout + Collapse */}
+        <div className="kfpl-sidebar-bottom">
+          <div className="kfpl-sidebar-item kfpl-sidebar-logout" onClick={handleLogout}>
+            <span className="kfpl-sidebar-item-icon">{icons.logout}</span>
+            <span className="kfpl-sidebar-item-label">Logout</span>
+          </div>
+          <div className="kfpl-sidebar-toggle" onClick={onToggle}>
+            {icons.chevronLeft}
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}

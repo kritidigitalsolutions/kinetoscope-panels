@@ -1,0 +1,1059 @@
+/* ============================================================
+   KFPL Agent Portal — Component Styles
+   Description: Cards, badges, buttons, modals, toast, dropdowns
+   ============================================================ */
+
+/* ── KPI Cards ─────────────────────── */
+.kfpl-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border-light);
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.kfpl-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kfpl-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.kfpl-card:hover::before {
+  opacity: 1;
+}
+
+/* KPI Card specific */
+.kfpl-kpi-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.kfpl-kpi-card::before {
+  opacity: 1;
+}
+
+.kfpl-kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kfpl-kpi-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kfpl-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kfpl-odometer-wrapper {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.kfpl-odometer-char {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.kfpl-odometer-digit-container {
+  display: inline-block;
+  height: 1.2em;
+  overflow: hidden;
+  position: relative;
+  vertical-align: middle;
+  width: 1ch;
+  text-align: center;
+}
+
+.kfpl-odometer-digit-reel {
+  display: flex;
+  flex-direction: column;
+  transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.kfpl-odometer-digit-reel span {
+  height: 1.2em;
+  line-height: 1.2em;
+  display: block;
+  text-align: center;
+  user-select: none;
+}
+
+.kfpl-kpi-card.visible .kfpl-kpi-value {
+  animation: countUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s forwards;
+}
+
+.kfpl-kpi-suffix {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0F766E; /* Teal accent */
+  background: rgba(15, 118, 110, 0.08); /* Soft teal tint */
+  border: 1px solid rgba(15, 118, 110, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 2px rgba(15, 118, 110, 0.04);
+  line-height: 1;
+}
+
+/* Custom suffix colors for Gold variant */
+.kfpl-card--gold .kfpl-kpi-suffix {
+  color: #B45309; /* Dark Amber/Gold */
+  background: rgba(180, 83, 9, 0.08);
+  border-color: rgba(180, 83, 9, 0.15);
+  box-shadow: 0 1px 2px rgba(180, 83, 9, 0.04);
+}
+
+.kfpl-kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.kfpl-kpi-trend.up {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.kfpl-kpi-trend.down {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.kfpl-kpi-trend svg {
+  width: 14px;
+  height: 14px;
+}
+
+.kfpl-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kfpl-kpi-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.kfpl-kpi-icon.navy {
+  background: rgba(6, 29, 19, 0.08);
+  color: var(--color-navy);
+}
+
+.kfpl-kpi-icon.gold {
+  background: var(--color-gold-glow);
+  color: var(--color-gold-dark);
+}
+
+.kfpl-kpi-icon.success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.kfpl-kpi-icon.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.kfpl-kpi-icon.danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.kfpl-kpi-icon.info {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+/* Gold variant KPI card */
+.kfpl-card--gold {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border-color: var(--color-gold-light);
+}
+
+.kfpl-card--gold::before {
+  background: linear-gradient(90deg, var(--color-gold) 0%, #34D399 50%, var(--color-gold) 100%);
+  opacity: 1;
+}
+
+/* KPI Pulse Animation */
+.kfpl-kpi-pulse {
+  animation: pulseGold 2s ease-in-out infinite;
+}
+
+/* KPI Sparkline Background */
+.kfpl-kpi-sparkline-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.kfpl-kpi-sparkline-bg svg {
+  width: 100%;
+  height: 100%;
+}
+
+.kfpl-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.kfpl-card-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.kfpl-card-body {
+  padding: 24px;
+}
+
+.kfpl-card-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+}
+
+/* ── Commission Summary Card (Hero) ─────────────────────── */
+.kfpl-commission-summary {
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  padding: 0;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  position: relative;
+}
+
+.kfpl-commission-summary-accent {
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-gold-dark) 50%, #047857 100%);
+}
+
+.kfpl-commission-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.kfpl-commission-summary-item {
+  padding: 28px 32px;
+  text-align: center;
+  position: relative;
+}
+
+.kfpl-commission-summary-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  height: 60%;
+  width: 1px;
+  background: var(--color-border-light);
+}
+
+.kfpl-commission-summary-item-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.kfpl-commission-summary-item-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-gold);
+  line-height: 1.2;
+}
+
+.kfpl-commission-summary-item-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ── Badge ─────────────────────── */
+.kfpl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.kfpl-badge--success {
+  background: var(--color-success-bg);
+  color: #065F46;
+}
+
+.kfpl-badge--warning {
+  background: var(--color-warning-bg);
+  color: #92400E;
+}
+
+.kfpl-badge--danger {
+  background: var(--color-danger-bg);
+  color: #991B1B;
+}
+
+.kfpl-badge--info {
+  background: var(--color-info-bg);
+  color: #1E40AF;
+}
+
+.kfpl-badge--muted {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+}
+
+.kfpl-badge--emerald {
+  background: var(--color-gold-light);
+  color: var(--color-gold-dark);
+}
+
+/* ── Buttons ─────────────────────── */
+.kfpl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.kfpl-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kfpl-btn-primary {
+  background: var(--color-gold);
+  color: var(--color-white);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.kfpl-btn-primary:hover {
+  background: var(--color-gold-dark);
+  box-shadow: var(--shadow-glow-emerald);
+  transform: translateY(-1px);
+}
+
+.kfpl-btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.kfpl-btn-secondary:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-text-muted);
+}
+
+.kfpl-btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.kfpl-btn-ghost:hover {
+  background: var(--color-surface);
+}
+
+.kfpl-btn-danger {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.kfpl-btn-danger:hover {
+  background: #DC2626;
+}
+
+.kfpl-btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.kfpl-btn-lg {
+  padding: 12px 28px;
+  font-size: 15px;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Modal ─────────────────────── */
+.kfpl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 29, 19, 0.5);
+  backdrop-filter: blur(6px);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: kfpl-fade-in 0.2s ease;
+}
+
+.kfpl-modal {
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-modal);
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: kfpl-modal-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes kfpl-modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.kfpl-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.kfpl-modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.kfpl-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  transition: var(--transition-fast);
+}
+
+.kfpl-modal-close:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.kfpl-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kfpl-modal-body {
+  padding: 24px;
+}
+
+.kfpl-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* ── Toast ─────────────────────── */
+.kfpl-toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kfpl-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-dropdown);
+  border-left: 4px solid;
+  min-width: 320px;
+  max-width: 420px;
+  animation: kfpl-toast-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes kfpl-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.kfpl-toast--success { border-color: var(--color-success); }
+.kfpl-toast--warning { border-color: var(--color-warning); }
+.kfpl-toast--danger { border-color: var(--color-danger); }
+.kfpl-toast--info { border-color: var(--color-info); }
+
+.kfpl-toast-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.kfpl-toast--success .kfpl-toast-icon { color: var(--color-success); }
+.kfpl-toast--warning .kfpl-toast-icon { color: var(--color-warning); }
+.kfpl-toast--danger .kfpl-toast-icon { color: var(--color-danger); }
+.kfpl-toast--info .kfpl-toast-icon { color: var(--color-info); }
+
+.kfpl-toast-message {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.kfpl-toast-close {
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.kfpl-toast-close:hover { color: var(--color-text-primary); }
+
+/* ── Empty State ─────────────────────── */
+.kfpl-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.kfpl-empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--color-gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.kfpl-empty-state-icon svg {
+  width: 28px;
+  height: 28px;
+  color: var(--color-gold);
+}
+
+.kfpl-empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.kfpl-empty-state-text {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  max-width: 360px;
+  margin-bottom: 20px;
+}
+
+/* ── Tabs ─────────────────────── */
+.kfpl-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--color-surface);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+}
+
+/* ── Tabs ─────────────────────── */
+.kfpl-tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--color-surface-alt);
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  width: fit-content;
+  border: 1px solid var(--color-border-light);
+}
+
+.kfpl-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: var(--transition-smooth);
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+}
+
+.kfpl-tab:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.kfpl-tab.active {
+  color: var(--color-white);
+  background: var(--color-navy-light);
+  box-shadow: 0 4px 12px rgba(6, 29, 19, 0.15);
+}
+
+.kfpl-tab svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  transition: var(--transition-fast);
+}
+
+.kfpl-tab.active svg {
+  opacity: 1;
+  color: var(--color-gold);
+}
+
+/* ── Reward Card ─────────────────────── */
+.kfpl-reward-card {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  padding: 24px;
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.kfpl-reward-card--locked {
+  filter: grayscale(0.7);
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.kfpl-reward-card--locked:hover {
+  filter: grayscale(0.5);
+}
+
+.kfpl-reward-card--unlocked {
+  border-color: var(--color-gold);
+  cursor: pointer;
+}
+
+.kfpl-reward-card--unlocked:hover {
+  box-shadow: var(--shadow-glow-emerald);
+  transform: translateY(-3px);
+}
+
+.kfpl-reward-card-ribbon {
+  position: absolute;
+  top: 12px;
+  right: -28px;
+  background: var(--color-gold);
+  color: var(--color-white);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 32px;
+  transform: rotate(45deg);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kfpl-reward-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--color-gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.kfpl-reward-card-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-gold);
+}
+
+.kfpl-reward-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.kfpl-reward-card-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.kfpl-reward-card-target {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.kfpl-reward-card-progress {
+  height: 6px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.kfpl-reward-card-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-gold), var(--color-gold-dark));
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Dropdown ─────────────────────── */
+.kfpl-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+  border: 1px solid var(--color-border-light);
+  min-width: 180px;
+  z-index: var(--z-overlay);
+  animation: kfpl-dropdown-enter 0.15s ease;
+}
+
+@keyframes kfpl-dropdown-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kfpl-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  transition: var(--transition-fast);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.kfpl-dropdown-item:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.kfpl-dropdown-item:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.kfpl-dropdown-item:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+
+.kfpl-dropdown-divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: 4px 0;
+}
+
+/* ── Activity Feed ─────────────────────── */
+.kfpl-activity-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.kfpl-activity-item:last-child {
+  border-bottom: none;
+}
+
+.kfpl-activity-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kfpl-activity-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.kfpl-activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.kfpl-activity-text {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.kfpl-activity-time {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ── Support Widget (FAB) ─────────────────────── */
+.kfpl-support-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: var(--z-fab);
+}
+
+.kfpl-support-fab-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--color-gold);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+  transition: var(--transition-smooth);
+}
+
+.kfpl-support-fab-btn:hover {
+  background: var(--color-gold-dark);
+  transform: scale(1.08);
+  box-shadow: var(--shadow-glow-emerald);
+}
+
+.kfpl-support-fab-btn svg {
+  width: 26px;
+  height: 26px;
+}
+
+.kfpl-support-fab-menu {
+  position: absolute;
+  bottom: 68px;
+  right: 0;
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dropdown);
+  border: 1px solid var(--color-border-light);
+  padding: 8px;
+  min-width: 200px;
+  animation: kfpl-dropdown-enter 0.2s ease;
+}
+
+.kfpl-support-fab-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: var(--transition-fast);
+  text-decoration: none;
+}
+
+.kfpl-support-fab-link:hover {
+  background: var(--color-gold-light);
+  color: var(--color-gold-dark);
+}
+
+.kfpl-support-fab-link svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ── Skeleton Loader ─────────────────────── */
+.kfpl-skeleton {
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-alt) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: kfpl-skeleton-shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes kfpl-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Dropdown Select and Double-Dash Buttons Compatibility (Super Admin sync) ── */
+.kfpl-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  background: var(--color-white);
+  transition: var(--transition-fast);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%233D4A5C' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.kfpl-select:focus {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+
+/* Double-dash buttons compatibility aliases */
+.kfpl-btn--primary {
+  background: var(--color-gold);
+  color: var(--color-white);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.kfpl-btn--primary:hover {
+  background: var(--color-gold-dark);
+  box-shadow: var(--shadow-glow-emerald);
+  transform: translateY(-1px);
+}
+
+.kfpl-btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.kfpl-btn--secondary:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-text-muted);
+}
+
+.kfpl-btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.kfpl-btn--ghost:hover {
+  background: var(--color-surface);
+}
+
+.kfpl-btn--danger {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.kfpl-btn--danger:hover {
+  background: #DC2626;
+}
+
+.kfpl-btn--success {
+  background: var(--color-success);
+  color: var(--color-white);
+}
+
+.kfpl-btn--success:hover {
+  background: var(--color-gold-dark);
+}
+
+.kfpl-btn--sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.kfpl-btn--lg {
+  padding: 12px 28px;
+  font-size: 15px;
+  border-radius: var(--radius-lg);
+}
+
+/* ============ END: components.css ============ */

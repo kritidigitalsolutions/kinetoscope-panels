@@ -1,26 +1,15 @@
-/* ============================================================
-   Page: ServiceRequestsPage.jsx
-   Description: Centralized service requests dashboard for Clients and Agents
-   ============================================================ */
-
 import { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
 import Badge from '../../components/ui/Badge';
-import { investors, agents } from '../../data/mockData';
-
-const DEFAULT_REQUESTS = [
-  { id: 'SR-101', raisedBy: 'Rajesh Kumar', raiserType: 'Client', dateRaised: '2026-06-10', subject: 'Address Update Request', description: 'I want to update my address to Flat 202, Marina Apartments, Mumbai. Please verify.', status: 'Open', adminNote: '' },
-  { id: 'SR-102', raisedBy: 'Neha Gupta', raiserType: 'Agent', dateRaised: '2026-06-12', subject: 'Commission Payout Enquiry', description: 'February commission payout of client Amit Joshi is not credited in my account. Please check why it is delayed.', status: 'In Progress', adminNote: 'Checking with finance department' },
-  { id: 'SR-103', raisedBy: 'Suresh Patel', raiserType: 'Client', dateRaised: '2026-06-13', subject: 'ROI Payment Pending', description: 'My ROI payment for April 2025 is still showing pending in my dashboard. Please verify and credit.', status: 'Open', adminNote: '' },
-  { id: 'SR-104', raisedBy: 'Arjun Singh', raiserType: 'Agent', dateRaised: '2026-06-14', subject: 'Add new segment request', description: 'Please assign Distribution segment to client Suresh Patel to capture high distribution ROI.', status: 'Resolved', adminNote: 'Assigned distribution segment successfully on 2026-06-15.' },
-  { id: 'SR-105', raisedBy: 'Priya Sharma', raiserType: 'Client', dateRaised: '2026-06-15', subject: 'KYC document update', description: 'Need to re-upload PAN card copy as previous upload was blurry.', status: 'Closed', adminNote: 'KYC PAN re-uploaded and approved.' }
-];
+import { apiRequest } from '../../config/apiHelper';
 
 export default function ServiceRequestsPage() {
   const addToast = useToast();
 
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selectedReq, setSelectedReq] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
@@ -35,75 +24,110 @@ export default function ServiceRequestsPage() {
   const [editNote, setEditNote] = useState('');
   const [sendEmail, setSendEmail] = useState(false);
 
-  useEffect(() => {
-    const data = localStorage.getItem('kfpl_service_requests');
-    if (data) {
-      setRequests(JSON.parse(data));
-    } else {
-      setRequests(DEFAULT_REQUESTS);
-      localStorage.setItem('kfpl_service_requests', JSON.stringify(DEFAULT_REQUESTS));
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const params = [];
+      if (statusFilter !== 'All') params.push(`status=${statusFilter}`);
+      if (typeFilter !== 'All') params.push(`raiserType=${typeFilter}`);
+      const queryString = params.length > 0 ? `?${params.join('&')}` : '';
+
+      const data = await apiRequest(`/api/super-admin/service-requests${queryString}`);
+      const list = data.requests || (Array.isArray(data) ? data : []);
+      setRequests(list);
+    } catch (err) {
+      console.error('Failed to load support requests:', err);
+      addToast(err.message || 'Failed to fetch service requests', 'danger', 'Error');
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  const saveRequests = (updatedList) => {
-    setRequests(updatedList);
-    localStorage.setItem('kfpl_service_requests', JSON.stringify(updatedList));
-    
-    // Dispatch custom event to notify Sidebar unresolved badge
-    window.dispatchEvent(new Event('serviceRequestsUpdated'));
   };
 
-  const handleOpenDetail = (req) => {
-    setSelectedReq(req);
-    setEditStatus(req.status);
-    setEditNote(req.adminNote || '');
-    setSendEmail(false);
-    setShowDetailModal(true);
+  useEffect(() => {
+    fetchRequests();
+  }, [statusFilter, typeFilter]);
+
+  const handleOpenDetail = async (req) => {
+    try {
+      const fullDetail = await apiRequest(`/api/super-admin/service-requests/${req._id || req.id}`);
+      setSelectedReq(fullDetail);
+      setEditStatus(fullDetail.status);
+      setEditNote(fullDetail.adminRemarks || fullDetail.adminNote || '');
+      setSendEmail(false);
+      setShowDetailModal(true);
+    } catch (err) {
+      console.error('Error fetching detail, falling back to list record:', err);
+      setSelectedReq(req);
+      setEditStatus(req.status);
+      setEditNote(req.adminRemarks || req.adminNote || '');
+      setSendEmail(false);
+      setShowDetailModal(true);
+    }
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!editStatus) {
       alert('Please select a status.');
       return;
     }
 
-    const updated = requests.map(r => {
-      if (r.id === selectedReq.id) {
-        return {
-          ...r,
+    try {
+      setSaving(true);
+      await apiRequest(`/api/super-admin/service-requests/${selectedReq._id || selectedReq.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           status: editStatus,
-          adminNote: editNote
-        };
-      }
-      return r;
-    });
+          adminRemarks: editNote,
+          notifyUser: sendEmail
+        }),
+      });
 
-    saveRequests(updated);
-    setShowDetailModal(false);
-    
-    // Simulate email notification if checked
-    if (sendEmail) {
-      let emailAddress = 'user@email.com';
-      if (selectedReq.raiserType === 'Client') {
-        const match = investors.find(i => i.name === selectedReq.raisedBy);
-        if (match) emailAddress = match.email;
-      } else if (selectedReq.raiserType === 'Agent') {
-        const match = agents.find(a => a.name === selectedReq.raisedBy);
-        if (match) emailAddress = match.email;
-      }
-      addToast(`Notification email sent to ${emailAddress}`, 'info', 'Email Sent');
+      addToast('Service Request updated successfully', 'success', 'Request Updated');
+      setShowDetailModal(false);
+      setSelectedReq(null);
+      
+      // Reload and broadcast custom event
+      await fetchRequests();
+      window.dispatchEvent(new Event('serviceRequestsUpdated'));
+    } catch (err) {
+      console.error('Failed to update service request:', err);
+      addToast(err.message || 'Failed to update request', 'danger', 'Error');
+    } finally {
+      setSaving(false);
     }
-
-    setSelectedReq(null);
-    addToast('Service Request updated successfully', 'success', 'Request Updated');
   };
 
-  // Filter Logic
+  const handleDeleteRequest = async () => {
+    if (!window.confirm('Are you sure you want to delete this service request? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await apiRequest(`/api/super-admin/service-requests/${selectedReq._id || selectedReq.id}`, {
+        method: 'DELETE'
+      });
+
+      addToast('Service Request deleted successfully', 'success', 'Request Deleted');
+      setShowDetailModal(false);
+      setSelectedReq(null);
+
+      // Reload and broadcast custom event
+      await fetchRequests();
+      window.dispatchEvent(new Event('serviceRequestsUpdated'));
+    } catch (err) {
+      console.error('Failed to delete service request:', err);
+      addToast(err.message || 'Failed to delete request', 'danger', 'Error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Client-side date filters
   const filteredRequests = requests.filter(req => {
-    if (statusFilter !== 'All' && req.status !== statusFilter) return false;
-    if (typeFilter !== 'All' && req.raiserType !== typeFilter) return false;
-    if (startDate && req.dateRaised < startDate) return false;
-    if (endDate && req.dateRaised > endDate) return false;
+    const reqDate = req.createdAt || req.dateRaised || req.date;
+    if (startDate && reqDate && reqDate.substring(0, 10) < startDate) return false;
+    if (endDate && reqDate && reqDate.substring(0, 10) > endDate) return false;
     return true;
   });
 
@@ -168,52 +192,62 @@ export default function ServiceRequestsPage() {
 
       {/* Main Table */}
       <div className="kfpl-card">
-        <div className="kfpl-table-scroll">
-          <table className="kfpl-table">
-            <thead>
-              <tr>
-                <th>Request ID</th>
-                <th>Raised By</th>
-                <th>Raiser Type</th>
-                <th>Date Raised</th>
-                <th>Subject</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
+            Loading service requests...
+          </div>
+        ) : (
+          <div className="kfpl-table-scroll">
+            <table className="kfpl-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-muted)' }}>
-                    No service requests found matching the filters.
-                  </td>
+                  <th>Request ID</th>
+                  <th>Raised By</th>
+                  <th>Raiser Type</th>
+                  <th>Date Raised</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
-              ) : (
-                filteredRequests.map(req => (
-                  <tr key={req.id} onClick={() => handleOpenDetail(req)} style={{ cursor: 'pointer' }}>
-                    <td style={{ fontWeight: 600 }}>{req.id}</td>
-                    <td className="kfpl-table-cell-primary">{req.raisedBy}</td>
-                    <td>
-                      <Badge status={req.raiserType === 'Client' ? 'silver' : 'gold'}>
-                        {req.raiserType}
-                      </Badge>
-                    </td>
-                    <td>{req.dateRaised}</td>
-                    <td>{req.subject}</td>
-                    <td>
-                      <Badge status={getStatusBadge(req.status)}>{req.status}</Badge>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={(e) => { e.stopPropagation(); handleOpenDetail(req); }}>
-                        Review
-                      </button>
+              </thead>
+              <tbody>
+                {filteredRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-muted)' }}>
+                      No service requests found matching the filters.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredRequests.map(req => {
+                    const raisedByName = req.raiserId?.name || req.raisedBy || 'N/A';
+                    const reqDate = req.createdAt || req.dateRaised || req.date;
+                    return (
+                      <tr key={req._id || req.id} onClick={() => handleOpenDetail(req)} style={{ cursor: 'pointer' }}>
+                        <td style={{ fontWeight: 600 }}>{req.id}</td>
+                        <td className="kfpl-table-cell-primary">{raisedByName}</td>
+                        <td>
+                          <Badge status={req.raiserType === 'Client' ? 'silver' : 'gold'}>
+                            {req.raiserType}
+                          </Badge>
+                        </td>
+                        <td>{reqDate ? new Date(reqDate).toLocaleDateString('en-IN') : 'N/A'}</td>
+                        <td>{req.subject}</td>
+                        <td>
+                          <Badge status={getStatusBadge(req.status)}>{req.status}</Badge>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button className="kfpl-btn kfpl-btn--ghost kfpl-btn--sm" onClick={(e) => { e.stopPropagation(); handleOpenDetail(req); }}>
+                            Review
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Detail & Response Modal */}
@@ -223,21 +257,38 @@ export default function ServiceRequestsPage() {
           onClose={() => setShowDetailModal(false)}
           title={`Review Service Request - ${selectedReq.id}`}
           footer={
-            <>
-              <button className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowDetailModal(false)}>Cancel</button>
-              <button className="kfpl-btn kfpl-btn--primary" onClick={handleSaveChanges}>Save Changes</button>
-            </>
+            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button 
+                type="button"
+                className="kfpl-btn kfpl-btn--danger" 
+                onClick={handleDeleteRequest}
+                disabled={saving}
+                style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Delete Request
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" className="kfpl-btn kfpl-btn--ghost" onClick={() => setShowDetailModal(false)} disabled={saving}>Cancel</button>
+                <button type="button" className="kfpl-btn kfpl-btn--primary" onClick={handleSaveChanges} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
           }
         >
           <div className="kfpl-form" style={{ gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '12px' }}>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>RAISED BY</span>
-                <strong style={{ fontSize: '0.95rem', color: 'var(--color-navy)' }}>{selectedReq.raisedBy} ({selectedReq.raiserType})</strong>
+                <strong style={{ fontSize: '0.95rem', color: 'var(--color-navy)' }}>
+                  {selectedReq.raiserId?.name || selectedReq.raisedBy || 'N/A'} ({selectedReq.raiserType})
+                </strong>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>DATE RAISED</span>
-                <strong style={{ fontSize: '0.95rem', color: 'var(--color-navy)' }}>{selectedReq.dateRaised}</strong>
+                <strong style={{ fontSize: '0.95rem', color: 'var(--color-navy)' }}>
+                  {selectedReq.createdAt || selectedReq.dateRaised || selectedReq.date ? new Date(selectedReq.createdAt || selectedReq.dateRaised || selectedReq.date).toLocaleDateString('en-IN') : 'N/A'}
+                </strong>
               </div>
             </div>
 
@@ -252,6 +303,29 @@ export default function ServiceRequestsPage() {
                 {selectedReq.description}
               </div>
             </div>
+
+            {selectedReq.attachmentUrl && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '4px' }}>ATTACHMENT</span>
+                <a 
+                  href={selectedReq.attachmentUrl} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    color: 'var(--color-gold)', 
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  View Attached File
+                </a>
+              </div>
+            )}
 
             <div className="kfpl-form-row" style={{ gap: '16px', alignItems: 'flex-end' }}>
               <div className="kfpl-input-group" style={{ flex: 1 }}>
